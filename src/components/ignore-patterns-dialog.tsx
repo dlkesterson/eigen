@@ -120,7 +120,7 @@ export function IgnorePatternsDialog({
 	};
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs'>
 			<Card className='w-full max-w-2xl max-h-[85vh] flex flex-col bg-background/95 backdrop-blur-md border-border/50'>
 				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/50'>
 					<CardTitle className='text-xl font-semibold flex items-center gap-2'>
@@ -231,7 +231,7 @@ export function IgnorePatternsDialog({
 								e.key === 'Enter' && handleAddPattern()
 							}
 							placeholder='Enter pattern (e.g., *.log or node_modules)'
-							className='flex-1 h-9 px-3 rounded-md border border-border/50 bg-background/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50'
+							className='flex-1 h-9 px-3 rounded-md border border-border/50 bg-background/50 text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/50'
 						/>
 						<Button
 							onClick={handleAddPattern}

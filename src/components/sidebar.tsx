@@ -65,7 +65,7 @@ export function Sidebar() {
 		>
 			{/* Logo */}
 			<div className='flex h-16 items-center gap-3 border-b border-slate-800 px-4'>
-				<div className='flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600'>
+				<div className='flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-indigo-500 to-purple-600'>
 					<Zap className='h-4 w-4 text-white' />
 				</div>
 				{sidebarOpen && (

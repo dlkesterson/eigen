@@ -124,7 +124,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 	if (!open) return null;
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs'>
 			<Card className='w-full max-w-lg border-slate-700 bg-slate-900 shadow-2xl'>
 				<CardHeader className='relative'>
 					<Button
@@ -211,7 +211,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 								className={cn(
 									'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
 									'font-mono text-sm text-white placeholder:text-slate-600',
-									'focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+									'focus:border-violet-500 focus:outline-hidden focus:ring-1 focus:ring-violet-500'
 								)}
 							/>
 						</div>
@@ -230,7 +230,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 								className={cn(
 									'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
 									'text-sm text-white placeholder:text-slate-600',
-									'focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+									'focus:border-violet-500 focus:outline-hidden focus:ring-1 focus:ring-violet-500'
 								)}
 							/>
 						</div>
@@ -270,7 +270,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 									className={cn(
 										'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
 										'text-sm text-white placeholder:text-slate-600',
-										'focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+										'focus:border-violet-500 focus:outline-hidden focus:ring-1 focus:ring-violet-500'
 									)}
 								/>
 								<p className='text-xs text-slate-500'>
@@ -327,7 +327,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 										className={cn(
 											'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
 											'text-sm text-white placeholder:text-slate-600',
-											'focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+											'focus:border-violet-500 focus:outline-hidden focus:ring-1 focus:ring-violet-500'
 										)}
 									/>
 								</div>
@@ -349,7 +349,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 										className={cn(
 											'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
 											'text-sm text-white placeholder:text-slate-600',
-											'focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+											'focus:border-violet-500 focus:outline-hidden focus:ring-1 focus:ring-violet-500'
 										)}
 									/>
 								</div>

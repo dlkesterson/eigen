@@ -178,7 +178,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
 						'w-full pl-10 pr-20 py-2 rounded-lg',
 						'bg-muted/50 border border-border',
 						'text-sm placeholder:text-muted-foreground',
-						'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
+						'focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary',
 						'disabled:opacity-50 disabled:cursor-not-allowed',
 						'transition-all duration-200'
 					)}

@@ -170,7 +170,7 @@ export function FileBrowser({
 	];
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs'>
 			<Card className='w-full max-w-3xl max-h-[80vh] flex flex-col bg-background/95 backdrop-blur-md border-border/50'>
 				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/50'>
 					<CardTitle className='text-xl font-semibold flex items-center gap-2'>
@@ -338,11 +338,11 @@ export function FileBrowser({
 												}
 											>
 												{entry.type === 'directory' ? (
-													<Folder className='h-5 w-5 text-blue-400 flex-shrink-0' />
+													<Folder className='h-5 w-5 text-blue-400 shrink-0' />
 												) : showVersions ? (
-													<Clock className='h-5 w-5 text-amber-400 flex-shrink-0' />
+													<Clock className='h-5 w-5 text-amber-400 shrink-0' />
 												) : (
-													<File className='h-5 w-5 text-muted-foreground flex-shrink-0' />
+													<File className='h-5 w-5 text-muted-foreground shrink-0' />
 												)}
 												<div className='flex-1 min-w-0'>
 													<p className='text-sm font-medium truncate'>

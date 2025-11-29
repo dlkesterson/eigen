@@ -91,7 +91,7 @@ function ThemeSelector() {
 			{themes.map(({ value, label, icon: Icon }) => (
 				<Button
 					key={value}
-					variant={theme === value ? 'default' : 'outline'}
+					variant={theme === value ? 'default' : 'outline-solid'}
 					size='sm'
 					onClick={() => setTheme(value)}
 					className={cn(
@@ -227,7 +227,7 @@ function PollingSettings() {
 					<Button
 						key={value}
 						variant={
-							pollingInterval === value ? 'default' : 'outline'
+							pollingInterval === value ? 'default' : 'outline-solid'
 						}
 						size='sm'
 						onClick={() => {
@@ -265,7 +265,7 @@ function NotificationSettings() {
 					</p>
 				</div>
 				<Button
-					variant={nativeNotificationsEnabled ? 'default' : 'outline'}
+					variant={nativeNotificationsEnabled ? 'default' : 'outline-solid'}
 					size='sm'
 					onClick={() => {
 						setNativeNotificationsEnabled(
@@ -307,7 +307,7 @@ function AISettings() {
 					</p>
 				</div>
 				<Button
-					variant={aiEnabled ? 'default' : 'outline'}
+					variant={aiEnabled ? 'default' : 'outline-solid'}
 					size='sm'
 					onClick={() => {
 						setAiEnabled(!aiEnabled);
@@ -404,7 +404,7 @@ function NetworkSettings() {
 					variant={
 						localOptions.globalAnnounceEnabled
 							? 'default'
-							: 'outline'
+							: 'outline-solid'
 					}
 					size='sm'
 					onClick={() =>
@@ -434,7 +434,7 @@ function NetworkSettings() {
 					variant={
 						localOptions.localAnnounceEnabled
 							? 'default'
-							: 'outline'
+							: 'outline-solid'
 					}
 					size='sm'
 					onClick={() =>
@@ -461,7 +461,7 @@ function NetworkSettings() {
 					</p>
 				</div>
 				<Button
-					variant={localOptions.relaysEnabled ? 'default' : 'outline'}
+					variant={localOptions.relaysEnabled ? 'default' : 'outline-solid'}
 					size='sm'
 					onClick={() =>
 						updateField(
@@ -496,7 +496,7 @@ function NetworkSettings() {
 									parseInt(e.target.value) || 0
 								)
 							}
-							className='w-full mt-1 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white border border-slate-700 focus:border-indigo-500 focus:outline-none'
+							className='w-full mt-1 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white border border-slate-700 focus:border-indigo-500 focus:outline-hidden'
 							placeholder='0 = unlimited'
 							min={0}
 						/>
@@ -514,7 +514,7 @@ function NetworkSettings() {
 									parseInt(e.target.value) || 0
 								)
 							}
-							className='w-full mt-1 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white border border-slate-700 focus:border-indigo-500 focus:outline-none'
+							className='w-full mt-1 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white border border-slate-700 focus:border-indigo-500 focus:outline-hidden'
 							placeholder='0 = unlimited'
 							min={0}
 						/>
@@ -541,7 +541,7 @@ function NetworkSettings() {
 							addresses.length > 0 ? addresses : ['default']
 						);
 					}}
-					className='w-full mt-1 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white border border-slate-700 focus:border-indigo-500 focus:outline-none'
+					className='w-full mt-1 rounded-lg bg-slate-800 px-3 py-2 text-sm text-white border border-slate-700 focus:border-indigo-500 focus:outline-hidden'
 					placeholder='default, tcp://0.0.0.0:22000'
 				/>
 				<p className='text-xs text-slate-500 mt-1'>

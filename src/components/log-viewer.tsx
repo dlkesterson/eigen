@@ -103,7 +103,7 @@ export function LogViewer({ open, onOpenChange }: LogViewerProps) {
 	};
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs'>
 			<Card className='w-full max-w-4xl max-h-[80vh] flex flex-col bg-background/95 backdrop-blur-md border-border/50'>
 				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/50'>
 					<CardTitle className='text-xl font-semibold flex items-center gap-2'>
@@ -232,7 +232,7 @@ export function LogViewer({ open, onOpenChange }: LogViewerProps) {
 										>
 											<Icon
 												className={cn(
-													'h-4 w-4 mt-0.5 flex-shrink-0',
+													'h-4 w-4 mt-0.5 shrink-0',
 													config.color
 												)}
 											/>

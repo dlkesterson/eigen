@@ -137,10 +137,10 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
 	return (
 		<div className='fixed inset-0 z-50 flex items-center justify-center py-8'>
 			<div
-				className='absolute inset-0 bg-black/60 backdrop-blur-sm'
+				className='absolute inset-0 bg-black/60 backdrop-blur-xs'
 				onClick={handleClose}
 			/>
-			<Card className='relative z-10 w-full max-w-lg border-slate-700 bg-slate-900/95 backdrop-blur mx-4 max-h-[90vh] overflow-y-auto'>
+			<Card className='relative z-10 w-full max-w-lg border-slate-700 bg-slate-900/95 backdrop-blur-sm mx-4 max-h-[90vh] overflow-y-auto'>
 				<CardHeader className='pb-4'>
 					<div className='flex items-center justify-between'>
 						<div className='flex items-center gap-3'>
@@ -177,7 +177,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
 								value={folderId}
 								onChange={(e) => setFolderId(e.target.value)}
 								placeholder='my-folder'
-								className='w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+								className='w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500'
 							/>
 							<p className='text-xs text-slate-500'>
 								Unique identifier for this folder
@@ -193,7 +193,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
 								value={folderLabel}
 								onChange={(e) => setFolderLabel(e.target.value)}
 								placeholder='My Folder'
-								className='w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+								className='w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500'
 							/>
 							<p className='text-xs text-slate-500'>
 								Human-readable name (optional)
@@ -212,7 +212,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
 										setFolderPath(e.target.value)
 									}
 									placeholder='/home/user/sync-folder'
-									className='flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+									className='flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500'
 								/>
 								<Button
 									type='button'

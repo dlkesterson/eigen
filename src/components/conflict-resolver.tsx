@@ -178,7 +178,7 @@ export function ConflictResolver({
 	const conflictList = conflicts || [];
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs'>
 			<Card className='w-full max-w-2xl max-h-[80vh] flex flex-col bg-background/95 backdrop-blur-md border-border/50'>
 				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/50'>
 					<CardTitle className='text-xl font-semibold flex items-center gap-2'>

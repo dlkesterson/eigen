@@ -119,7 +119,7 @@ export default function DebugPanel() {
 	}
 
 	return (
-		<div className='fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4'>
+		<div className='fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4'>
 			<Card className='w-full max-w-6xl h-[80vh] flex flex-col bg-slate-900 border-slate-700'>
 				<CardHeader className='border-b border-slate-800 shrink-0'>
 					<div className='flex items-center justify-between'>
@@ -417,7 +417,7 @@ export default function DebugPanel() {
 															).toLocaleTimeString()}
 														</span>
 													</div>
-													<p className='text-slate-300 break-words'>
+													<p className='text-slate-300 wrap-break-word'>
 														{log.message}
 													</p>
 													{log.context &&
