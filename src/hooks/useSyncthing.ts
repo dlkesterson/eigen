@@ -888,7 +888,16 @@ export function useSyncthingEvents(options?: {
             }
         } catch (error) {
             // Only log actual errors, not aborts or empty responses
-            if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+            const isAbortError = error instanceof DOMException && error.name === 'AbortError';
+            const isNullish = error === null || error === undefined;
+            const isEmptyError = error && typeof error === 'object' &&
+                (Object.keys(error).length === 0 || JSON.stringify(error) === '{}');
+
+            // Also check for timeout errors which are expected during long polling
+            const errorStr = String(error);
+            const isTimeoutError = errorStr.includes('timeout') || errorStr.includes('Timeout');
+
+            if (!isAbortError && !isEmptyError && !isNullish && !isTimeoutError) {
                 console.error("Event polling error:", error);
             }
         } finally {

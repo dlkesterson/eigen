@@ -120,8 +120,16 @@ pub fn run() {
                 .item(&quit)
                 .build()?;
 
+            // Load tray icon - embedded at compile time
+            let tray_icon_bytes = include_bytes!("../icons/tray_icon.png");
+            let tray_img = image::load_from_memory(tray_icon_bytes)
+                .expect("Failed to load tray icon");
+            let rgba = tray_img.to_rgba8();
+            let (width, height) = rgba.dimensions();
+            let tray_icon = tauri::image::Image::new_owned(rgba.into_raw(), width, height);
+
             let _tray = TrayIconBuilder::with_id("main")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
                 .menu(&menu)
                 .tooltip("Eigen - Syncthing Manager")
                 .on_menu_event(|app, event| {

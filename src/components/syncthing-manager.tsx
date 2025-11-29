@@ -33,8 +33,9 @@ async function updateTrayStatus(status: string, details: string) {
  * Checks installation and auto-starts Syncthing when the app loads.
  * Also handles device discovery notifications via the Event API.
  */
-// Cooldown period for device notifications (in milliseconds)
+// Cooldown period for notifications (in milliseconds)
 const DEVICE_NOTIFICATION_COOLDOWN = 60000; // 1 minute
+const FOLDER_NOTIFICATION_COOLDOWN = 30000; // 30 seconds - prevent spam for folder sync/error events
 
 export function SyncthingManager({ children }: { children: React.ReactNode }) {
 	const { data: installation, isLoading: checkingInstallation } =
@@ -47,6 +48,8 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
 
 	// Track last notification time per device to prevent spam
 	const deviceNotificationTimestamps = useRef<Map<string, number>>(new Map());
+	// Track last notification time per folder to prevent spam
+	const folderNotificationTimestamps = useRef<Map<string, number>>(new Map());
 
 	// Native notifications hook
 	const { notifyDeviceEvent, notifyFolderEvent } = useNativeNotifications();
@@ -69,6 +72,29 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
 			}
 
 			deviceNotificationTimestamps.current.set(key, now);
+			return true;
+		},
+		[]
+	);
+
+	/**
+	 * Check if we should show a notification for a folder event
+	 * Returns true if cooldown has passed, false if we should skip
+	 */
+	const shouldNotifyFolder = useCallback(
+		(folderId: string, eventType: string): boolean => {
+			const key = `${folderId}-${eventType}`;
+			const now = Date.now();
+			const lastNotified = folderNotificationTimestamps.current.get(key);
+
+			if (
+				lastNotified &&
+				now - lastNotified < FOLDER_NOTIFICATION_COOLDOWN
+			) {
+				return false;
+			}
+
+			folderNotificationTimestamps.current.set(key, now);
 			return true;
 		},
 		[]
@@ -174,9 +200,16 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
 				}
 
 				case 'FolderCompletion':
-					// Only show when folder reaches 100%
+					// Only show when folder reaches 100% and not recently notified
 					if (event.data?.completion === 100) {
+						const folderId = event.data?.folder || 'unknown';
 						const folderName = event.data?.folder || 'Folder';
+
+						// Rate limit notifications per folder to prevent spam
+						if (!shouldNotifyFolder(folderId, 'completion')) {
+							break;
+						}
+
 						toast.success('Sync Complete', {
 							description: `Folder "${folderName}" is now in sync.`,
 							duration: 3000,
@@ -188,8 +221,15 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
 
 				case 'FolderErrors':
 					if (event.data?.errors?.length > 0) {
+						const folderId = event.data?.folder || 'unknown';
 						const folderName = event.data?.folder || 'Folder';
 						const errorCount = event.data.errors.length;
+
+						// Rate limit error notifications per folder to prevent spam
+						if (!shouldNotifyFolder(folderId, 'errors')) {
+							break;
+						}
+
 						toast.error('Sync Errors', {
 							description: `Folder "${folderName}" has ${errorCount} error(s).`,
 							duration: 10000,
@@ -204,7 +244,12 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
 					break;
 			}
 		},
-		[notifyDeviceEvent, notifyFolderEvent, shouldNotifyDevice]
+		[
+			notifyDeviceEvent,
+			notifyFolderEvent,
+			shouldNotifyDevice,
+			shouldNotifyFolder,
+		]
 	);
 
 	// Subscribe to Syncthing events when connected

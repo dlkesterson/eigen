@@ -1,5 +1,6 @@
 // src/lib/health-monitor.ts
 import { logger } from './logger';
+import { invoke } from '@tauri-apps/api/core';
 
 interface HealthCheck {
     name: string;
@@ -141,16 +142,23 @@ export class HealthMonitor {
             error,
         });
 
-        logger.warn(`Health check failed: ${check.name}`, {
-            error,
-            consecutiveFailures,
-            critical: check.critical,
-        });
+        // Only log warning on first few failures to reduce noise
+        if (consecutiveFailures <= 3) {
+            logger.warn(`Health check failed: ${check.name}`, {
+                error,
+                consecutiveFailures,
+                critical: check.critical,
+            });
+        }
 
-        // Alert on critical failures
+        // Alert on critical failures - only log once when threshold is reached
+        // (not on every subsequent failure)
         if (check.critical && consecutiveFailures === 3) {
             logger.error(`CRITICAL: Health check failing repeatedly: ${check.name}`, {
                 consecutiveFailures,
+                hint: check.name === 'syncthing-api'
+                    ? 'Syncthing may not be running. Please ensure Syncthing is started.'
+                    : undefined,
             });
         }
     }
@@ -262,21 +270,15 @@ export class HealthMonitor {
 export const healthMonitor = new HealthMonitor();
 
 // Register default checks
-export function registerDefaultHealthChecks(apiKey?: string) {
-    // Syncthing API check
+export function registerDefaultHealthChecks(_apiKey?: string) {
+    // Syncthing API check - use Tauri invoke instead of direct fetch
     healthMonitor.register({
         name: 'syncthing-api',
         check: async () => {
             try {
-                const headers: Record<string, string> = {};
-                if (apiKey) {
-                    headers['X-API-Key'] = apiKey;
-                }
-                const response = await fetch('http://127.0.0.1:8384/rest/system/ping', {
-                    method: 'GET',
-                    headers,
-                });
-                return response.ok;
+                // Use the same Tauri command that the UI uses
+                const result = await invoke('get_system_status');
+                return result !== null && result !== undefined;
             } catch {
                 return false;
             }
