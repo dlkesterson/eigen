@@ -154,11 +154,13 @@ export class HealthMonitor {
         // Alert on critical failures - only log once when threshold is reached
         // (not on every subsequent failure)
         if (check.critical && consecutiveFailures === 3) {
+            const hint =
+                check.name === 'syncthing-api'
+                    ? 'Syncthing may not be running. Please ensure Syncthing is started.'
+                    : undefined;
             logger.error(`CRITICAL: Health check failing repeatedly: ${check.name}`, {
                 consecutiveFailures,
-                hint: check.name === 'syncthing-api'
-                    ? 'Syncthing may not be running. Please ensure Syncthing is started.'
-                    : undefined,
+                ...(hint && { hint }),
             });
         }
     }
@@ -181,12 +183,12 @@ export class HealthMonitor {
      * Notify all listeners
      */
     private notifyListeners() {
-        this.listeners.forEach(listener => {
+        this.listeners.forEach((listener) => {
             try {
                 listener(new Map(this.status));
             } catch (error) {
                 logger.error('Health monitor listener error', {
-                    error: error instanceof Error ? error.message : String(error)
+                    error: error instanceof Error ? error.message : String(error),
                 });
             }
         });
@@ -210,7 +212,7 @@ export class HealthMonitor {
      * Check if system is healthy
      */
     isHealthy(): boolean {
-        return Array.from(this.status.values()).every(s => s.healthy);
+        return Array.from(this.status.values()).every((s) => s.healthy);
     }
 
     /**
@@ -230,9 +232,9 @@ export class HealthMonitor {
         const all = Array.from(this.status.values());
         return {
             total: all.length,
-            healthy: all.filter(s => s.healthy).length,
-            unhealthy: all.filter(s => !s.healthy).length,
-            critical: all.filter(s => {
+            healthy: all.filter((s) => s.healthy).length,
+            unhealthy: all.filter((s) => !s.healthy).length,
+            critical: all.filter((s) => {
                 const check = this.checks.get(s.name);
                 return check?.critical && !s.healthy;
             }).length,
@@ -244,14 +246,14 @@ export class HealthMonitor {
      */
     async runAllChecks(): Promise<void> {
         const checks = Array.from(this.checks.values());
-        await Promise.all(checks.map(check => this.runCheck(check)));
+        await Promise.all(checks.map((check) => this.runCheck(check)));
     }
 
     /**
      * Stop all health checks
      */
     stop() {
-        this.intervals.forEach(interval => clearInterval(interval));
+        this.intervals.forEach((interval) => clearInterval(interval));
         this.intervals.clear();
         logger.info('Health monitor stopped');
     }
@@ -261,7 +263,7 @@ export class HealthMonitor {
      */
     restart() {
         this.stop();
-        this.checks.forEach(check => this.startCheck(check));
+        this.checks.forEach((check) => this.startCheck(check));
         logger.info('Health monitor restarted');
     }
 }
@@ -312,7 +314,11 @@ export function registerDefaultHealthChecks(_apiKey?: string) {
         healthMonitor.register({
             name: 'memory',
             check: async () => {
-                const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+                const memory = (
+                    performance as Performance & {
+                        memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+                    }
+                ).memory;
                 if (memory) {
                     const usedPercent = (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100;
                     return usedPercent < 90; // Alert if over 90%

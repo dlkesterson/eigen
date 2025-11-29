@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { invoke } from "@tauri-apps/api/core";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
-import { useEffect, useRef, useCallback, useState } from "react";
-import { useAppStore } from "@/store";
+import { invoke } from '@tauri-apps/api/core';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { useAppStore } from '@/store';
 
 // ============================================================================
 // Zod Schemas for Type Safety
@@ -18,174 +18,206 @@ export const SyncthingInfoSchema = z.object({
 
 export type SyncthingInfo = z.infer<typeof SyncthingInfoSchema>;
 
-export const SystemStatusSchema = z.object({
-    myID: z.string().optional(),
-    uptime: z.number().optional(),
-    allPeersConnected: z.boolean().optional(),
-    goroutines: z.number().optional(),
-    sys: z.number().optional(),
-    startTime: z.string().optional(),
-}).passthrough();
+export const SystemStatusSchema = z
+    .object({
+        myID: z.string().optional(),
+        uptime: z.number().optional(),
+        allPeersConnected: z.boolean().optional(),
+        goroutines: z.number().optional(),
+        sys: z.number().optional(),
+        startTime: z.string().optional(),
+    })
+    .passthrough();
 
-export const ConnectionInfoSchema = z.object({
-    connected: z.boolean().optional(),
-    paused: z.boolean().optional(),
-    address: z.string().optional(),
-    type: z.string().optional(),
-    clientVersion: z.string().optional(),
-    crypto: z.string().optional(),
-}).passthrough();
+export const ConnectionInfoSchema = z
+    .object({
+        connected: z.boolean().optional(),
+        paused: z.boolean().optional(),
+        address: z.string().optional(),
+        type: z.string().optional(),
+        clientVersion: z.string().optional(),
+        crypto: z.string().optional(),
+    })
+    .passthrough();
 
-export const ConnectionsSchema = z.object({
-    total: z.object({
-        at: z.string().optional(),
-        inBytesTotal: z.number().optional(),
-        outBytesTotal: z.number().optional(),
-    }).optional(),
-    connections: z.record(z.string(), ConnectionInfoSchema).optional(),
-}).passthrough();
+export const ConnectionsSchema = z
+    .object({
+        total: z
+            .object({
+                at: z.string().optional(),
+                inBytesTotal: z.number().optional(),
+                outBytesTotal: z.number().optional(),
+            })
+            .optional(),
+        connections: z.record(z.string(), ConnectionInfoSchema).optional(),
+    })
+    .passthrough();
 
 // Versioning schema
-export const VersioningConfigSchema = z.object({
-    type: z.string().optional(),
-    params: z.record(z.string(), z.string()).optional(),
-    cleanupIntervalS: z.number().optional(),
-    fsPath: z.string().optional(),
-    fsType: z.string().optional(),
-}).passthrough();
+export const VersioningConfigSchema = z
+    .object({
+        type: z.string().optional(),
+        params: z.record(z.string(), z.string()).optional(),
+        cleanupIntervalS: z.number().optional(),
+        fsPath: z.string().optional(),
+        fsType: z.string().optional(),
+    })
+    .passthrough();
 
 // Folder device reference schema
-export const FolderDeviceSchema = z.object({
-    deviceID: z.string(),
-    introducedBy: z.string().optional(),
-    encryptionPassword: z.string().optional(),
-}).passthrough();
+export const FolderDeviceSchema = z
+    .object({
+        deviceID: z.string(),
+        introducedBy: z.string().optional(),
+        encryptionPassword: z.string().optional(),
+    })
+    .passthrough();
 
-export const FolderConfigSchema = z.object({
-    id: z.string(),
-    label: z.string().optional(),
-    path: z.string().optional(),
-    paused: z.boolean().optional(),
-    type: z.string().optional(),
-    rescanIntervalS: z.number().optional(),
-    fsWatcherEnabled: z.boolean().optional(),
-    fsWatcherDelayS: z.number().optional(),
-    ignorePerms: z.boolean().optional(),
-    versioning: VersioningConfigSchema.optional(),
-    devices: z.array(FolderDeviceSchema).optional(),
-}).passthrough();
+export const FolderConfigSchema = z
+    .object({
+        id: z.string(),
+        label: z.string().optional(),
+        path: z.string().optional(),
+        paused: z.boolean().optional(),
+        type: z.string().optional(),
+        rescanIntervalS: z.number().optional(),
+        fsWatcherEnabled: z.boolean().optional(),
+        fsWatcherDelayS: z.number().optional(),
+        ignorePerms: z.boolean().optional(),
+        versioning: VersioningConfigSchema.optional(),
+        devices: z.array(FolderDeviceSchema).optional(),
+    })
+    .passthrough();
 
-export const DeviceConfigSchema = z.object({
-    deviceID: z.string(),
-    name: z.string().optional(),
-    paused: z.boolean().optional(),
-    addresses: z.array(z.string()).optional(),
-    compression: z.string().optional(),
-    introducer: z.boolean().optional(),
-    autoAcceptFolders: z.boolean().optional(),
-    maxSendKbps: z.number().optional(),
-    maxRecvKbps: z.number().optional(),
-}).passthrough();
+export const DeviceConfigSchema = z
+    .object({
+        deviceID: z.string(),
+        name: z.string().optional(),
+        paused: z.boolean().optional(),
+        addresses: z.array(z.string()).optional(),
+        compression: z.string().optional(),
+        introducer: z.boolean().optional(),
+        autoAcceptFolders: z.boolean().optional(),
+        maxSendKbps: z.number().optional(),
+        maxRecvKbps: z.number().optional(),
+    })
+    .passthrough();
 
 // Global options schema
-export const OptionsSchema = z.object({
-    listenAddresses: z.array(z.string()).optional(),
-    globalAnnounceServers: z.array(z.string()).optional(),
-    globalAnnounceEnabled: z.boolean().optional(),
-    localAnnounceEnabled: z.boolean().optional(),
-    localAnnouncePort: z.number().optional(),
-    localAnnounceMCAddr: z.string().optional(),
-    maxSendKbps: z.number().optional(),
-    maxRecvKbps: z.number().optional(),
-    reconnectionIntervalS: z.number().optional(),
-    relaysEnabled: z.boolean().optional(),
-    relayReconnectIntervalM: z.number().optional(),
-    startBrowser: z.boolean().optional(),
-    natEnabled: z.boolean().optional(),
-    natLeaseMinutes: z.number().optional(),
-    natRenewalMinutes: z.number().optional(),
-    natTimeoutSeconds: z.number().optional(),
-    urAccepted: z.number().optional(),
-    urSeen: z.number().optional(),
-    urUniqueId: z.string().optional(),
-    urURL: z.string().optional(),
-    urPostInsecurely: z.boolean().optional(),
-    urInitialDelayS: z.number().optional(),
-    autoUpgradeIntervalH: z.number().optional(),
-    upgradeToPreReleases: z.boolean().optional(),
-    keepTemporariesH: z.number().optional(),
-    cacheIgnoredFiles: z.boolean().optional(),
-    progressUpdateIntervalS: z.number().optional(),
-    limitBandwidthInLan: z.boolean().optional(),
-    minHomeDiskFree: z.object({
-        value: z.number(),
-        unit: z.string(),
-    }).optional(),
-    releasesURL: z.string().optional(),
-    alwaysLocalNets: z.array(z.string()).optional(),
-    overwriteRemoteDeviceNamesOnConnect: z.boolean().optional(),
-    tempIndexMinBlocks: z.number().optional(),
-    unackedNotificationIDs: z.array(z.string()).optional(),
-    trafficClass: z.number().optional(),
-    setLowPriority: z.boolean().optional(),
-    maxFolderConcurrency: z.number().optional(),
-    crashReportingURL: z.string().optional(),
-    crashReportingEnabled: z.boolean().optional(),
-    stunKeepaliveStartS: z.number().optional(),
-    stunKeepaliveMinS: z.number().optional(),
-    stunServers: z.array(z.string()).optional(),
-    databaseTuning: z.string().optional(),
-    maxConcurrentIncomingRequestKiB: z.number().optional(),
-    announceLANAddresses: z.boolean().optional(),
-    sendFullIndexOnUpgrade: z.boolean().optional(),
-    featureFlags: z.array(z.string()).optional(),
-    connectionLimitEnough: z.number().optional(),
-    connectionLimitMax: z.number().optional(),
-    insecureAllowOldTLSVersions: z.boolean().optional(),
-}).passthrough();
+export const OptionsSchema = z
+    .object({
+        listenAddresses: z.array(z.string()).optional(),
+        globalAnnounceServers: z.array(z.string()).optional(),
+        globalAnnounceEnabled: z.boolean().optional(),
+        localAnnounceEnabled: z.boolean().optional(),
+        localAnnouncePort: z.number().optional(),
+        localAnnounceMCAddr: z.string().optional(),
+        maxSendKbps: z.number().optional(),
+        maxRecvKbps: z.number().optional(),
+        reconnectionIntervalS: z.number().optional(),
+        relaysEnabled: z.boolean().optional(),
+        relayReconnectIntervalM: z.number().optional(),
+        startBrowser: z.boolean().optional(),
+        natEnabled: z.boolean().optional(),
+        natLeaseMinutes: z.number().optional(),
+        natRenewalMinutes: z.number().optional(),
+        natTimeoutSeconds: z.number().optional(),
+        urAccepted: z.number().optional(),
+        urSeen: z.number().optional(),
+        urUniqueId: z.string().optional(),
+        urURL: z.string().optional(),
+        urPostInsecurely: z.boolean().optional(),
+        urInitialDelayS: z.number().optional(),
+        autoUpgradeIntervalH: z.number().optional(),
+        upgradeToPreReleases: z.boolean().optional(),
+        keepTemporariesH: z.number().optional(),
+        cacheIgnoredFiles: z.boolean().optional(),
+        progressUpdateIntervalS: z.number().optional(),
+        limitBandwidthInLan: z.boolean().optional(),
+        minHomeDiskFree: z
+            .object({
+                value: z.number(),
+                unit: z.string(),
+            })
+            .optional(),
+        releasesURL: z.string().optional(),
+        alwaysLocalNets: z.array(z.string()).optional(),
+        overwriteRemoteDeviceNamesOnConnect: z.boolean().optional(),
+        tempIndexMinBlocks: z.number().optional(),
+        unackedNotificationIDs: z.array(z.string()).optional(),
+        trafficClass: z.number().optional(),
+        setLowPriority: z.boolean().optional(),
+        maxFolderConcurrency: z.number().optional(),
+        crashReportingURL: z.string().optional(),
+        crashReportingEnabled: z.boolean().optional(),
+        stunKeepaliveStartS: z.number().optional(),
+        stunKeepaliveMinS: z.number().optional(),
+        stunServers: z.array(z.string()).optional(),
+        databaseTuning: z.string().optional(),
+        maxConcurrentIncomingRequestKiB: z.number().optional(),
+        announceLANAddresses: z.boolean().optional(),
+        sendFullIndexOnUpgrade: z.boolean().optional(),
+        featureFlags: z.array(z.string()).optional(),
+        connectionLimitEnough: z.number().optional(),
+        connectionLimitMax: z.number().optional(),
+        insecureAllowOldTLSVersions: z.boolean().optional(),
+    })
+    .passthrough();
 
-export const ConfigSchema = z.object({
-    folders: z.array(FolderConfigSchema).optional(),
-    devices: z.array(DeviceConfigSchema).optional(),
-    options: OptionsSchema.optional(),
-}).passthrough();
+export const ConfigSchema = z
+    .object({
+        folders: z.array(FolderConfigSchema).optional(),
+        devices: z.array(DeviceConfigSchema).optional(),
+        options: OptionsSchema.optional(),
+    })
+    .passthrough();
 
-export const FolderStatusSchema = z.object({
-    globalFiles: z.number().optional(),
-    globalBytes: z.number().optional(),
-    localFiles: z.number().optional(),
-    localBytes: z.number().optional(),
-    needFiles: z.number().optional(),
-    needBytes: z.number().optional(),
-    state: z.string().optional(),
-    stateChanged: z.string().optional(),
-}).passthrough();
+export const FolderStatusSchema = z
+    .object({
+        globalFiles: z.number().optional(),
+        globalBytes: z.number().optional(),
+        localFiles: z.number().optional(),
+        localBytes: z.number().optional(),
+        needFiles: z.number().optional(),
+        needBytes: z.number().optional(),
+        state: z.string().optional(),
+        stateChanged: z.string().optional(),
+    })
+    .passthrough();
 
 // Ignore patterns schema
-export const IgnorePatternsSchema = z.object({
-    ignore: z.array(z.string()).optional(),
-    expanded: z.array(z.string()).optional(),
-}).passthrough();
+export const IgnorePatternsSchema = z
+    .object({
+        ignore: z.array(z.string()).optional(),
+        expanded: z.array(z.string()).optional(),
+    })
+    .passthrough();
 
 // Log entry schema
-export const LogEntrySchema = z.object({
-    when: z.string(),
-    message: z.string(),
-    level: z.number().optional(),
-}).passthrough();
+export const LogEntrySchema = z
+    .object({
+        when: z.string(),
+        message: z.string(),
+        level: z.number().optional(),
+    })
+    .passthrough();
 
-export const SystemLogsSchema = z.object({
-    messages: z.array(LogEntrySchema).optional(),
-}).passthrough();
+export const SystemLogsSchema = z
+    .object({
+        messages: z.array(LogEntrySchema).optional(),
+    })
+    .passthrough();
 
 // Event schema
-export const SyncthingEventSchema = z.object({
-    id: z.number(),
-    globalID: z.number().optional(),
-    time: z.string(),
-    type: z.string(),
-    data: z.any(),
-}).passthrough();
+export const SyncthingEventSchema = z
+    .object({
+        id: z.number(),
+        globalID: z.number().optional(),
+        time: z.string(),
+        type: z.string(),
+        data: z.any(),
+    })
+    .passthrough();
 
 // ============================================================================
 // Types
@@ -210,7 +242,7 @@ export interface AdvancedFolderOptions {
     folderId: string;
     folderLabel: string;
     folderPath: string;
-    versioningType?: "simple" | "staggered" | "trashcan" | "external" | "";
+    versioningType?: 'simple' | 'staggered' | 'trashcan' | 'external' | '';
     versioningParams?: Record<string, string>;
     rescanIntervalS?: number;
     fsWatcherEnabled?: boolean;
@@ -223,7 +255,7 @@ export interface AdvancedDeviceOptions {
     deviceId: string;
     name: string;
     addresses?: string[];
-    compression?: "metadata" | "always" | "never";
+    compression?: 'metadata' | 'always' | 'never';
     introducer?: boolean;
     autoAcceptFolders?: boolean;
     maxSendKbps?: number;
@@ -239,9 +271,9 @@ export interface AdvancedDeviceOptions {
  */
 export function useSyncthingInstallation() {
     return useQuery({
-        queryKey: ["syncthingInstallation"],
+        queryKey: ['syncthingInstallation'],
         queryFn: async () => {
-            const data = await invoke("check_syncthing_installation");
+            const data = await invoke('check_syncthing_installation');
             return SyncthingInfoSchema.parse(data);
         },
         staleTime: Infinity, // Installation status doesn't change often
@@ -256,9 +288,9 @@ export function useSystemStatus() {
     const pollingInterval = useAppStore((state) => state.pollingInterval);
 
     return useQuery({
-        queryKey: ["systemStatus"],
+        queryKey: ['systemStatus'],
         queryFn: async () => {
-            const data = await invoke("get_system_status");
+            const data = await invoke('get_system_status');
             return SystemStatusSchema.parse(data);
         },
         refetchInterval: pollingInterval,
@@ -276,9 +308,9 @@ export function useConnections() {
     const pollingInterval = useAppStore((state) => state.pollingInterval);
 
     return useQuery({
-        queryKey: ["connections"],
+        queryKey: ['connections'],
         queryFn: async () => {
-            const data = await invoke("get_connections");
+            const data = await invoke('get_connections');
             return ConnectionsSchema.parse(data);
         },
         refetchInterval: pollingInterval,
@@ -294,9 +326,9 @@ export function useConnections() {
  */
 export function useConfig() {
     return useQuery({
-        queryKey: ["config"],
+        queryKey: ['config'],
         queryFn: async () => {
-            const data = await invoke("get_config");
+            const data = await invoke('get_config');
             return ConfigSchema.parse(data);
         },
         refetchInterval: 30000, // Less frequent refresh for config
@@ -316,9 +348,9 @@ export function useFolderStatus(folderId: string) {
     const folderPollingInterval = Math.max(pollingInterval / 2, 1000);
 
     return useQuery({
-        queryKey: ["folderStatus", folderId],
+        queryKey: ['folderStatus', folderId],
         queryFn: async () => {
-            const data = await invoke("get_folder_status", { folderId });
+            const data = await invoke('get_folder_status', { folderId });
             return FolderStatusSchema.parse(data);
         },
         refetchInterval: folderPollingInterval,
@@ -340,14 +372,14 @@ export function useStartSyncthing() {
 
     return useMutation({
         mutationFn: async () => {
-            return await invoke<string>("start_syncthing_sidecar");
+            return await invoke<string>('start_syncthing_sidecar');
         },
         onSuccess: () => {
             // Wait a bit for syncthing to start, then refetch
             setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ["systemStatus"] });
-                queryClient.invalidateQueries({ queryKey: ["connections"] });
-                queryClient.invalidateQueries({ queryKey: ["config"] });
+                queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
+                queryClient.invalidateQueries({ queryKey: ['connections'] });
+                queryClient.invalidateQueries({ queryKey: ['config'] });
             }, 2000);
         },
     });
@@ -361,11 +393,11 @@ export function useStopSyncthing() {
 
     return useMutation({
         mutationFn: async () => {
-            return await invoke<string>("stop_syncthing_sidecar");
+            return await invoke<string>('stop_syncthing_sidecar');
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["systemStatus"] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -378,17 +410,17 @@ export function usePauseFolder() {
 
     return useMutation({
         mutationFn: async (folderId: string) => {
-            await invoke("pause_folder", { folderId });
+            await invoke('pause_folder', { folderId });
         },
         onMutate: async (folderId) => {
             // Cancel outgoing refetches
-            await queryClient.cancelQueries({ queryKey: ["config"] });
+            await queryClient.cancelQueries({ queryKey: ['config'] });
 
             // Snapshot previous value
-            const previousConfig = queryClient.getQueryData<Config>(["config"]);
+            const previousConfig = queryClient.getQueryData<Config>(['config']);
 
             // Optimistically update
-            queryClient.setQueryData<Config>(["config"], (old) => {
+            queryClient.setQueryData<Config>(['config'], (old) => {
                 if (!old?.folders) return old;
                 return {
                     ...old,
@@ -403,11 +435,11 @@ export function usePauseFolder() {
         onError: (_err, _folderId, context) => {
             // Rollback on error
             if (context?.previousConfig) {
-                queryClient.setQueryData(["config"], context.previousConfig);
+                queryClient.setQueryData(['config'], context.previousConfig);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
         },
     });
 }
@@ -420,14 +452,14 @@ export function useResumeFolder() {
 
     return useMutation({
         mutationFn: async (folderId: string) => {
-            await invoke("resume_folder", { folderId });
+            await invoke('resume_folder', { folderId });
         },
         onMutate: async (folderId) => {
-            await queryClient.cancelQueries({ queryKey: ["config"] });
+            await queryClient.cancelQueries({ queryKey: ['config'] });
 
-            const previousConfig = queryClient.getQueryData<Config>(["config"]);
+            const previousConfig = queryClient.getQueryData<Config>(['config']);
 
-            queryClient.setQueryData<Config>(["config"], (old) => {
+            queryClient.setQueryData<Config>(['config'], (old) => {
                 if (!old?.folders) return old;
                 return {
                     ...old,
@@ -441,11 +473,11 @@ export function useResumeFolder() {
         },
         onError: (_err, _folderId, context) => {
             if (context?.previousConfig) {
-                queryClient.setQueryData(["config"], context.previousConfig);
+                queryClient.setQueryData(['config'], context.previousConfig);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
         },
     });
 }
@@ -458,10 +490,10 @@ export function useRescanFolder() {
 
     return useMutation({
         mutationFn: async (folderId: string) => {
-            await invoke("rescan_folder", { folderId });
+            await invoke('rescan_folder', { folderId });
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["folderStatus"] });
+            queryClient.invalidateQueries({ queryKey: ['folderStatus'] });
         },
     });
 }
@@ -475,9 +507,9 @@ export function useRescanFolder() {
  */
 export function useDeviceId() {
     return useQuery({
-        queryKey: ["deviceId"],
+        queryKey: ['deviceId'],
         queryFn: async () => {
-            return await invoke<string>("get_device_id");
+            return await invoke<string>('get_device_id');
         },
         staleTime: Infinity,
         retry: 3,
@@ -492,11 +524,11 @@ export function useAddDevice() {
 
     return useMutation({
         mutationFn: async ({ deviceId, name }: { deviceId: string; name?: string }) => {
-            await invoke("add_device", { deviceId, name: name || deviceId.slice(0, 7) });
+            await invoke('add_device', { deviceId, name: name || deviceId.slice(0, 7) });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -509,11 +541,11 @@ export function useRemoveDevice() {
 
     return useMutation({
         mutationFn: async (deviceId: string) => {
-            await invoke("remove_device", { deviceId });
+            await invoke('remove_device', { deviceId });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -526,14 +558,14 @@ export function usePauseDevice() {
 
     return useMutation({
         mutationFn: async (deviceId: string) => {
-            await invoke("pause_device", { deviceId });
+            await invoke('pause_device', { deviceId });
         },
         onMutate: async (deviceId) => {
-            await queryClient.cancelQueries({ queryKey: ["config"] });
+            await queryClient.cancelQueries({ queryKey: ['config'] });
 
-            const previousConfig = queryClient.getQueryData<Config>(["config"]);
+            const previousConfig = queryClient.getQueryData<Config>(['config']);
 
-            queryClient.setQueryData<Config>(["config"], (old) => {
+            queryClient.setQueryData<Config>(['config'], (old) => {
                 if (!old?.devices) return old;
                 return {
                     ...old,
@@ -547,12 +579,12 @@ export function usePauseDevice() {
         },
         onError: (_err, _deviceId, context) => {
             if (context?.previousConfig) {
-                queryClient.setQueryData(["config"], context.previousConfig);
+                queryClient.setQueryData(['config'], context.previousConfig);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -565,14 +597,14 @@ export function useResumeDevice() {
 
     return useMutation({
         mutationFn: async (deviceId: string) => {
-            await invoke("resume_device", { deviceId });
+            await invoke('resume_device', { deviceId });
         },
         onMutate: async (deviceId) => {
-            await queryClient.cancelQueries({ queryKey: ["config"] });
+            await queryClient.cancelQueries({ queryKey: ['config'] });
 
-            const previousConfig = queryClient.getQueryData<Config>(["config"]);
+            const previousConfig = queryClient.getQueryData<Config>(['config']);
 
-            queryClient.setQueryData<Config>(["config"], (old) => {
+            queryClient.setQueryData<Config>(['config'], (old) => {
                 if (!old?.devices) return old;
                 return {
                     ...old,
@@ -586,12 +618,12 @@ export function useResumeDevice() {
         },
         onError: (_err, _deviceId, context) => {
             if (context?.previousConfig) {
-                queryClient.setQueryData(["config"], context.previousConfig);
+                queryClient.setQueryData(['config'], context.previousConfig);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -616,10 +648,10 @@ export function useAddFolder() {
             folderLabel: string;
             folderPath: string;
         }) => {
-            await invoke("add_folder", { folderId, folderLabel, folderPath });
+            await invoke('add_folder', { folderId, folderLabel, folderPath });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
         },
     });
 }
@@ -632,11 +664,11 @@ export function useRemoveFolder() {
 
     return useMutation({
         mutationFn: async (folderId: string) => {
-            await invoke("remove_folder", { folderId });
+            await invoke('remove_folder', { folderId });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["folderStatus"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['folderStatus'] });
         },
     });
 }
@@ -649,12 +681,12 @@ export function useShareFolder() {
 
     return useMutation({
         mutationFn: async ({ folderId, deviceId }: { folderId: string; deviceId: string }) => {
-            await invoke("share_folder", { folderId, deviceId });
+            await invoke('share_folder', { folderId, deviceId });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
             // Also invalidate folder status as it might change from "Up to Date" to "Syncing"
-            queryClient.invalidateQueries({ queryKey: ["folderStatus"] });
+            queryClient.invalidateQueries({ queryKey: ['folderStatus'] });
         },
     });
 }
@@ -667,14 +699,14 @@ export function useUnshareFolder() {
 
     return useMutation({
         mutationFn: async ({ folderId, deviceId }: { folderId: string; deviceId: string }) => {
-            await invoke("unshare_folder", { folderId, deviceId });
+            await invoke('unshare_folder', { folderId, deviceId });
         },
         onMutate: async ({ folderId, deviceId }) => {
-            await queryClient.cancelQueries({ queryKey: ["config"] });
+            await queryClient.cancelQueries({ queryKey: ['config'] });
 
-            const previousConfig = queryClient.getQueryData<Config>(["config"]);
+            const previousConfig = queryClient.getQueryData<Config>(['config']);
 
-            queryClient.setQueryData<Config>(["config"], (old) => {
+            queryClient.setQueryData<Config>(['config'], (old) => {
                 if (!old?.folders) return old;
                 return {
                     ...old,
@@ -692,12 +724,12 @@ export function useUnshareFolder() {
         },
         onError: (_err, _variables, context) => {
             if (context?.previousConfig) {
-                queryClient.setQueryData(["config"], context.previousConfig);
+                queryClient.setQueryData(['config'], context.previousConfig);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["folderStatus"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['folderStatus'] });
         },
     });
 }
@@ -714,7 +746,7 @@ export function useAddFolderAdvanced() {
 
     return useMutation({
         mutationFn: async (options: AdvancedFolderOptions) => {
-            await invoke("add_folder_advanced", {
+            await invoke('add_folder_advanced', {
                 folderId: options.folderId,
                 folderLabel: options.folderLabel,
                 folderPath: options.folderPath,
@@ -727,7 +759,7 @@ export function useAddFolderAdvanced() {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
         },
     });
 }
@@ -737,9 +769,9 @@ export function useAddFolderAdvanced() {
  */
 export function useFolderConfig(folderId: string) {
     return useQuery({
-        queryKey: ["folderConfig", folderId],
+        queryKey: ['folderConfig', folderId],
         queryFn: async () => {
-            const data = await invoke("get_folder_config", { folderId });
+            const data = await invoke('get_folder_config', { folderId });
             return FolderConfigSchema.parse(data);
         },
         enabled: !!folderId,
@@ -754,12 +786,18 @@ export function useUpdateFolderConfig() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ folderId, updates }: { folderId: string; updates: Partial<FolderConfig> }) => {
-            await invoke("update_folder_config", { folderId, updates });
+        mutationFn: async ({
+            folderId,
+            updates,
+        }: {
+            folderId: string;
+            updates: Partial<FolderConfig>;
+        }) => {
+            await invoke('update_folder_config', { folderId, updates });
         },
         onSuccess: (_data, { folderId }) => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["folderConfig", folderId] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['folderConfig', folderId] });
         },
     });
 }
@@ -773,9 +811,9 @@ export function useUpdateFolderConfig() {
  */
 export function useFolderIgnores(folderId: string) {
     return useQuery({
-        queryKey: ["folderIgnores", folderId],
+        queryKey: ['folderIgnores', folderId],
         queryFn: async () => {
-            const data = await invoke("get_folder_ignores", { folderId });
+            const data = await invoke('get_folder_ignores', { folderId });
             return IgnorePatternsSchema.parse(data);
         },
         enabled: !!folderId,
@@ -790,11 +828,17 @@ export function useSetFolderIgnores() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ folderId, ignorePatterns }: { folderId: string; ignorePatterns: string[] }) => {
-            await invoke("set_folder_ignores", { folderId, ignorePatterns });
+        mutationFn: async ({
+            folderId,
+            ignorePatterns,
+        }: {
+            folderId: string;
+            ignorePatterns: string[];
+        }) => {
+            await invoke('set_folder_ignores', { folderId, ignorePatterns });
         },
         onSuccess: (_data, { folderId }) => {
-            queryClient.invalidateQueries({ queryKey: ["folderIgnores", folderId] });
+            queryClient.invalidateQueries({ queryKey: ['folderIgnores', folderId] });
         },
     });
 }
@@ -808,9 +852,9 @@ export function useSetFolderIgnores() {
  */
 export function useSystemLogs(since?: string) {
     return useQuery({
-        queryKey: ["systemLogs", since],
+        queryKey: ['systemLogs', since],
         queryFn: async () => {
-            const data = await invoke("get_system_logs", { since: since || null });
+            const data = await invoke('get_system_logs', { since: since || null });
             return SystemLogsSchema.parse(data);
         },
         refetchInterval: 10000, // Refresh every 10 seconds
@@ -842,46 +886,46 @@ export function useSyncthingEvents(options?: {
         setIsPolling(true);
 
         try {
-            const data = await invoke<SyncthingEvent[]>("get_events", {
+            const data = await invoke<SyncthingEvent[]>('get_events', {
                 since: lastEventIdRef.current,
                 limit: 100,
                 timeout: 30,
             });
 
             if (Array.isArray(data) && data.length > 0) {
-                const parsedEvents = data.map(e => SyncthingEventSchema.parse(e));
+                const parsedEvents = data.map((e) => SyncthingEventSchema.parse(e));
 
                 // Update last event ID
-                const maxId = Math.max(...parsedEvents.map(e => e.id));
+                const maxId = Math.max(...parsedEvents.map((e) => e.id));
                 if (maxId > lastEventIdRef.current) {
                     lastEventIdRef.current = maxId;
                 }
 
-                setEvents(prev => [...prev.slice(-100), ...parsedEvents]);
+                setEvents((prev) => [...prev.slice(-100), ...parsedEvents]);
 
                 // Call event handler for each event
-                parsedEvents.forEach(event => {
+                parsedEvents.forEach((event) => {
                     options?.onEvent?.(event);
 
                     // Invalidate queries based on event type
                     switch (event.type) {
-                        case "StateChanged":
-                        case "FolderCompletion":
-                        case "FolderSummary":
-                            queryClient.invalidateQueries({ queryKey: ["folderStatus"] });
+                        case 'StateChanged':
+                        case 'FolderCompletion':
+                        case 'FolderSummary':
+                            queryClient.invalidateQueries({ queryKey: ['folderStatus'] });
                             break;
-                        case "DeviceConnected":
-                        case "DeviceDisconnected":
-                        case "DevicePaused":
-                        case "DeviceResumed":
-                            queryClient.invalidateQueries({ queryKey: ["connections"] });
+                        case 'DeviceConnected':
+                        case 'DeviceDisconnected':
+                        case 'DevicePaused':
+                        case 'DeviceResumed':
+                            queryClient.invalidateQueries({ queryKey: ['connections'] });
                             break;
-                        case "ConfigSaved":
-                            queryClient.invalidateQueries({ queryKey: ["config"] });
+                        case 'ConfigSaved':
+                            queryClient.invalidateQueries({ queryKey: ['config'] });
                             break;
-                        case "ItemStarted":
-                        case "ItemFinished":
-                            queryClient.invalidateQueries({ queryKey: ["folderStatus"] });
+                        case 'ItemStarted':
+                        case 'ItemFinished':
+                            queryClient.invalidateQueries({ queryKey: ['folderStatus'] });
                             break;
                     }
                 });
@@ -890,16 +934,22 @@ export function useSyncthingEvents(options?: {
             // Only log actual errors, not aborts or empty responses
             const isAbortError = error instanceof DOMException && error.name === 'AbortError';
             const isNullish = error === null || error === undefined;
-            const isEmptyError = error && typeof error === 'object' &&
-                (Object.keys(error).length === 0 || JSON.stringify(error) === '{}');
+            const isEmptyError =
+                error &&
+                typeof error === 'object' &&
+                !Array.isArray(error) &&
+                (Object.keys(error as object).length === 0 || JSON.stringify(error) === '{}');
 
             // Also check for timeout errors which are expected during long polling
             const errorStr = String(error);
             const isTimeoutError = errorStr.includes('timeout') || errorStr.includes('Timeout');
 
-            if (!isAbortError && !isEmptyError && !isNullish && !isTimeoutError) {
-                console.error("Event polling error:", error);
+            // Skip logging for expected non-error conditions
+            if (isAbortError || isEmptyError || isNullish || isTimeoutError) {
+                return;
             }
+
+            console.error('Event polling error:', error);
         } finally {
             setIsPolling(false);
         }
@@ -943,7 +993,7 @@ export function useAddDeviceAdvanced() {
 
     return useMutation({
         mutationFn: async (options: AdvancedDeviceOptions) => {
-            await invoke("add_device_advanced", {
+            await invoke('add_device_advanced', {
                 deviceId: options.deviceId,
                 name: options.name,
                 addresses: options.addresses || null,
@@ -955,8 +1005,8 @@ export function useAddDeviceAdvanced() {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -966,9 +1016,9 @@ export function useAddDeviceAdvanced() {
  */
 export function useDeviceConfig(deviceId: string) {
     return useQuery({
-        queryKey: ["deviceConfig", deviceId],
+        queryKey: ['deviceConfig', deviceId],
         queryFn: async () => {
-            const data = await invoke("get_device_config", { deviceId });
+            const data = await invoke('get_device_config', { deviceId });
             return DeviceConfigSchema.parse(data);
         },
         enabled: !!deviceId,
@@ -983,13 +1033,19 @@ export function useUpdateDeviceConfig() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ deviceId, updates }: { deviceId: string; updates: Partial<DeviceConfig> }) => {
-            await invoke("update_device_config", { deviceId, updates });
+        mutationFn: async ({
+            deviceId,
+            updates,
+        }: {
+            deviceId: string;
+            updates: Partial<DeviceConfig>;
+        }) => {
+            await invoke('update_device_config', { deviceId, updates });
         },
         onSuccess: (_data, { deviceId }) => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
-            queryClient.invalidateQueries({ queryKey: ["deviceConfig", deviceId] });
-            queryClient.invalidateQueries({ queryKey: ["connections"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['deviceConfig', deviceId] });
+            queryClient.invalidateQueries({ queryKey: ['connections'] });
         },
     });
 }
@@ -1006,14 +1062,14 @@ export function useRestartSyncthing() {
 
     return useMutation({
         mutationFn: async () => {
-            await invoke("restart_syncthing");
+            await invoke('restart_syncthing');
         },
         onSuccess: () => {
             // Wait for restart and then refetch everything
             setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ["systemStatus"] });
-                queryClient.invalidateQueries({ queryKey: ["config"] });
-                queryClient.invalidateQueries({ queryKey: ["connections"] });
+                queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
+                queryClient.invalidateQueries({ queryKey: ['config'] });
+                queryClient.invalidateQueries({ queryKey: ['connections'] });
             }, 3000);
         },
     });
@@ -1029,7 +1085,7 @@ export function useRestartSyncthing() {
 export function useOpenFolderInExplorer() {
     return useMutation({
         mutationFn: async (folderPath: string) => {
-            await invoke("open_folder_in_explorer", { folderPath });
+            await invoke('open_folder_in_explorer', { folderPath });
         },
     });
 }
@@ -1039,11 +1095,11 @@ export function useOpenFolderInExplorer() {
  */
 export function useBrowseFolder(folderId: string, prefix?: string) {
     return useQuery({
-        queryKey: ["browseFolder", folderId, prefix],
+        queryKey: ['browseFolder', folderId, prefix],
         queryFn: async () => {
-            const data = await invoke("browse_folder", {
+            const data = await invoke('browse_folder', {
                 folderId,
-                prefix: prefix || null
+                prefix: prefix || null,
             });
             return data as Record<string, unknown>[];
         },
@@ -1068,9 +1124,9 @@ export interface ConflictFile {
  */
 export function useScanConflicts(folderPath: string) {
     return useQuery({
-        queryKey: ["conflicts", folderPath],
+        queryKey: ['conflicts', folderPath],
         queryFn: async () => {
-            const data = await invoke<ConflictFile[]>("scan_for_conflicts", { folderPath });
+            const data = await invoke<ConflictFile[]>('scan_for_conflicts', { folderPath });
             return data;
         },
         enabled: !!folderPath,
@@ -1085,11 +1141,17 @@ export function useDeleteConflict() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ folderPath, conflictFile }: { folderPath: string; conflictFile: string }) => {
-            await invoke("delete_conflict_file", { folderPath, conflictFile });
+        mutationFn: async ({
+            folderPath,
+            conflictFile,
+        }: {
+            folderPath: string;
+            conflictFile: string;
+        }) => {
+            await invoke('delete_conflict_file', { folderPath, conflictFile });
         },
         onSuccess: (_data, { folderPath }) => {
-            queryClient.invalidateQueries({ queryKey: ["conflicts", folderPath] });
+            queryClient.invalidateQueries({ queryKey: ['conflicts', folderPath] });
         },
     });
 }
@@ -1110,10 +1172,10 @@ export function useResolveConflictKeepConflict() {
             originalFile: string;
             conflictFile: string;
         }) => {
-            await invoke("resolve_conflict_keep_conflict", { folderPath, originalFile, conflictFile });
+            await invoke('resolve_conflict_keep_conflict', { folderPath, originalFile, conflictFile });
         },
         onSuccess: (_data, { folderPath }) => {
-            queryClient.invalidateQueries({ queryKey: ["conflicts", folderPath] });
+            queryClient.invalidateQueries({ queryKey: ['conflicts', folderPath] });
         },
     });
 }
@@ -1136,11 +1198,11 @@ export interface VersionEntry {
  */
 export function useBrowseVersions(folderPath: string, prefix?: string) {
     return useQuery({
-        queryKey: ["versions", folderPath, prefix],
+        queryKey: ['versions', folderPath, prefix],
         queryFn: async () => {
-            const data = await invoke<VersionEntry[]>("browse_versions", {
+            const data = await invoke<VersionEntry[]>('browse_versions', {
                 folderPath,
-                prefix: prefix || null
+                prefix: prefix || null,
             });
             return data;
         },
@@ -1167,16 +1229,16 @@ export function useRestoreVersion() {
             originalName: string;
             overwrite?: boolean;
         }) => {
-            await invoke("restore_version", {
+            await invoke('restore_version', {
                 folderPath,
                 versionPath,
                 originalName,
-                overwrite
+                overwrite,
             });
         },
         onSuccess: (_data, { folderPath }) => {
-            queryClient.invalidateQueries({ queryKey: ["versions", folderPath] });
-            queryClient.invalidateQueries({ queryKey: ["browseFolder"] });
+            queryClient.invalidateQueries({ queryKey: ['versions', folderPath] });
+            queryClient.invalidateQueries({ queryKey: ['browseFolder'] });
         },
     });
 }
@@ -1193,10 +1255,10 @@ export function useUpdateOptions() {
 
     return useMutation({
         mutationFn: async (options: Partial<Options>) => {
-            await invoke("update_options", { options });
+            await invoke('update_options', { options });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["config"] });
+            queryClient.invalidateQueries({ queryKey: ['config'] });
         },
     });
 }
@@ -1221,4 +1283,3 @@ export function useSyncthingLifecycle() {
         connectionError: isError ? error : null,
     };
 }
-

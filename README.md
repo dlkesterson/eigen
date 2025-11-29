@@ -13,6 +13,7 @@
 ## Tech Stack
 
 ### Frontend
+
 - **Next.js 15** - React framework with static export
 - **Tailwind CSS** - Utility-first styling
 - **TanStack Query** - Server state management
@@ -21,6 +22,7 @@
 - **Lucide Icons** - Beautiful icons
 
 ### Backend
+
 - **Tauri v2** - Rust-based desktop framework
 - **Reqwest** - HTTP client for Syncthing API
 - **Tokio** - Async runtime
@@ -101,18 +103,21 @@ User UI ← React Component ← TanStack Query ← Tauri IPC ← Rust Backend �
 ## Features
 
 ### Dashboard
+
 - Real-time sync status
 - Network topology visualization
 - Upload/download statistics
 - Folder and device overview
 
 ### Folders
+
 - View all synced folders
 - Pause/resume sync
 - Force rescan
 - Sync status indicators
 
 ### Devices
+
 - Connected device list
 - Connection status
 - Device information

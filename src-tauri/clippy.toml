@@ -1,0 +1,11 @@
+# Clippy configuration for the Tauri project
+# This file configures Clippy lints for the project
+# Run with: cargo clippy -- -D warnings
+
+# Allow common patterns in Tauri apps
+allow-dbg-in-tests = true
+
+# Configure lint behavior
+avoid-breaking-exported-api = true
+cognitive-complexity-threshold = 25
+msrv = "1.70.0"

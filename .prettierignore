@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Package manager files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# IDE/Editor
+.vscode/
+.idea/
+
+# Other
+*.min.js
+*.min.css
+coverage/

@@ -48,8 +48,8 @@ class Logger {
         // Console output with colors (works in browser and Node.js dev mode)
         const colors = {
             debug: '\x1b[36m', // cyan
-            info: '\x1b[32m',  // green
-            warn: '\x1b[33m',  // yellow
+            info: '\x1b[32m', // green
+            warn: '\x1b[33m', // yellow
             error: '\x1b[31m', // red
         };
         const reset = '\x1b[0m';
@@ -66,15 +66,22 @@ class Logger {
                 warn: 'color: #eab308',
                 error: 'color: #ef4444',
             };
+            // Filter out undefined values from context and only include if non-empty
+            const filteredContext = context
+                ? Object.fromEntries(Object.entries(context).filter(([, v]) => v !== undefined))
+                : null;
+            const hasContext = filteredContext && Object.keys(filteredContext).length > 0;
             console[level === 'debug' ? 'log' : level](
                 `%c[${level.toUpperCase()}] ${timestamp}`,
                 browserColors[level],
                 message,
-                context || ''
+                ...(hasContext ? [filteredContext] : [])
             );
         } else {
             // Node.js
-            console.log(`${colors[level]}[${level.toUpperCase()}] ${timestamp}${reset} ${message}${contextStr}`);
+            console.log(
+                `${colors[level]}[${level.toUpperCase()}] ${timestamp}${reset} ${message}${contextStr}`
+            );
         }
 
         // Notify listeners
@@ -129,7 +136,7 @@ class Logger {
     }
 
     private notifyListeners() {
-        this.listeners.forEach(listener => {
+        this.listeners.forEach((listener) => {
             try {
                 listener();
             } catch (e) {
@@ -140,7 +147,7 @@ class Logger {
 
     // Get logs by level
     getLogsByLevel(level: LogLevel): LogEntry[] {
-        return this.history.filter(entry => entry.level === level);
+        return this.history.filter((entry) => entry.level === level);
     }
 
     // Get recent logs
@@ -150,12 +157,12 @@ class Logger {
 
     // Get error count
     getErrorCount(): number {
-        return this.history.filter(entry => entry.level === 'error').length;
+        return this.history.filter((entry) => entry.level === 'error').length;
     }
 
     // Get warning count
     getWarningCount(): number {
-        return this.history.filter(entry => entry.level === 'warn').length;
+        return this.history.filter((entry) => entry.level === 'warn').length;
     }
 }
 
