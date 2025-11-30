@@ -9,7 +9,8 @@ import {
   useResumeDevice,
   useSystemStatus,
 } from '@/hooks/useSyncthing';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle, CardDescription, Card } from '@/components/ui/card';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,12 +84,19 @@ function DeviceCard({
   const isServer = connectionType.includes('server');
 
   return (
-    <Card
+    <SpotlightCard
       className={cn(
-        'group border-border bg-card/50 backdrop-blur-md transition-all',
+        'group transition-all',
         isPaused && 'opacity-60',
         isConnected && 'border-emerald-500/30'
       )}
+      spotlightColor={
+        isConnected
+          ? 'rgba(16, 185, 129, 0.15)'
+          : isLocalDevice
+            ? 'rgba(139, 92, 246, 0.15)'
+            : undefined
+      }
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -219,7 +227,7 @@ function DeviceCard({
           )}
         </div>
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   useOpenFolderInExplorer,
   useBrowseFolder,
@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useSyncthing';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { QuickLook, useQuickLook } from '@/components/quick-look';
 import {
   FolderOpen,
   X,
@@ -78,7 +79,9 @@ export function FileBrowser({
 }: FileBrowserProps) {
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [showVersions, setShowVersions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
+  const quickLook = useQuickLook();
   const openInExplorer = useOpenFolderInExplorer();
   const restoreVersion = useRestoreVersion();
 
@@ -94,17 +97,73 @@ export function FileBrowser({
     refetch: refetchVersions,
   } = useBrowseVersions(folderPath, currentPath.length > 0 ? currentPath.join('/') : undefined);
 
+  // Sort entries for consistent indexing
+  const sortedEntries = [
+    ...(showVersions
+      ? (versions as VersionEntry[] | undefined) || []
+      : (contents as FileEntry[] | undefined) || []),
+  ].sort((a, b) => {
+    if (a.type !== b.type) {
+      return a.type === 'directory' ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  // Keyboard navigation and Quick Look
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && selectedIndex !== null && sortedEntries[selectedIndex]) {
+        e.preventDefault();
+        const entry = sortedEntries[selectedIndex];
+        if (entry.type === 'file') {
+          const filePath =
+            currentPath.length > 0
+              ? `${folderPath}/${currentPath.join('/')}/${entry.name}`
+              : `${folderPath}/${entry.name}`;
+          quickLook.openQuickLook({
+            name: entry.name,
+            path: filePath,
+            size: entry.size,
+          });
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev === null ? 0 : Math.min(prev + 1, sortedEntries.length - 1)
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev === null ? 0 : Math.max(prev - 1, 0)));
+      } else if (e.key === 'Enter' && selectedIndex !== null) {
+        const entry = sortedEntries[selectedIndex];
+        if (entry?.type === 'directory') {
+          setCurrentPath([...currentPath, entry.name]);
+          setSelectedIndex(null);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, selectedIndex, sortedEntries, currentPath, folderPath, quickLook]);
+
+  // Reset selection when path changes
+  useEffect(() => {
+    setSelectedIndex(null);
+  }, [currentPath]);
+
   if (!open) return null;
 
   const isLoading = showVersions ? isLoadingVersions : isLoadingFiles;
   const refetch = showVersions ? refetchVersions : refetchFiles;
-  const fileEntries = showVersions
-    ? (versions as VersionEntry[] | undefined) || []
-    : (contents as FileEntry[] | undefined) || [];
+  const fileEntries = sortedEntries;
 
   const handleNavigate = (entry: FileEntry | VersionEntry) => {
     if (entry.type === 'directory') {
       setCurrentPath([...currentPath, entry.name]);
+      setSelectedIndex(null);
     }
   };
 
@@ -271,89 +330,113 @@ export function FileBrowser({
               </div>
             ) : (
               <div className="divide-border/30 divide-y">
-                {/* Directories first, then files, both alphabetically sorted */}
-                {[...fileEntries]
-                  .sort((a, b) => {
-                    if (a.type !== b.type) {
-                      return a.type === 'directory' ? -1 : 1;
-                    }
-                    return a.name.localeCompare(b.name);
-                  })
-                  .map((entry, index) => {
-                    const versionEntry = entry as VersionEntry;
-                    const isVersionFile = showVersions && entry.type === 'file';
+                {/* Already sorted in sortedEntries */}
+                {fileEntries.map((entry, index) => {
+                  const versionEntry = entry as VersionEntry;
+                  const isVersionFile = showVersions && entry.type === 'file';
+                  const isSelected = selectedIndex === index;
 
-                    return (
-                      <div
-                        key={index}
-                        className={cn(
-                          'hover:bg-muted/30 group flex items-center gap-3 px-4 py-2 transition-colors',
-                          entry.type === 'directory' && 'cursor-pointer'
-                        )}
-                        onClick={() => entry.type === 'directory' && handleNavigate(entry)}
-                      >
-                        {entry.type === 'directory' ? (
-                          <Folder className="h-5 w-5 shrink-0 text-blue-400" />
-                        ) : showVersions ? (
-                          <Clock className="h-5 w-5 shrink-0 text-amber-400" />
-                        ) : (
-                          <File className="text-muted-foreground h-5 w-5 shrink-0" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {showVersions && versionEntry.originalName
-                              ? versionEntry.originalName
-                              : entry.name}
+                  return (
+                    <div
+                      key={index}
+                      className={cn(
+                        'group flex items-center gap-3 px-4 py-2 transition-colors',
+                        entry.type === 'directory' && 'cursor-pointer',
+                        isSelected ? 'bg-primary/20' : 'hover:bg-muted/30'
+                      )}
+                      onClick={() => {
+                        setSelectedIndex(index);
+                        if (entry.type === 'directory') {
+                          handleNavigate(entry);
+                        }
+                      }}
+                      onDoubleClick={() => {
+                        if (entry.type === 'file') {
+                          const filePath =
+                            currentPath.length > 0
+                              ? `${folderPath}/${currentPath.join('/')}/${entry.name}`
+                              : `${folderPath}/${entry.name}`;
+                          quickLook.openQuickLook({
+                            name: entry.name,
+                            path: filePath,
+                            size: entry.size,
+                          });
+                        }
+                      }}
+                    >
+                      {entry.type === 'directory' ? (
+                        <Folder className="h-5 w-5 shrink-0 text-blue-400" />
+                      ) : showVersions ? (
+                        <Clock className="h-5 w-5 shrink-0 text-amber-400" />
+                      ) : (
+                        <File className="text-muted-foreground h-5 w-5 shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {showVersions && versionEntry.originalName
+                            ? versionEntry.originalName
+                            : entry.name}
+                        </p>
+                        {isVersionFile && versionEntry.versionTime && (
+                          <p className="text-xs text-amber-500/70">
+                            Version from {versionEntry.versionTime}
                           </p>
-                          {isVersionFile && versionEntry.versionTime && (
-                            <p className="text-xs text-amber-500/70">
-                              Version from {versionEntry.versionTime}
-                            </p>
-                          )}
-                        </div>
-                        {entry.size !== undefined && entry.type === 'file' && (
-                          <span className="text-muted-foreground text-xs">
-                            {formatBytes(entry.size)}
-                          </span>
-                        )}
-                        {entry.modTime && !isVersionFile && (
-                          <span className="text-muted-foreground hidden text-xs sm:block">
-                            {formatDate(entry.modTime)}
-                          </span>
-                        )}
-                        {isVersionFile && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-amber-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-400"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRestoreVersion(versionEntry);
-                            }}
-                            disabled={restoreVersion.isPending}
-                          >
-                            <RotateCcw className="mr-1 h-4 w-4" />
-                            Restore
-                          </Button>
-                        )}
-                        {entry.type === 'directory' && (
-                          <ChevronRight className="text-muted-foreground h-4 w-4" />
                         )}
                       </div>
-                    );
-                  })}
+                      {entry.size !== undefined && entry.type === 'file' && (
+                        <span className="text-muted-foreground text-xs">
+                          {formatBytes(entry.size)}
+                        </span>
+                      )}
+                      {entry.modTime && !isVersionFile && (
+                        <span className="text-muted-foreground hidden text-xs sm:block">
+                          {formatDate(entry.modTime)}
+                        </span>
+                      )}
+                      {isVersionFile && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRestoreVersion(versionEntry);
+                          }}
+                          disabled={restoreVersion.isPending}
+                        >
+                          <RotateCcw className="mr-1 h-4 w-4" />
+                          Restore
+                        </Button>
+                      )}
+                      {entry.type === 'directory' && (
+                        <ChevronRight className="text-muted-foreground h-4 w-4" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </CardContent>
 
         <div className="border-border/50 text-muted-foreground flex items-center justify-between border-t p-3 text-xs">
-          <span>{fileEntries.length} items</span>
+          <span>{fileEntries.length} items • Press Space to preview</span>
           <span className="max-w-[300px] truncate" title={folderPath}>
             {folderPath}
           </span>
         </div>
       </Card>
+
+      {/* Quick Look Preview */}
+      {quickLook.selectedFile && (
+        <QuickLook
+          open={quickLook.isOpen}
+          onClose={quickLook.closeQuickLook}
+          fileName={quickLook.selectedFile.name}
+          filePath={quickLook.selectedFile.path}
+          fileSize={quickLook.selectedFile.size}
+        />
+      )}
     </div>
   );
 }

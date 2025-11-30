@@ -4,6 +4,7 @@ import { useSystemStatus, useConnections } from '@/hooks/useSyncthing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Counter } from '@/components/ui/counter';
 import { formatUptime, formatBytes } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
@@ -33,13 +34,17 @@ const cardVariants = {
 function StatCard({
   title,
   value,
+  numericValue,
+  formattingFn,
   icon: Icon,
   isLoading,
   badge,
   index = 0,
 }: {
   title: string;
-  value: string;
+  value?: string;
+  numericValue?: number;
+  formattingFn?: (value: number) => string;
   icon: React.ComponentType<{ className?: string }>;
   isLoading: boolean;
   badge?: { label: string; variant: 'success' | 'warning' | 'destructive' };
@@ -66,19 +71,24 @@ function StatCard({
             <Skeleton className="h-8 w-24" />
           ) : (
             <div className="flex items-center gap-2">
-              <motion.div
-                className="text-foreground text-2xl font-bold"
-                key={value}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 500,
-                  damping: 30,
-                }}
-              >
-                {value}
-              </motion.div>
+              <div className="text-foreground text-2xl font-bold">
+                {numericValue !== undefined && formattingFn ? (
+                  <Counter value={numericValue} formattingFn={formattingFn} />
+                ) : (
+                  <motion.span
+                    key={value}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 500,
+                      damping: 30,
+                    }}
+                  >
+                    {value}
+                  </motion.span>
+                )}
+              </div>
               {badge && (
                 <Badge variant={badge.variant} className="text-xs">
                   {badge.label}
@@ -150,14 +160,16 @@ export function StatsOverview() {
       />
       <StatCard
         title="Downloaded"
-        value={formatBytes(inBytes)}
+        numericValue={inBytes}
+        formattingFn={formatBytes}
         icon={ArrowDownToLine}
         isLoading={isLoading}
         index={4}
       />
       <StatCard
         title="Uploaded"
-        value={formatBytes(outBytes)}
+        numericValue={outBytes}
+        formattingFn={formatBytes}
         icon={ArrowUpFromLine}
         isLoading={isLoading}
         index={5}

@@ -12,7 +12,8 @@ import {
   useUnshareFolder,
   useSystemStatus,
 } from '@/hooks/useSyncthing';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle, CardDescription, Card } from '@/components/ui/card';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -146,11 +147,15 @@ function FolderCard({
   };
 
   return (
-    <Card
-      className={cn(
-        'border-border bg-card/50 backdrop-blur-md transition-all',
-        isPaused && 'opacity-60'
-      )}
+    <SpotlightCard
+      className={cn('transition-all', isPaused && 'opacity-60')}
+      spotlightColor={
+        isSyncing
+          ? 'rgba(234, 179, 8, 0.15)'
+          : needsSync
+            ? 'rgba(234, 179, 8, 0.1)'
+            : 'rgba(99, 102, 241, 0.15)'
+      }
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -323,7 +328,7 @@ function FolderCard({
           </>
         )}
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }
 

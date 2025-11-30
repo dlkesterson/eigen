@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/store';
 import {
   useSyncthingInstallation,
@@ -302,7 +302,7 @@ function NetworkSettings() {
   const updateOptions = useUpdateOptions();
 
   const [localOptions, setLocalOptions] = useState<Partial<Options>>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Initialize local state from config
   useEffect(() => {
@@ -315,23 +315,37 @@ function NetworkSettings() {
         maxRecvKbps: config.options.maxRecvKbps,
         listenAddresses: config.options.listenAddresses,
       });
-      setHasChanges(false);
     }
   }, [config?.options]);
 
+  // Auto-save function with debounce
+  const autoSave = useCallback(
+    async (options: Partial<Options>) => {
+      try {
+        setIsSaving(true);
+        await updateOptions.mutateAsync(options);
+        toast.success('Settings auto-saved', { duration: 1500 });
+      } catch {
+        toast.error('Failed to save settings');
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [updateOptions]
+  );
+
   const updateField = <K extends keyof Options>(key: K, value: Options[K]) => {
-    setLocalOptions((prev) => ({ ...prev, [key]: value }));
-    setHasChanges(true);
+    const newOptions = { ...localOptions, [key]: value };
+    setLocalOptions(newOptions);
+    // Auto-save toggle changes immediately
+    if (typeof value === 'boolean') {
+      autoSave(newOptions);
+    }
   };
 
-  const handleSave = async () => {
-    try {
-      await updateOptions.mutateAsync(localOptions);
-      toast.success('Network settings saved');
-      setHasChanges(false);
-    } catch {
-      toast.error('Failed to save network settings');
-    }
+  // Auto-save on blur for text/number inputs
+  const handleBlur = () => {
+    autoSave(localOptions);
   };
 
   if (isLoading) {
@@ -414,6 +428,7 @@ function NetworkSettings() {
               type="number"
               value={localOptions.maxSendKbps ?? 0}
               onChange={(e) => updateField('maxSendKbps', parseInt(e.target.value) || 0)}
+              onBlur={handleBlur}
               className="border-border bg-secondary text-foreground focus:border-primary mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden"
               placeholder="0 = unlimited"
               min={0}
@@ -425,6 +440,7 @@ function NetworkSettings() {
               type="number"
               value={localOptions.maxRecvKbps ?? 0}
               onChange={(e) => updateField('maxRecvKbps', parseInt(e.target.value) || 0)}
+              onBlur={handleBlur}
               className="border-border bg-secondary text-foreground focus:border-primary mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden"
               placeholder="0 = unlimited"
               min={0}
@@ -447,6 +463,7 @@ function NetworkSettings() {
               .filter(Boolean);
             updateField('listenAddresses', addresses.length > 0 ? addresses : ['default']);
           }}
+          onBlur={handleBlur}
           className="border-border bg-secondary text-foreground focus:border-primary mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden"
           placeholder="default, tcp://0.0.0.0:22000"
         />
@@ -455,27 +472,12 @@ function NetworkSettings() {
         </p>
       </div>
 
-      {/* Save Button */}
-      {hasChanges && (
-        <Button
-          variant="default"
-          size="sm"
-          onClick={handleSave}
-          disabled={updateOptions.isPending}
-          className="bg-primary hover:bg-primary/90 w-full"
-        >
-          {updateOptions.isPending ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
-          )}
-        </Button>
+      {/* Auto-saving indicator */}
+      {isSaving && (
+        <div className="text-muted-foreground flex items-center gap-2 text-xs">
+          <RefreshCw className="h-3 w-3 animate-spin" />
+          Saving...
+        </div>
       )}
     </div>
   );
