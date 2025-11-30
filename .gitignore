@@ -46,3 +46,4 @@ coverage/
 
 src-tauri/binaries/
 repomix-output.xml
+tsconfig.tsbuildinfo
