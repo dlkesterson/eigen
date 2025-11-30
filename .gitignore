@@ -36,6 +36,7 @@ gen/schemas/
 # Cache
 .cache/
 .eslintcache
+*.tsbuildinfo
 
 # Testing
 coverage/
