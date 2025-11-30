@@ -1,8 +1,8 @@
 use crate::{SyncthingError, SyncthingState};
-use tauri::State;
-use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
 use serde::Serialize;
+use tauri::AppHandle;
+use tauri::State;
+use tauri_plugin_shell::ShellExt;
 
 /// Information about Syncthing installation
 #[derive(Debug, Serialize)]
@@ -21,11 +21,8 @@ pub fn check_syncthing_installation() -> SyncthingInfo {
     match Command::new("syncthing").arg("--version").output() {
         Ok(output) => {
             let version_str = String::from_utf8_lossy(&output.stdout);
-            let version = version_str
-                .lines()
-                .next()
-                .map(|s| s.to_string());
-            
+            let version = version_str.lines().next().map(|s| s.to_string());
+
             // Try to get the path
             let path = Command::new("which")
                 .arg("syncthing")
@@ -33,16 +30,20 @@ pub fn check_syncthing_installation() -> SyncthingInfo {
                 .ok()
                 .and_then(|o| {
                     let p = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                    if p.is_empty() { None } else { Some(p) }
+                    if p.is_empty() {
+                        None
+                    } else {
+                        Some(p)
+                    }
                 });
-            
+
             SyncthingInfo {
                 installed: true,
                 version,
                 path,
                 bundled: false,
             }
-        }
+        },
         Err(_) => SyncthingInfo {
             installed: true, // Bundled sidecar is always available
             version: Some("bundled".to_string()),
@@ -58,18 +59,22 @@ pub async fn start_syncthing_sidecar(
     app: AppHandle,
     state: State<'_, SyncthingState>,
 ) -> Result<String, SyncthingError> {
-    let mut child_guard = state.sidecar_child.lock().map_err(|e| {
-        SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e))
-    })?;
+    let mut child_guard = state
+        .sidecar_child
+        .lock()
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e)))?;
 
     if child_guard.is_some() {
         return Ok("Syncthing already running".into());
     }
 
     // Use the bundled sidecar
-    let sidecar_command = app.shell()
+    let sidecar_command = app
+        .shell()
         .sidecar("syncthing")
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to create sidecar command: {}", e)))?
+        .map_err(|e| {
+            SyncthingError::ProcessError(format!("Failed to create sidecar command: {}", e))
+        })?
         .args([
             "-no-browser",
             "-no-restart",
@@ -77,9 +82,9 @@ pub async fn start_syncthing_sidecar(
             &format!("-gui-address={}:{}", state.config.host, state.config.port),
         ]);
 
-    let (_rx, child) = sidecar_command
-        .spawn()
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {}", e)))?;
+    let (_rx, child) = sidecar_command.spawn().map_err(|e| {
+        SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {}", e))
+    })?;
 
     *child_guard = Some(child);
     Ok("Syncthing sidecar started successfully".into())
@@ -90,9 +95,10 @@ pub async fn start_syncthing_sidecar(
 pub async fn stop_syncthing_sidecar(
     state: State<'_, SyncthingState>,
 ) -> Result<String, SyncthingError> {
-    let mut child_guard = state.sidecar_child.lock().map_err(|e| {
-        SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e))
-    })?;
+    let mut child_guard = state
+        .sidecar_child
+        .lock()
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e)))?;
 
     if let Some(child) = child_guard.take() {
         child.kill().map_err(|e| {
@@ -189,7 +195,7 @@ pub async fn update_options(
     options: serde_json::Value,
 ) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
-    
+
     // First get the current config
     let get_url = format!(
         "http://{}:{}/rest/config",
@@ -213,10 +219,9 @@ pub async fn update_options(
         current_config.get("options"),
     ) {
         let mut new_options = current_options.clone();
-        if let (Some(opts_obj), Some(updates_obj)) = (
-            new_options.as_object_mut(),
-            options.as_object(),
-        ) {
+        if let (Some(opts_obj), Some(updates_obj)) =
+            (new_options.as_object_mut(), options.as_object())
+        {
             for (key, value) in updates_obj {
                 opts_obj.insert(key.clone(), value.clone());
             }
@@ -385,9 +390,7 @@ pub fn get_api_config(state: State<'_, SyncthingState>) -> (String, u16) {
 
 /// Get this device's ID
 #[tauri::command]
-pub async fn get_device_id(
-    state: State<'_, SyncthingState>,
-) -> Result<String, SyncthingError> {
+pub async fn get_device_id(state: State<'_, SyncthingState>) -> Result<String, SyncthingError> {
     let client = reqwest::Client::new();
     let url = format!(
         "http://{}:{}/rest/system/status",
@@ -420,13 +423,13 @@ pub async fn add_device(
     name: String,
 ) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
-    
+
     // First, get current config
     let config_url = format!(
         "http://{}:{}/rest/config",
         state.config.host, state.config.port
     );
-    
+
     let res = client
         .get(&config_url)
         .header("X-API-Key", &state.config.api_key)
@@ -507,13 +510,13 @@ pub async fn add_folder(
     folder_path: String,
 ) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
-    
+
     // First, get current config
     let config_url = format!(
         "http://{}:{}/rest/config",
         state.config.host, state.config.port
     );
-    
+
     let res = client
         .get(&config_url)
         .header("X-API-Key", &state.config.api_key)
@@ -709,12 +712,12 @@ pub async fn add_folder_advanced(
     ignore_perms: Option<bool>,
 ) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
-    
+
     let config_url = format!(
         "http://{}:{}/rest/config",
         state.config.host, state.config.port
     );
-    
+
     let res = client
         .get(&config_url)
         .header("X-API-Key", &state.config.api_key)
@@ -870,7 +873,9 @@ pub async fn update_folder_config(
         .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
 
     // Merge updates into folder config
-    if let (Some(config_obj), Some(updates_obj)) = (folder_config.as_object_mut(), updates.as_object()) {
+    if let (Some(config_obj), Some(updates_obj)) =
+        (folder_config.as_object_mut(), updates.as_object())
+    {
         for (key, value) in updates_obj {
             config_obj.insert(key.clone(), value.clone());
         }
@@ -994,7 +999,9 @@ pub async fn get_events(
     timeout: Option<u32>,
 ) -> Result<serde_json::Value, SyncthingError> {
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(timeout.unwrap_or(60) as u64 + 5))
+        .timeout(std::time::Duration::from_secs(
+            timeout.unwrap_or(60) as u64 + 5,
+        ))
         .build()
         .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
 
@@ -1051,12 +1058,12 @@ pub async fn add_device_advanced(
     max_recv_kbps: Option<u32>,
 ) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
-    
+
     let config_url = format!(
         "http://{}:{}/rest/config",
         state.config.host, state.config.port
     );
-    
+
     let res = client
         .get(&config_url)
         .header("X-API-Key", &state.config.api_key)
@@ -1131,7 +1138,9 @@ pub async fn update_device_config(
         .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
 
     // Merge updates
-    if let (Some(config_obj), Some(updates_obj)) = (device_config.as_object_mut(), updates.as_object()) {
+    if let (Some(config_obj), Some(updates_obj)) =
+        (device_config.as_object_mut(), updates.as_object())
+    {
         for (key, value) in updates_obj {
             config_obj.insert(key.clone(), value.clone());
         }
@@ -1277,9 +1286,7 @@ pub async fn unshare_folder(
 
 /// Restart Syncthing
 #[tauri::command]
-pub async fn restart_syncthing(
-    state: State<'_, SyncthingState>,
-) -> Result<(), SyncthingError> {
+pub async fn restart_syncthing(state: State<'_, SyncthingState>) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
     let url = format!(
         "http://{}:{}/rest/system/restart",
@@ -1354,7 +1361,7 @@ pub async fn get_device_config(
 #[tauri::command]
 pub async fn open_folder_in_explorer(folder_path: String) -> Result<(), SyncthingError> {
     use std::process::Command;
-    
+
     #[cfg(target_os = "linux")]
     {
         Command::new("xdg-open")
@@ -1451,7 +1458,11 @@ pub async fn browse_folder_recursive(
 }
 
 /// Helper function to flatten the nested browse response
-fn flatten_browse_response(items: &[serde_json::Value], parent_path: &str, result: &mut Vec<serde_json::Value>) {
+fn flatten_browse_response(
+    items: &[serde_json::Value],
+    parent_path: &str,
+    result: &mut Vec<serde_json::Value>,
+) {
     for item in items {
         if let Some(obj) = item.as_object() {
             let name = obj.get("name").and_then(|n| n.as_str()).unwrap_or("");
@@ -1460,10 +1471,10 @@ fn flatten_browse_response(items: &[serde_json::Value], parent_path: &str, resul
             } else {
                 format!("{}/{}", parent_path, name)
             };
-            
+
             let item_type = obj.get("type").and_then(|t| t.as_str()).unwrap_or("");
             let is_directory = item_type == "FILE_INFO_TYPE_DIRECTORY";
-            
+
             // Add the item with its full path
             let flat_item = serde_json::json!({
                 "name": full_path,
@@ -1471,9 +1482,9 @@ fn flatten_browse_response(items: &[serde_json::Value], parent_path: &str, resul
                 "modTime": obj.get("modTime").cloned().unwrap_or(serde_json::Value::Null),
                 "type": if is_directory { "directory" } else { "file" }
             });
-            
+
             result.push(flat_item);
-            
+
             // Recursively process children
             if let Some(children) = obj.get("children").and_then(|c| c.as_array()) {
                 flatten_browse_response(children, &full_path, result);
@@ -1492,8 +1503,12 @@ pub async fn scan_for_conflicts(
     folder_path: String,
 ) -> Result<Vec<serde_json::Value>, SyncthingError> {
     let mut conflicts = Vec::new();
-    
-    fn scan_dir(dir: &std::path::Path, conflicts: &mut Vec<serde_json::Value>, base: &std::path::Path) {
+
+    fn scan_dir(
+        dir: &std::path::Path,
+        conflicts: &mut Vec<serde_json::Value>,
+        base: &std::path::Path,
+    ) {
         if let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
@@ -1526,7 +1541,7 @@ pub async fn scan_for_conflicts(
             }
         }
     }
-    
+
     fn extract_original_filename(conflict_name: &str) -> String {
         // Pattern: file.sync-conflict-20231201-120000-ABCDEFG.txt
         // Should become: file.txt
@@ -1558,10 +1573,11 @@ pub async fn delete_conflict_file(
     conflict_file: String,
 ) -> Result<(), SyncthingError> {
     let full_path = std::path::Path::new(&folder_path).join(&conflict_file);
-    
+
     if full_path.exists() {
-        std::fs::remove_file(&full_path)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete conflict file: {}", e)))?;
+        std::fs::remove_file(&full_path).map_err(|e| {
+            SyncthingError::ProcessError(format!("Failed to delete conflict file: {}", e))
+        })?;
     }
 
     Ok(())
@@ -1577,17 +1593,19 @@ pub async fn resolve_conflict_keep_conflict(
     let base_path = std::path::Path::new(&folder_path);
     let original_path = base_path.join(&original_file);
     let conflict_path = base_path.join(&conflict_file);
-    
+
     // Delete original if it exists
     if original_path.exists() {
-        std::fs::remove_file(&original_path)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete original: {}", e)))?;
+        std::fs::remove_file(&original_path).map_err(|e| {
+            SyncthingError::ProcessError(format!("Failed to delete original: {}", e))
+        })?;
     }
 
     // Rename conflict to original
     if conflict_path.exists() {
-        std::fs::rename(&conflict_path, &original_path)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to rename conflict file: {}", e)))?;
+        std::fs::rename(&conflict_path, &original_path).map_err(|e| {
+            SyncthingError::ProcessError(format!("Failed to rename conflict file: {}", e))
+        })?;
     }
 
     Ok(())
@@ -1603,8 +1621,8 @@ pub async fn browse_versions(
     folder_path: String,
     prefix: Option<String>,
 ) -> Result<Vec<serde_json::Value>, SyncthingError> {
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
 
     let versions_path = Path::new(&folder_path).join(".stversions");
     let browse_path = if let Some(ref p) = prefix {
@@ -1618,18 +1636,19 @@ pub async fn browse_versions(
     }
 
     let mut entries = Vec::new();
-    
+
     if let Ok(dir_entries) = fs::read_dir(&browse_path) {
         for entry in dir_entries.flatten() {
             let path = entry.path();
-            let name = path.file_name()
+            let name = path
+                .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("")
                 .to_string();
 
             if let Ok(metadata) = entry.metadata() {
                 let is_dir = metadata.is_dir();
-                
+
                 // Parse version timestamp from filename if it's a file
                 // Pattern: filename~YYYYMMDD-HHMMSS.ext
                 let (original_name, version_time) = if !is_dir {
@@ -1658,11 +1677,15 @@ pub async fn browse_versions(
     entries.sort_by(|a, b| {
         let a_is_dir = a["type"].as_str() == Some("directory");
         let b_is_dir = b["type"].as_str() == Some("directory");
-        
+
         if a_is_dir != b_is_dir {
-            return if a_is_dir { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
+            return if a_is_dir {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Greater
+            };
         }
-        
+
         let a_time = a["modTime"].as_u64().unwrap_or(0);
         let b_time = b["modTime"].as_u64().unwrap_or(0);
         b_time.cmp(&a_time)
@@ -1675,15 +1698,15 @@ pub async fn browse_versions(
 fn parse_version_filename(name: &str) -> (String, Option<String>) {
     // Pattern: filename~YYYYMMDD-HHMMSS.ext or filename~YYYYMMDD-HHMMSS
     // Example: document~20231215-143022.pdf -> (document.pdf, 2023-12-15 14:30:22)
-    
+
     if let Some(tilde_pos) = name.rfind('~') {
         let before_tilde = &name[..tilde_pos];
         let after_tilde = &name[tilde_pos + 1..];
-        
+
         // Check if after_tilde matches version pattern
         let version_part: String;
         let extension: &str;
-        
+
         if let Some(dot_pos) = after_tilde.find('.') {
             version_part = after_tilde[..dot_pos].to_string();
             extension = &after_tilde[dot_pos..];
@@ -1691,11 +1714,11 @@ fn parse_version_filename(name: &str) -> (String, Option<String>) {
             version_part = after_tilde.to_string();
             extension = "";
         }
-        
+
         // Validate version format: YYYYMMDD-HHMMSS (15 chars)
         if version_part.len() == 15 && version_part.chars().nth(8) == Some('-') {
             let original = format!("{}{}", before_tilde, extension);
-            
+
             // Format the timestamp nicely
             let formatted = format!(
                 "{}-{}-{} {}:{}:{}",
@@ -1706,11 +1729,11 @@ fn parse_version_filename(name: &str) -> (String, Option<String>) {
                 &version_part[11..13], // Minute
                 &version_part[13..15]  // Second
             );
-            
+
             return (original, Some(formatted));
         }
     }
-    
+
     (name.to_string(), None)
 }
 
@@ -1722,26 +1745,31 @@ pub async fn restore_version(
     original_name: String,
     overwrite: bool,
 ) -> Result<(), SyncthingError> {
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
 
-    let source = Path::new(&folder_path).join(".stversions").join(&version_path);
+    let source = Path::new(&folder_path)
+        .join(".stversions")
+        .join(&version_path);
     let dest = Path::new(&folder_path).join(&original_name);
 
     if !source.exists() {
-        return Err(SyncthingError::ProcessError("Version file not found".to_string()));
+        return Err(SyncthingError::ProcessError(
+            "Version file not found".to_string(),
+        ));
     }
 
     if dest.exists() && !overwrite {
         return Err(SyncthingError::ProcessError(
-            "Destination file exists. Set overwrite=true to replace.".to_string()
+            "Destination file exists. Set overwrite=true to replace.".to_string(),
         ));
     }
 
     // Create parent directories if needed
     if let Some(parent) = dest.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to create directories: {}", e)))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            SyncthingError::ProcessError(format!("Failed to create directories: {}", e))
+        })?;
     }
 
     // Copy the version file to the original location
@@ -1766,10 +1794,9 @@ pub async fn update_tray_status(
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_tooltip(Some(&tooltip));
     }
-    
+
     // Note: Tauri v2 menu items are immutable after creation,
     // so we update via the tooltip instead
-    
+
     Ok(())
 }
-

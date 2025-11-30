@@ -22,7 +22,7 @@ impl SyncthingConfig {
             format!("{}/.local/state/syncthing/config.xml", home),
             format!("{}/.config/syncthing/config.xml", home),
         ];
-        
+
         for path in &paths {
             if let Ok(content) = fs::read_to_string(path) {
                 // Simple XML parsing for apikey
@@ -105,7 +105,8 @@ pub fn run() {
             let show = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
             let hide = MenuItemBuilder::with_id("hide", "Hide to Tray").build(app)?;
             let separator2 = PredefinedMenuItem::separator(app)?;
-            let open_syncthing = MenuItemBuilder::with_id("open_syncthing", "Open Syncthing Web UI").build(app)?;
+            let open_syncthing =
+                MenuItemBuilder::with_id("open_syncthing", "Open Syncthing Web UI").build(app)?;
             let separator3 = PredefinedMenuItem::separator(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit Eigen").build(app)?;
 
@@ -122,8 +123,8 @@ pub fn run() {
 
             // Load tray icon - embedded at compile time
             let tray_icon_bytes = include_bytes!("../icons/tray_icon.png");
-            let tray_img = image::load_from_memory(tray_icon_bytes)
-                .expect("Failed to load tray icon");
+            let tray_img =
+                image::load_from_memory(tray_icon_bytes).expect("Failed to load tray icon");
             let rgba = tray_img.to_rgba8();
             let (width, height) = rgba.dimensions();
             let tray_icon = tauri::image::Image::new_owned(rgba.into_raw(), width, height);
@@ -140,16 +141,16 @@ pub fn run() {
                                 let _ = window.unminimize();
                                 let _ = window.set_focus();
                             }
-                        }
+                        },
                         "hide" => {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.hide();
                             }
-                        }
+                        },
                         "open_syncthing" => {
                             // Open Syncthing web UI in browser
                             let _ = open::that("http://127.0.0.1:8384");
-                        }
+                        },
                         "quit" => {
                             // Stop syncthing sidecar before quitting
                             let state = app.state::<SyncthingState>();
@@ -159,13 +160,17 @@ pub fn run() {
                                 }
                             }
                             app.exit(0);
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 })
                 .on_tray_icon_event(|tray, event| {
                     use tauri::tray::TrayIconEvent;
-                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
+                    if let TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        ..
+                    } = event
+                    {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
                             // Toggle window visibility

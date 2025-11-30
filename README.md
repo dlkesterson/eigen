@@ -7,6 +7,7 @@
 ## ✨ Features
 
 ### Core Syncthing Management
+
 - 🔄 **Full Syncthing Control** - Start, stop, restart Syncthing with bundled sidecar support
 - 📁 **Folder Management** - Add, configure, pause/resume sync folders
 - 💻 **Device Management** - Add devices, configure sharing, monitor connections
@@ -14,23 +15,27 @@
 - 🌐 **Network Visualization** - Interactive SVG network topology showing device connections
 
 ### AI-Powered Features
+
 - 🧠 **Semantic File Search** - Natural language file search using transformers.js embeddings
 - 📝 **Smart Conflict Resolution** - AI-assisted diff analysis for sync conflicts
 - 🔮 **Predictive Sync** - Learn access patterns and pre-sync frequently used folders
 - 🗂️ **File Indexing** - Index files to IndexedDB with AI embeddings for fast semantic search
 
 ### File Management
+
 - 📂 **File Browser** - Browse synced folders with version history
 - ⏰ **Version Timeline** - Visual timeline of file versions with restore capability
 - 🔙 **Version Restore** - One-click restore of previous file versions
 - 🚫 **Ignore Patterns** - Easy-to-use ignore pattern editor with common presets
 
 ### Device Sharing & Pairing
+
 - 📱 **QR Code Invites** - Generate QR codes for easy device pairing
 - 🔗 **Deep Links** - `eigen://invite` deep link protocol for one-click device addition
 - 📋 **Shareable Links** - Copy invite links with optional expiration
 
 ### Reliability & Monitoring
+
 - ❤️ **Health Monitoring** - Continuous health checks with status tracking
 - 🔄 **Auto Recovery** - Automatic recovery from common failure scenarios
 - 🔌 **Circuit Breaker** - Prevent cascade failures with intelligent retry logic
@@ -38,6 +43,7 @@
 - 🔔 **Native Notifications** - OS-level notifications for sync events
 
 ### User Experience
+
 - 🎨 **Modern UI** - Beautiful glassmorphism design with smooth animations
 - 🌙 **Theme Support** - Light, dark, and system theme options
 - ⚡ **Fluid Animations** - Framer Motion powered transitions
@@ -47,34 +53,38 @@
 ## 🛠️ Tech Stack
 
 ### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 16** | React framework with static export |
-| **React 19** | UI library with latest features |
-| **Tailwind CSS 4** | Utility-first styling |
-| **TanStack Query** | Server state management & caching |
-| **Zustand** | Client state management |
-| **Framer Motion** | Smooth animations |
-| **Lucide Icons** | Beautiful iconography |
-| **Sonner** | Toast notifications |
-| **Zod** | Runtime type validation |
+
+| Technology         | Purpose                            |
+| ------------------ | ---------------------------------- |
+| **Next.js 16**     | React framework with static export |
+| **React 19**       | UI library with latest features    |
+| **Tailwind CSS 4** | Utility-first styling              |
+| **TanStack Query** | Server state management & caching  |
+| **Zustand**        | Client state management            |
+| **Framer Motion**  | Smooth animations                  |
+| **Lucide Icons**   | Beautiful iconography              |
+| **Sonner**         | Toast notifications                |
+| **Zod**            | Runtime type validation            |
 
 ### Backend
-| Technology | Purpose |
-|------------|---------|
-| **Tauri v2** | Rust-based desktop framework |
-| **Reqwest** | HTTP client for Syncthing API |
-| **Tokio** | Async runtime |
-| **Serde** | Serialization/deserialization |
+
+| Technology   | Purpose                       |
+| ------------ | ----------------------------- |
+| **Tauri v2** | Rust-based desktop framework  |
+| **Reqwest**  | HTTP client for Syncthing API |
+| **Tokio**    | Async runtime                 |
+| **Serde**    | Serialization/deserialization |
 
 ### AI & Data
-| Technology | Purpose |
-|------------|---------|
-| **@xenova/transformers** | Client-side ML embeddings |
-| **IndexedDB (idb)** | Local file metadata & embeddings storage |
-| **Web Workers** | Background AI processing |
+
+| Technology               | Purpose                                  |
+| ------------------------ | ---------------------------------------- |
+| **@xenova/transformers** | Client-side ML embeddings                |
+| **IndexedDB (idb)**      | Local file metadata & embeddings storage |
+| **Web Workers**          | Background AI processing                 |
 
 ### Tauri Plugins
+
 - `@tauri-apps/plugin-notification` - Native OS notifications
 - `@tauri-apps/plugin-dialog` - Native file dialogs
 - `@tauri-apps/plugin-shell` - Syncthing sidecar management
@@ -220,20 +230,53 @@ User UI ← React Component ← TanStack Query ← Tauri IPC ← Rust Backend �
 
 ## 🔧 Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start Next.js dev server |
-| `pnpm tauri dev` | Start full Tauri development mode |
-| `pnpm build` | Build Next.js for production |
-| `pnpm tauri build` | Build complete desktop application |
-| `pnpm lint` | Run ESLint |
-| `pnpm format` | Format code with Prettier |
-| `pnpm type-check` | Run TypeScript type checking |
+| Command                   | Description                            |
+| ------------------------- | -------------------------------------- |
+| `pnpm dev`                | Start Next.js dev server               |
+| `pnpm tauri dev`          | Start full Tauri development mode      |
+| `pnpm build`              | Build Next.js for production           |
+| `pnpm tauri build`        | Build complete desktop application     |
+| `pnpm lint`               | Run ESLint                             |
+| `pnpm format`             | Format code with Prettier              |
+| `pnpm type-check`         | Run TypeScript type checking           |
 | `pnpm download:syncthing` | Download Syncthing binary for bundling |
-| `pnpm tauri:lint` | Run Clippy on Rust code |
-| `pnpm tauri:fmt` | Format Rust code |
+| `pnpm tauri:lint`         | Run Clippy on Rust code                |
+| `pnpm tauri:fmt`          | Format Rust code                       |
 
-## 🔒 Security
+## � Releases
+
+Pre-built binaries are available for Windows, macOS, and Linux on the [Releases page](https://github.com/dlkesterson/eigen/releases).
+
+### Creating a Release
+
+To create a new release with cross-platform builds:
+
+```bash
+# Tag the release
+git tag v0.1.0
+
+# Push the tag to trigger the release workflow
+git push origin v0.1.0
+```
+
+The GitHub Actions workflow will automatically:
+
+1. Build for Windows (x64), macOS (x64 + ARM64), and Linux (x64)
+2. Download the appropriate Syncthing binary for each platform
+3. Create a GitHub release with all artifacts
+
+### Available Artifacts
+
+| Platform              | File                         | Description    |
+| --------------------- | ---------------------------- | -------------- |
+| Windows               | `Eigen_x.x.x_x64-setup.exe`  | NSIS installer |
+| Windows               | `Eigen_x.x.x_x64_en-US.msi`  | MSI installer  |
+| macOS (Intel)         | `Eigen_x.x.x_x64.dmg`        | DMG disk image |
+| macOS (Apple Silicon) | `Eigen_x.x.x_aarch64.dmg`    | DMG disk image |
+| Linux                 | `eigen_x.x.x_amd64.deb`      | Debian package |
+| Linux                 | `eigen_x.x.x_amd64.AppImage` | AppImage       |
+
+## �🔒 Security
 
 - **API Keys** - Syncthing API keys are managed internally by the Rust backend and never exposed to the frontend
 - **Local Processing** - AI embeddings are generated entirely client-side; no data sent to external services

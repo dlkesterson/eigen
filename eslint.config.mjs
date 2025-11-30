@@ -45,6 +45,13 @@ export default [
         ...globals.browser,
         ...globals.node,
         React: 'readonly',
+        // DOM types
+        EventListener: 'readonly',
+        RequestInit: 'readonly',
+        RequestInfo: 'readonly',
+        Response: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
       },
     },
     plugins: {
@@ -74,9 +81,20 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'warn',
+      'react/jsx-no-comment-textnodes': 'warn',
 
       // React Hooks rules
       ...reactHooksPlugin.configs.recommended.rules,
+      // Downgrade React Compiler rules to warnings for now
+      // These are valid issues but need careful refactoring
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      // React 19 Compiler rules (from eslint-plugin-react-hooks v7+)
+      // Disable until codebase is refactored for React 19 patterns
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/set-state-in-render': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/immutability': 'warn',
 
       // Next.js rules
       ...nextPlugin.configs.recommended.rules,

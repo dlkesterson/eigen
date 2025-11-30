@@ -40,3 +40,7 @@ gen/schemas/
 # Testing
 coverage/
 .nyc_output/
+
+
+
+src-tauri/binaries/

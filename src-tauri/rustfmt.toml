@@ -7,29 +7,13 @@ tab_spaces = 4
 use_small_heuristics = "Default"
 newline_style = "Unix"
 
-# Import formatting
-imports_granularity = "Crate"
-group_imports = "StdExternalCrate"
+# Import formatting (stable options only)
 reorder_imports = true
 reorder_modules = true
 
-# Function/struct formatting
-fn_args_layout = "Tall"
-struct_lit_single_line = true
-where_single_line = false
-
-# Comments
-wrap_comments = false
-comment_width = 100
-normalize_comments = false
-
-# Chains and match arms
-chain_width = 60
+# Match arms
 match_block_trailing_comma = true
-match_arm_leading_pipes = "Never"
 
-# Misc
+# Misc (stable options only)
 use_field_init_shorthand = true
 use_try_shorthand = true
-force_multiline_blocks = false
-format_strings = false
