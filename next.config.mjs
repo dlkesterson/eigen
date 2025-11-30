@@ -6,6 +6,8 @@ const nextConfig = {
     unoptimized: true,
   },
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : undefined,
+  // Empty turbopack config to allow running without --turbopack flag
+  turbopack: {},
   // Enable Web Workers with webpack 5
   webpack: (config) => {
     config.resolve.alias = {

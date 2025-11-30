@@ -194,7 +194,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card border-border absolute top-full right-0 left-0 mt-2 rounded-lg border p-3 shadow-lg"
+          className="bg-card border-border absolute top-full right-0 left-0 z-100 mt-2 rounded-lg border p-3 shadow-lg"
         >
           <div className="flex items-center gap-3">
             <Loader2 className="text-primary h-5 w-5 animate-spin" />
@@ -227,7 +227,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-card border-border absolute top-full right-0 left-0 z-50 mt-2 max-h-[400px] overflow-y-auto rounded-lg border shadow-lg"
+            className="bg-card border-border absolute top-full right-0 left-0 z-100 mt-2 max-h-[400px] overflow-y-auto rounded-lg border shadow-lg"
           >
             <div className="p-2">
               <p className="text-muted-foreground px-2 py-1 text-xs">
@@ -278,7 +278,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-card border-border absolute top-full right-0 left-0 mt-2 rounded-lg border p-6 text-center shadow-lg"
+            className="bg-card border-border absolute top-full right-0 left-0 z-100 mt-2 rounded-lg border p-6 text-center shadow-lg"
           >
             <Search className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
             <p className="text-muted-foreground text-sm">No files found</p>

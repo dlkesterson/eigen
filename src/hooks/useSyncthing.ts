@@ -942,14 +942,26 @@ export function useSyncthingEvents(options?: {
 
             // Also check for timeout errors which are expected during long polling
             const errorStr = String(error);
+            const errorJson = JSON.stringify(error);
             const isTimeoutError = errorStr.includes('timeout') || errorStr.includes('Timeout');
 
+            // Check for connection errors when Syncthing isn't running
+            const isConnectionError = errorStr.includes('Connection') || errorStr.includes('connection') ||
+                errorStr.includes('ECONNREFUSED') || errorStr.includes('NetworkError');
+
+            // Check for parse errors (Syncthing returning unexpected data)
+            const isParseError = errorJson.includes('ParseError') || errorJson.includes('decoding') ||
+                errorStr.includes('ParseError') || errorStr.includes('decoding');
+
             // Skip logging for expected non-error conditions
-            if (isAbortError || isEmptyError || isNullish || isTimeoutError) {
+            if (isAbortError || isEmptyError || isNullish || isTimeoutError || isConnectionError || isParseError) {
                 return;
             }
 
-            console.error('Event polling error:', error);
+            // Only log if it's a real unexpected error
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('Event polling error:', error);
+            }
         } finally {
             setIsPolling(false);
         }

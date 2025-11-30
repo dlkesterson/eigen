@@ -239,6 +239,7 @@ pub fn run() {
             // File browser
             commands::open_folder_in_explorer,
             commands::browse_folder,
+            commands::browse_folder_recursive,
             // Conflict resolution
             commands::scan_for_conflicts,
             commands::delete_conflict_file,

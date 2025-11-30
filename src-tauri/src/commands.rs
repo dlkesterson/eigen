@@ -1383,6 +1383,7 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<(), Syncthin
 }
 
 /// Browse files in a folder (list directory contents)
+/// This version returns immediate children only (for file browser UI)
 #[tauri::command]
 pub async fn browse_folder(
     state: State<'_, SyncthingState>,
@@ -1391,7 +1392,7 @@ pub async fn browse_folder(
 ) -> Result<serde_json::Value, SyncthingError> {
     let client = reqwest::Client::new();
     let mut url = format!(
-        "http://{}:{}/rest/db/browse?folder={}",
+        "http://{}:{}/rest/db/browse?folder={}&levels=0",
         state.config.host, state.config.port, folder_id
     );
 
@@ -1412,6 +1413,73 @@ pub async fn browse_folder(
         .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
 
     Ok(json)
+}
+
+/// Browse all files in a folder recursively (for indexing)
+/// Returns a flat list of all files with their full paths
+#[tauri::command]
+pub async fn browse_folder_recursive(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<Vec<serde_json::Value>, SyncthingError> {
+    let client = reqwest::Client::new();
+    // Use a high levels value to get deep recursion
+    let url = format!(
+        "http://{}:{}/rest/db/browse?folder={}&levels=999",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Flatten the hierarchical structure into a flat list
+    let mut files = Vec::new();
+    if let Some(arr) = json.as_array() {
+        flatten_browse_response(arr, "", &mut files);
+    }
+
+    Ok(files)
+}
+
+/// Helper function to flatten the nested browse response
+fn flatten_browse_response(items: &[serde_json::Value], parent_path: &str, result: &mut Vec<serde_json::Value>) {
+    for item in items {
+        if let Some(obj) = item.as_object() {
+            let name = obj.get("name").and_then(|n| n.as_str()).unwrap_or("");
+            let full_path = if parent_path.is_empty() {
+                name.to_string()
+            } else {
+                format!("{}/{}", parent_path, name)
+            };
+            
+            let item_type = obj.get("type").and_then(|t| t.as_str()).unwrap_or("");
+            let is_directory = item_type == "FILE_INFO_TYPE_DIRECTORY";
+            
+            // Add the item with its full path
+            let flat_item = serde_json::json!({
+                "name": full_path,
+                "size": obj.get("size").and_then(|s| s.as_i64()).unwrap_or(0),
+                "modTime": obj.get("modTime").cloned().unwrap_or(serde_json::Value::Null),
+                "type": if is_directory { "directory" } else { "file" }
+            });
+            
+            result.push(flat_item);
+            
+            // Recursively process children
+            if let Some(children) = obj.get("children").and_then(|c| c.as_array()) {
+                flatten_browse_response(children, &full_path, result);
+            }
+        }
+    }
 }
 
 // ============================================================================

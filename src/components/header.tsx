@@ -28,13 +28,13 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950/50 px-6 backdrop-blur-xl">
+    <header className="relative z-50 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950/50 px-6 backdrop-blur-xl">
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-semibold text-white">{titles[activeTab] || 'Dashboard'}</h1>
       </div>
 
       {/* AI Search Bar */}
-      <div className="mx-4 max-w-md flex-1">
+      <div className="relative z-50 mx-4 max-w-md flex-1">
         <AISearchBar onResultSelect={handleSearchResultSelect} className="w-full" />
       </div>
 

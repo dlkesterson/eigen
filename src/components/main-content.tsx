@@ -101,7 +101,7 @@ export function MainContent() {
   };
 
   return (
-    <main className="flex-1 overflow-auto p-6">
+    <main className="relative z-0 flex-1 overflow-auto p-6">
       <AnimatePresence mode="wait">
         <div key={activeTab}>{renderContent()}</div>
       </AnimatePresence>

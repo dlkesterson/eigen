@@ -273,6 +273,1840 @@ jobs:
         run: cargo check --all-targets
 </file>
 
+<file path="src-tauri/capabilities/default.json">
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "notification:default",
+    "dialog:allow-open",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "binaries/syncthing",
+          "sidecar": true,
+          "args": [
+            "-no-browser",
+            "-no-restart",
+            {
+              "validator": "\\S+"
+            }
+          ]
+        }
+      ]
+    },
+    "shell:allow-kill"
+  ]
+}
+</file>
+
+<file path="src-tauri/src/commands.rs">
+use crate::{SyncthingError, SyncthingState};
+use tauri::State;
+use tauri::AppHandle;
+use tauri_plugin_shell::ShellExt;
+use serde::Serialize;
+
+/// Information about Syncthing installation
+#[derive(Debug, Serialize)]
+pub struct SyncthingInfo {
+    pub installed: bool,
+    pub version: Option<String>,
+    pub path: Option<String>,
+    pub bundled: bool,
+}
+
+/// Check if Syncthing is installed and get version info
+#[tauri::command]
+pub fn check_syncthing_installation() -> SyncthingInfo {
+    // Check for system-installed syncthing
+    use std::process::Command;
+    match Command::new("syncthing").arg("--version").output() {
+        Ok(output) => {
+            let version_str = String::from_utf8_lossy(&output.stdout);
+            let version = version_str
+                .lines()
+                .next()
+                .map(|s| s.to_string());
+            
+            // Try to get the path
+            let path = Command::new("which")
+                .arg("syncthing")
+                .output()
+                .ok()
+                .and_then(|o| {
+                    let p = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                    if p.is_empty() { None } else { Some(p) }
+                });
+            
+            SyncthingInfo {
+                installed: true,
+                version,
+                path,
+                bundled: false,
+            }
+        }
+        Err(_) => SyncthingInfo {
+            installed: true, // Bundled sidecar is always available
+            version: Some("bundled".to_string()),
+            path: Some("bundled sidecar".to_string()),
+            bundled: true,
+        },
+    }
+}
+
+/// Start the Syncthing sidecar process
+#[tauri::command]
+pub async fn start_syncthing_sidecar(
+    app: AppHandle,
+    state: State<'_, SyncthingState>,
+) -> Result<String, SyncthingError> {
+    let mut child_guard = state.sidecar_child.lock().map_err(|e| {
+        SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e))
+    })?;
+
+    if child_guard.is_some() {
+        return Ok("Syncthing already running".into());
+    }
+
+    // Use the bundled sidecar
+    let sidecar_command = app.shell()
+        .sidecar("syncthing")
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to create sidecar command: {}", e)))?
+        .args([
+            "-no-browser",
+            "-no-restart",
+            &format!("-gui-apikey={}", state.config.api_key),
+            &format!("-gui-address={}:{}", state.config.host, state.config.port),
+        ]);
+
+    let (_rx, child) = sidecar_command
+        .spawn()
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {}", e)))?;
+
+    *child_guard = Some(child);
+    Ok("Syncthing sidecar started successfully".into())
+}
+
+/// Stop the Syncthing sidecar process
+#[tauri::command]
+pub async fn stop_syncthing_sidecar(
+    state: State<'_, SyncthingState>,
+) -> Result<String, SyncthingError> {
+    let mut child_guard = state.sidecar_child.lock().map_err(|e| {
+        SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e))
+    })?;
+
+    if let Some(child) = child_guard.take() {
+        child.kill().map_err(|e| {
+            SyncthingError::ProcessError(format!("Failed to kill sidecar process: {}", e))
+        })?;
+        Ok("Syncthing sidecar stopped".into())
+    } else {
+        Ok("Syncthing sidecar was not running".into())
+    }
+}
+
+/// Get Syncthing system status
+#[tauri::command]
+pub async fn get_system_status(
+    state: State<'_, SyncthingState>,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/system/status",
+        state.config.host, state.config.port
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Get Syncthing connections info
+#[tauri::command]
+pub async fn get_connections(
+    state: State<'_, SyncthingState>,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/system/connections",
+        state.config.host, state.config.port
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Get Syncthing configuration
+#[tauri::command]
+pub async fn get_config(
+    state: State<'_, SyncthingState>,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Update global Syncthing options
+#[tauri::command]
+pub async fn update_options(
+    state: State<'_, SyncthingState>,
+    options: serde_json::Value,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    
+    // First get the current config
+    let get_url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+
+    let current_config: serde_json::Value = client
+        .get(&get_url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Merge options into current config
+    let mut updated_config = current_config.clone();
+    if let (Some(config_obj), Some(current_options)) = (
+        updated_config.as_object_mut(),
+        current_config.get("options"),
+    ) {
+        let mut new_options = current_options.clone();
+        if let (Some(opts_obj), Some(updates_obj)) = (
+            new_options.as_object_mut(),
+            options.as_object(),
+        ) {
+            for (key, value) in updates_obj {
+                opts_obj.insert(key.clone(), value.clone());
+            }
+        }
+        config_obj.insert("options".to_string(), new_options);
+    }
+
+    // Save the updated config
+    let put_url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+
+    let res = client
+        .put(&put_url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&updated_config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    if !res.status().is_success() {
+        return Err(SyncthingError::HttpError(format!(
+            "Failed to update options: {}",
+            res.status()
+        )));
+    }
+
+    Ok(())
+}
+
+/// Get folder status
+#[tauri::command]
+pub async fn get_folder_status(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/db/status?folder={}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Pause a folder
+#[tauri::command]
+pub async fn pause_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    // Get current config
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Update paused status
+    config["paused"] = serde_json::Value::Bool(true);
+
+    // Put updated config
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Resume a folder
+#[tauri::command]
+pub async fn resume_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    // Get current config
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Update paused status
+    config["paused"] = serde_json::Value::Bool(false);
+
+    // Put updated config
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Force rescan of a folder
+#[tauri::command]
+pub async fn rescan_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/db/scan?folder={}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    client
+        .post(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Get the current API configuration (for debugging)
+#[tauri::command]
+pub fn get_api_config(state: State<'_, SyncthingState>) -> (String, u16) {
+    (state.config.host.clone(), state.config.port)
+}
+
+/// Get this device's ID
+#[tauri::command]
+pub async fn get_device_id(
+    state: State<'_, SyncthingState>,
+) -> Result<String, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/system/status",
+        state.config.host, state.config.port
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    json["myID"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| SyncthingError::ParseError("No device ID found".into()))
+}
+
+/// Add a new device to Syncthing
+#[tauri::command]
+pub async fn add_device(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+    name: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    
+    // First, get current config
+    let config_url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+    
+    let res = client
+        .get(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Check if device already exists
+    if let Some(devices) = config["devices"].as_array() {
+        for device in devices {
+            if device["deviceID"].as_str() == Some(&device_id) {
+                return Err(SyncthingError::ProcessError("Device already exists".into()));
+            }
+        }
+    }
+
+    // Create new device config
+    let new_device = serde_json::json!({
+        "deviceID": device_id,
+        "name": name,
+        "addresses": ["dynamic"],
+        "compression": "metadata",
+        "introducer": false,
+        "paused": false,
+        "autoAcceptFolders": false,
+    });
+
+    // Add to devices array
+    if let Some(devices) = config["devices"].as_array_mut() {
+        devices.push(new_device);
+    }
+
+    // Save updated config
+    client
+        .put(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Remove a device from Syncthing
+#[tauri::command]
+pub async fn remove_device(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/devices/{}",
+        state.config.host, state.config.port, device_id
+    );
+
+    client
+        .delete(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Add a new folder to Syncthing
+#[tauri::command]
+pub async fn add_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    folder_label: String,
+    folder_path: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    
+    // First, get current config
+    let config_url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+    
+    let res = client
+        .get(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Check if folder already exists
+    if let Some(folders) = config["folders"].as_array() {
+        for folder in folders {
+            if folder["id"].as_str() == Some(&folder_id) {
+                return Err(SyncthingError::ProcessError("Folder already exists".into()));
+            }
+        }
+    }
+
+    // Create new folder config
+    let new_folder = serde_json::json!({
+        "id": folder_id,
+        "label": folder_label,
+        "path": folder_path,
+        "type": "sendreceive",
+        "rescanIntervalS": 3600,
+        "fsWatcherEnabled": true,
+        "fsWatcherDelayS": 10,
+        "ignorePerms": false,
+        "autoNormalize": true,
+        "paused": false,
+        "devices": [],
+        "minDiskFree": {
+            "value": 1,
+            "unit": "%"
+        },
+        "versioning": {
+            "type": "",
+            "params": {},
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        },
+        "copiers": 0,
+        "pullerMaxPendingKiB": 0,
+        "hashers": 0,
+        "order": "random",
+        "ignoreDelete": false,
+        "scanProgressIntervalS": 0,
+        "pullerPauseS": 0,
+        "maxConflicts": 10,
+        "disableSparseFiles": false,
+        "disableTempIndexes": false,
+        "weakHashThresholdPct": 25,
+        "markerName": ".stfolder",
+        "copyOwnershipFromParent": false,
+        "modTimeWindowS": 0,
+        "maxConcurrentWrites": 2,
+        "disableFsync": false,
+        "blockPullOrder": "standard",
+        "copyRangeMethod": "standard",
+        "caseSensitiveFS": false,
+        "junctionsAsDirs": false,
+        "syncOwnership": false,
+        "sendOwnership": false,
+        "syncXattrs": false,
+        "sendXattrs": false,
+        "xattrFilter": {
+            "entries": [],
+            "maxSingleEntrySize": 1024,
+            "maxTotalSize": 4096
+        }
+    });
+
+    // Add to folders array
+    if let Some(folders) = config["folders"].as_array_mut() {
+        folders.push(new_folder);
+    }
+
+    // Save updated config
+    client
+        .put(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Remove a folder from Syncthing
+#[tauri::command]
+pub async fn remove_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    client
+        .delete(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Share a folder with a specific device
+#[tauri::command]
+pub async fn share_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    device_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    // 1. Get current folder config
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut folder_config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // 2. Check if device is already added
+    let mut device_exists = false;
+    if let Some(devices) = folder_config["devices"].as_array() {
+        for device in devices {
+            if device["deviceID"].as_str() == Some(&device_id) {
+                device_exists = true;
+                break;
+            }
+        }
+    }
+
+    // 3. Add device if not exists
+    if !device_exists {
+        let new_device_entry = serde_json::json!({
+            "deviceID": device_id,
+            "introducedBy": ""
+        });
+
+        if let Some(devices) = folder_config["devices"].as_array_mut() {
+            devices.push(new_device_entry);
+        }
+
+        // 4. Update config
+        client
+            .put(&url)
+            .header("X-API-Key", &state.config.api_key)
+            .json(&folder_config)
+            .send()
+            .await
+            .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// Advanced Folder Configuration
+// ============================================================================
+
+/// Add a folder with advanced configuration options
+#[tauri::command]
+pub async fn add_folder_advanced(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    folder_label: String,
+    folder_path: String,
+    versioning_type: Option<String>,
+    versioning_params: Option<serde_json::Value>,
+    rescan_interval_s: Option<u32>,
+    fs_watcher_enabled: Option<bool>,
+    fs_watcher_delay_s: Option<u32>,
+    ignore_perms: Option<bool>,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    
+    let config_url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+    
+    let res = client
+        .get(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Check if folder already exists
+    if let Some(folders) = config["folders"].as_array() {
+        for folder in folders {
+            if folder["id"].as_str() == Some(&folder_id) {
+                return Err(SyncthingError::ProcessError("Folder already exists".into()));
+            }
+        }
+    }
+
+    // Build versioning config
+    let versioning = match versioning_type.as_deref() {
+        Some("simple") => serde_json::json!({
+            "type": "simple",
+            "params": versioning_params.unwrap_or(serde_json::json!({
+                "keep": "5"
+            })),
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        }),
+        Some("staggered") => serde_json::json!({
+            "type": "staggered",
+            "params": versioning_params.unwrap_or(serde_json::json!({
+                "cleanInterval": "3600",
+                "maxAge": "31536000"
+            })),
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        }),
+        Some("trashcan") => serde_json::json!({
+            "type": "trashcan",
+            "params": versioning_params.unwrap_or(serde_json::json!({
+                "cleanoutDays": "0"
+            })),
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        }),
+        Some("external") => serde_json::json!({
+            "type": "external",
+            "params": versioning_params.unwrap_or(serde_json::json!({
+                "command": ""
+            })),
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        }),
+        _ => serde_json::json!({
+            "type": "",
+            "params": {},
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        }),
+    };
+
+    let new_folder = serde_json::json!({
+        "id": folder_id,
+        "label": folder_label,
+        "path": folder_path,
+        "type": "sendreceive",
+        "rescanIntervalS": rescan_interval_s.unwrap_or(3600),
+        "fsWatcherEnabled": fs_watcher_enabled.unwrap_or(true),
+        "fsWatcherDelayS": fs_watcher_delay_s.unwrap_or(10),
+        "ignorePerms": ignore_perms.unwrap_or(false),
+        "autoNormalize": true,
+        "paused": false,
+        "devices": [],
+        "minDiskFree": { "value": 1, "unit": "%" },
+        "versioning": versioning,
+        "copiers": 0,
+        "pullerMaxPendingKiB": 0,
+        "hashers": 0,
+        "order": "random",
+        "ignoreDelete": false,
+        "scanProgressIntervalS": 0,
+        "pullerPauseS": 0,
+        "maxConflicts": 10,
+        "disableSparseFiles": false,
+        "disableTempIndexes": false,
+        "weakHashThresholdPct": 25,
+        "markerName": ".stfolder",
+        "copyOwnershipFromParent": false,
+        "modTimeWindowS": 0,
+        "maxConcurrentWrites": 2,
+        "disableFsync": false,
+        "blockPullOrder": "standard",
+        "copyRangeMethod": "standard",
+        "caseSensitiveFS": false,
+        "junctionsAsDirs": false,
+        "syncOwnership": false,
+        "sendOwnership": false,
+        "syncXattrs": false,
+        "sendXattrs": false,
+        "xattrFilter": {
+            "entries": [],
+            "maxSingleEntrySize": 1024,
+            "maxTotalSize": 4096
+        }
+    });
+
+    if let Some(folders) = config["folders"].as_array_mut() {
+        folders.push(new_folder);
+    }
+
+    client
+        .put(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Update folder configuration
+#[tauri::command]
+pub async fn update_folder_config(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    updates: serde_json::Value,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut folder_config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Merge updates into folder config
+    if let (Some(config_obj), Some(updates_obj)) = (folder_config.as_object_mut(), updates.as_object()) {
+        for (key, value) in updates_obj {
+            config_obj.insert(key.clone(), value.clone());
+        }
+    }
+
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&folder_config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Ignore Patterns (.stignore)
+// ============================================================================
+
+/// Get ignore patterns for a folder
+#[tauri::command]
+pub async fn get_folder_ignores(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/db/ignores?folder={}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Set ignore patterns for a folder
+#[tauri::command]
+pub async fn set_folder_ignores(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    ignore_patterns: Vec<String>,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/db/ignores?folder={}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let body = serde_json::json!({
+        "ignore": ignore_patterns
+    });
+
+    client
+        .post(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+// ============================================================================
+// System Logs
+// ============================================================================
+
+/// Get Syncthing logs
+#[tauri::command]
+pub async fn get_system_logs(
+    state: State<'_, SyncthingState>,
+    since: Option<String>,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let mut url = format!(
+        "http://{}:{}/rest/system/log",
+        state.config.host, state.config.port
+    );
+
+    if let Some(since_time) = since {
+        url = format!("{}?since={}", url, since_time);
+    }
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+// ============================================================================
+// Event API
+// ============================================================================
+
+/// Get events from Syncthing (for real-time updates)
+#[tauri::command]
+pub async fn get_events(
+    state: State<'_, SyncthingState>,
+    since: Option<u64>,
+    limit: Option<u32>,
+    timeout: Option<u32>,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(timeout.unwrap_or(60) as u64 + 5))
+        .build()
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut url = format!(
+        "http://{}:{}/rest/events",
+        state.config.host, state.config.port
+    );
+
+    let mut params = Vec::new();
+    if let Some(s) = since {
+        params.push(format!("since={}", s));
+    }
+    if let Some(l) = limit {
+        params.push(format!("limit={}", l));
+    }
+    if let Some(t) = timeout {
+        params.push(format!("timeout={}", t));
+    }
+
+    if !params.is_empty() {
+        url = format!("{}?{}", url, params.join("&"));
+    }
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+// ============================================================================
+// Advanced Device Settings
+// ============================================================================
+
+/// Add device with advanced options
+#[tauri::command]
+pub async fn add_device_advanced(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+    name: String,
+    addresses: Option<Vec<String>>,
+    compression: Option<String>,
+    introducer: Option<bool>,
+    auto_accept_folders: Option<bool>,
+    max_send_kbps: Option<u32>,
+    max_recv_kbps: Option<u32>,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    
+    let config_url = format!(
+        "http://{}:{}/rest/config",
+        state.config.host, state.config.port
+    );
+    
+    let res = client
+        .get(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Check if device already exists
+    if let Some(devices) = config["devices"].as_array() {
+        for device in devices {
+            if device["deviceID"].as_str() == Some(&device_id) {
+                return Err(SyncthingError::ProcessError("Device already exists".into()));
+            }
+        }
+    }
+
+    let new_device = serde_json::json!({
+        "deviceID": device_id,
+        "name": name,
+        "addresses": addresses.unwrap_or_else(|| vec!["dynamic".to_string()]),
+        "compression": compression.unwrap_or_else(|| "metadata".to_string()),
+        "introducer": introducer.unwrap_or(false),
+        "paused": false,
+        "autoAcceptFolders": auto_accept_folders.unwrap_or(false),
+        "maxSendKbps": max_send_kbps.unwrap_or(0),
+        "maxRecvKbps": max_recv_kbps.unwrap_or(0),
+    });
+
+    if let Some(devices) = config["devices"].as_array_mut() {
+        devices.push(new_device);
+    }
+
+    client
+        .put(&config_url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Update device configuration
+#[tauri::command]
+pub async fn update_device_config(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+    updates: serde_json::Value,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/devices/{}",
+        state.config.host, state.config.port, device_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut device_config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Merge updates
+    if let (Some(config_obj), Some(updates_obj)) = (device_config.as_object_mut(), updates.as_object()) {
+        for (key, value) in updates_obj {
+            config_obj.insert(key.clone(), value.clone());
+        }
+    }
+
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&device_config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Pause a device
+#[tauri::command]
+pub async fn pause_device(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/devices/{}",
+        state.config.host, state.config.port, device_id
+    );
+
+    // Get current config
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Update paused status
+    config["paused"] = serde_json::Value::Bool(true);
+
+    // Put updated config
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Resume a device
+#[tauri::command]
+pub async fn resume_device(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/devices/{}",
+        state.config.host, state.config.port, device_id
+    );
+
+    // Get current config
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Update paused status
+    config["paused"] = serde_json::Value::Bool(false);
+
+    // Put updated config
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Unshare a folder from a device
+#[tauri::command]
+pub async fn unshare_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    device_id: String,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    // Get current folder config
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let mut folder_config: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Remove device from the devices array
+    if let Some(devices) = folder_config["devices"].as_array_mut() {
+        devices.retain(|d| d["deviceID"].as_str() != Some(&device_id));
+    }
+
+    // Update config
+    client
+        .put(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .json(&folder_config)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+// ============================================================================
+// System Management
+// ============================================================================
+
+/// Restart Syncthing
+#[tauri::command]
+pub async fn restart_syncthing(
+    state: State<'_, SyncthingState>,
+) -> Result<(), SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/system/restart",
+        state.config.host, state.config.port
+    );
+
+    client
+        .post(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Get detailed folder configuration
+#[tauri::command]
+pub async fn get_folder_config(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/folders/{}",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Get detailed device configuration
+#[tauri::command]
+pub async fn get_device_config(
+    state: State<'_, SyncthingState>,
+    device_id: String,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "http://{}:{}/rest/config/devices/{}",
+        state.config.host, state.config.port, device_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Open folder in file explorer
+#[tauri::command]
+pub async fn open_folder_in_explorer(folder_path: String) -> Result<(), SyncthingError> {
+    use std::process::Command;
+    
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&folder_path)
+            .spawn()
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&folder_path)
+            .spawn()
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg(&folder_path)
+            .spawn()
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Browse files in a folder (list directory contents)
+/// This version returns immediate children only (for file browser UI)
+#[tauri::command]
+pub async fn browse_folder(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+    prefix: Option<String>,
+) -> Result<serde_json::Value, SyncthingError> {
+    let client = reqwest::Client::new();
+    let mut url = format!(
+        "http://{}:{}/rest/db/browse?folder={}&levels=0",
+        state.config.host, state.config.port, folder_id
+    );
+
+    if let Some(p) = prefix {
+        url = format!("{}&prefix={}", url, p);
+    }
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    Ok(json)
+}
+
+/// Browse all files in a folder recursively (for indexing)
+/// Returns a flat list of all files with their full paths
+#[tauri::command]
+pub async fn browse_folder_recursive(
+    state: State<'_, SyncthingState>,
+    folder_id: String,
+) -> Result<Vec<serde_json::Value>, SyncthingError> {
+    let client = reqwest::Client::new();
+    // Use a high levels value to get deep recursion
+    let url = format!(
+        "http://{}:{}/rest/db/browse?folder={}&levels=999",
+        state.config.host, state.config.port, folder_id
+    );
+
+    let res = client
+        .get(&url)
+        .header("X-API-Key", &state.config.api_key)
+        .send()
+        .await
+        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+
+    // Flatten the hierarchical structure into a flat list
+    let mut files = Vec::new();
+    if let Some(arr) = json.as_array() {
+        flatten_browse_response(arr, "", &mut files);
+    }
+
+    Ok(files)
+}
+
+/// Helper function to flatten the nested browse response
+fn flatten_browse_response(items: &[serde_json::Value], parent_path: &str, result: &mut Vec<serde_json::Value>) {
+    for item in items {
+        if let Some(obj) = item.as_object() {
+            let name = obj.get("name").and_then(|n| n.as_str()).unwrap_or("");
+            let full_path = if parent_path.is_empty() {
+                name.to_string()
+            } else {
+                format!("{}/{}", parent_path, name)
+            };
+            
+            let item_type = obj.get("type").and_then(|t| t.as_str()).unwrap_or("");
+            let is_directory = item_type == "FILE_INFO_TYPE_DIRECTORY";
+            
+            // Add the item with its full path
+            let flat_item = serde_json::json!({
+                "name": full_path,
+                "size": obj.get("size").and_then(|s| s.as_i64()).unwrap_or(0),
+                "modTime": obj.get("modTime").cloned().unwrap_or(serde_json::Value::Null),
+                "type": if is_directory { "directory" } else { "file" }
+            });
+            
+            result.push(flat_item);
+            
+            // Recursively process children
+            if let Some(children) = obj.get("children").and_then(|c| c.as_array()) {
+                flatten_browse_response(children, &full_path, result);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// File Conflict Resolution
+// ============================================================================
+
+/// Get list of conflict files for a folder by scanning the filesystem
+#[tauri::command]
+pub async fn scan_for_conflicts(
+    folder_path: String,
+) -> Result<Vec<serde_json::Value>, SyncthingError> {
+    let mut conflicts = Vec::new();
+    
+    fn scan_dir(dir: &std::path::Path, conflicts: &mut Vec<serde_json::Value>, base: &std::path::Path) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    // Skip hidden directories and .stversions
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if !name.starts_with('.') && name != ".stversions" {
+                            scan_dir(&path, conflicts, base);
+                        }
+                    }
+                } else if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.contains(".sync-conflict-") {
+                        let relative_path = path.strip_prefix(base).unwrap_or(&path);
+                        if let Ok(metadata) = std::fs::metadata(&path) {
+                            // Extract original filename from conflict pattern
+                            // Pattern: filename.sync-conflict-YYYYMMDD-HHMMSS-DEVICEID.ext
+                            let original = extract_original_filename(name);
+                            conflicts.push(serde_json::json!({
+                                "name": relative_path.to_string_lossy(),
+                                "original": original,
+                                "size": metadata.len(),
+                                "modTime": metadata.modified().ok().map(|t| {
+                                    let duration = t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+                                    duration.as_secs()
+                                }),
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    fn extract_original_filename(conflict_name: &str) -> String {
+        // Pattern: file.sync-conflict-20231201-120000-ABCDEFG.txt
+        // Should become: file.txt
+        if let Some(pos) = conflict_name.find(".sync-conflict-") {
+            let before = &conflict_name[..pos];
+            // Find the extension after the conflict marker
+            let after = &conflict_name[pos..];
+            if let Some(ext_pos) = after.rfind('.') {
+                let ext = &after[ext_pos..];
+                return format!("{}{}", before, ext);
+            }
+            return before.to_string();
+        }
+        conflict_name.to_string()
+    }
+
+    let base = std::path::Path::new(&folder_path);
+    if base.exists() {
+        scan_dir(base, &mut conflicts, base);
+    }
+
+    Ok(conflicts)
+}
+
+/// Delete a conflict file (resolve by keeping the original)
+#[tauri::command]
+pub async fn delete_conflict_file(
+    folder_path: String,
+    conflict_file: String,
+) -> Result<(), SyncthingError> {
+    let full_path = std::path::Path::new(&folder_path).join(&conflict_file);
+    
+    if full_path.exists() {
+        std::fs::remove_file(&full_path)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete conflict file: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Resolve conflict by replacing original with conflict file
+#[tauri::command]
+pub async fn resolve_conflict_keep_conflict(
+    folder_path: String,
+    original_file: String,
+    conflict_file: String,
+) -> Result<(), SyncthingError> {
+    let base_path = std::path::Path::new(&folder_path);
+    let original_path = base_path.join(&original_file);
+    let conflict_path = base_path.join(&conflict_file);
+    
+    // Delete original if it exists
+    if original_path.exists() {
+        std::fs::remove_file(&original_path)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete original: {}", e)))?;
+    }
+
+    // Rename conflict to original
+    if conflict_path.exists() {
+        std::fs::rename(&conflict_path, &original_path)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to rename conflict file: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// File Versioning
+// ============================================================================
+
+/// Browse the .stversions folder for old file versions
+#[tauri::command]
+pub async fn browse_versions(
+    folder_path: String,
+    prefix: Option<String>,
+) -> Result<Vec<serde_json::Value>, SyncthingError> {
+    use std::path::Path;
+    use std::fs;
+
+    let versions_path = Path::new(&folder_path).join(".stversions");
+    let browse_path = if let Some(ref p) = prefix {
+        versions_path.join(p)
+    } else {
+        versions_path.clone()
+    };
+
+    if !browse_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut entries = Vec::new();
+    
+    if let Ok(dir_entries) = fs::read_dir(&browse_path) {
+        for entry in dir_entries.flatten() {
+            let path = entry.path();
+            let name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            if let Ok(metadata) = entry.metadata() {
+                let is_dir = metadata.is_dir();
+                
+                // Parse version timestamp from filename if it's a file
+                // Pattern: filename~YYYYMMDD-HHMMSS.ext
+                let (original_name, version_time) = if !is_dir {
+                    parse_version_filename(&name)
+                } else {
+                    (name.clone(), None)
+                };
+
+                entries.push(serde_json::json!({
+                    "name": name,
+                    "originalName": original_name,
+                    "type": if is_dir { "directory" } else { "file" },
+                    "size": if is_dir { None::<u64> } else { Some(metadata.len()) },
+                    "modTime": metadata.modified().ok().map(|t| {
+                        t.duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0)
+                    }),
+                    "versionTime": version_time,
+                }));
+            }
+        }
+    }
+
+    // Sort: directories first, then by modification time (newest first)
+    entries.sort_by(|a, b| {
+        let a_is_dir = a["type"].as_str() == Some("directory");
+        let b_is_dir = b["type"].as_str() == Some("directory");
+        
+        if a_is_dir != b_is_dir {
+            return if a_is_dir { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
+        }
+        
+        let a_time = a["modTime"].as_u64().unwrap_or(0);
+        let b_time = b["modTime"].as_u64().unwrap_or(0);
+        b_time.cmp(&a_time)
+    });
+
+    Ok(entries)
+}
+
+/// Parse versioned filename to extract original name and version timestamp
+fn parse_version_filename(name: &str) -> (String, Option<String>) {
+    // Pattern: filename~YYYYMMDD-HHMMSS.ext or filename~YYYYMMDD-HHMMSS
+    // Example: document~20231215-143022.pdf -> (document.pdf, 2023-12-15 14:30:22)
+    
+    if let Some(tilde_pos) = name.rfind('~') {
+        let before_tilde = &name[..tilde_pos];
+        let after_tilde = &name[tilde_pos + 1..];
+        
+        // Check if after_tilde matches version pattern
+        let version_part: String;
+        let extension: &str;
+        
+        if let Some(dot_pos) = after_tilde.find('.') {
+            version_part = after_tilde[..dot_pos].to_string();
+            extension = &after_tilde[dot_pos..];
+        } else {
+            version_part = after_tilde.to_string();
+            extension = "";
+        }
+        
+        // Validate version format: YYYYMMDD-HHMMSS (15 chars)
+        if version_part.len() == 15 && version_part.chars().nth(8) == Some('-') {
+            let original = format!("{}{}", before_tilde, extension);
+            
+            // Format the timestamp nicely
+            let formatted = format!(
+                "{}-{}-{} {}:{}:{}",
+                &version_part[0..4],   // Year
+                &version_part[4..6],   // Month
+                &version_part[6..8],   // Day
+                &version_part[9..11],  // Hour
+                &version_part[11..13], // Minute
+                &version_part[13..15]  // Second
+            );
+            
+            return (original, Some(formatted));
+        }
+    }
+    
+    (name.to_string(), None)
+}
+
+/// Restore a versioned file to its original location
+#[tauri::command]
+pub async fn restore_version(
+    folder_path: String,
+    version_path: String,
+    original_name: String,
+    overwrite: bool,
+) -> Result<(), SyncthingError> {
+    use std::path::Path;
+    use std::fs;
+
+    let source = Path::new(&folder_path).join(".stversions").join(&version_path);
+    let dest = Path::new(&folder_path).join(&original_name);
+
+    if !source.exists() {
+        return Err(SyncthingError::ProcessError("Version file not found".to_string()));
+    }
+
+    if dest.exists() && !overwrite {
+        return Err(SyncthingError::ProcessError(
+            "Destination file exists. Set overwrite=true to replace.".to_string()
+        ));
+    }
+
+    // Create parent directories if needed
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to create directories: {}", e)))?;
+    }
+
+    // Copy the version file to the original location
+    fs::copy(&source, &dest)
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to restore file: {}", e)))?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Tray Status Update
+// ============================================================================
+
+/// Update the system tray tooltip with current status
+#[tauri::command]
+pub async fn update_tray_status(
+    app: tauri::AppHandle,
+    _status: String,
+    tooltip: String,
+) -> Result<(), SyncthingError> {
+    // Update the tray tooltip
+    if let Some(tray) = app.tray_by_id("main") {
+        let _ = tray.set_tooltip(Some(&tooltip));
+    }
+    
+    // Note: Tauri v2 menu items are immutable after creation,
+    // so we update via the tooltip instead
+    
+    Ok(())
+}
+</file>
+
+<file path="src-tauri/src/main.rs">
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+fn main() {
+    eigen_lib::run()
+}
+</file>
+
+<file path="src-tauri/.gitignore">
+# Generated by Cargo
+# will have compiled files and executables
+/target/
+
+# Generated by Tauri
+# will have schema files for capabilities auto-completion
+/gen/schemas
+</file>
+
+<file path="src-tauri/build.rs">
+fn main() {
+    tauri_build::build()
+}
+</file>
+
 <file path="src-tauri/clippy.toml">
 # Clippy configuration for the Tauri project
 # This file configures Clippy lints for the project
@@ -323,6 +2157,11 @@ use_field_init_shorthand = true
 use_try_shorthand = true
 force_multiline_blocks = false
 format_strings = false
+</file>
+
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
 </file>
 
 <file path=".prettierignore">
@@ -1473,8 +3312,10 @@ export function FileIndexer() {
   const aiEnabled = useAppStore((state) => state.aiEnabled);
   const {
     status: aiStatus,
+    statusMessage: aiStatusMessage,
     isReady,
     initialize,
+    retry,
     indexFiles,
     progress: embeddingProgress,
   } = useAISearch({ enabled: aiEnabled });
@@ -1506,10 +3347,9 @@ export function FileIndexer() {
       });
 
       try {
-        // Get files from Syncthing using browse_folder command
-        const files = await invoke<BrowseFile[]>('browse_folder', {
+        // Get all files recursively from Syncthing using browse_folder_recursive command
+        const files = await invoke<BrowseFile[]>('browse_folder_recursive', {
           folderId,
-          prefix: null,
         });
 
         if (!files || files.length === 0) {
@@ -1693,7 +3533,7 @@ export function FileIndexer() {
       {/* AI Status */}
       <div
         className={cn(
-          'mb-4 flex items-center gap-2 rounded-lg p-2',
+          'mb-4 rounded-lg p-2',
           aiStatus === 'ready'
             ? 'bg-green-500/10 text-green-600'
             : aiStatus === 'loading'
@@ -1703,19 +3543,40 @@ export function FileIndexer() {
                 : 'bg-muted/50 text-muted-foreground'
         )}
       >
-        {aiStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
-        {aiStatus === 'ready' && <CheckCircle2 className="h-4 w-4" />}
-        {aiStatus === 'error' && <AlertCircle className="h-4 w-4" />}
-        {aiStatus === 'idle' && <Brain className="h-4 w-4" />}
-        <span className="text-sm">
-          {aiStatus === 'ready'
-            ? 'AI Model Ready'
-            : aiStatus === 'loading'
-              ? 'Loading AI Model...'
-              : aiStatus === 'error'
-                ? 'AI Model Error'
-                : 'AI Model Idle'}
-        </span>
+        <div className="flex items-center gap-2">
+          {aiStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
+          {aiStatus === 'ready' && <CheckCircle2 className="h-4 w-4" />}
+          {aiStatus === 'error' && <AlertCircle className="h-4 w-4" />}
+          {aiStatus === 'idle' && <Brain className="h-4 w-4" />}
+          <span className="flex-1 text-sm">
+            {aiStatus === 'ready'
+              ? 'AI Model Ready'
+              : aiStatus === 'loading'
+                ? 'Loading AI Model...'
+                : aiStatus === 'error'
+                  ? 'AI Model Error'
+                  : 'AI Model Idle'}
+          </span>
+          {aiStatus === 'error' && (
+            <button
+              onClick={retry}
+              className="rounded bg-red-500/20 px-2 py-1 text-xs font-medium hover:bg-red-500/30"
+            >
+              Retry
+            </button>
+          )}
+          {aiStatus === 'idle' && (
+            <button
+              onClick={initialize}
+              className="text-primary rounded bg-blue-500/20 px-2 py-1 text-xs font-medium hover:bg-blue-500/30"
+            >
+              Load Model
+            </button>
+          )}
+        </div>
+        {aiStatus === 'error' && aiStatusMessage && (
+          <p className="mt-1 text-xs opacity-80">{aiStatusMessage}</p>
+        )}
       </div>
 
       {/* Status */}
@@ -2314,13 +4175,13 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950/50 px-6 backdrop-blur-xl">
+    <header className="relative z-50 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950/50 px-6 backdrop-blur-xl">
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-semibold text-white">{titles[activeTab] || 'Dashboard'}</h1>
       </div>
 
       {/* AI Search Bar */}
-      <div className="mx-4 max-w-md flex-1">
+      <div className="relative z-50 mx-4 max-w-md flex-1">
         <AISearchBar onResultSelect={handleSearchResultSelect} className="w-full" />
       </div>
 
@@ -2677,7 +4538,7 @@ export function MainContent() {
   };
 
   return (
-    <main className="flex-1 overflow-auto p-6">
+    <main className="relative z-0 flex-1 overflow-auto p-6">
       <AnimatePresence mode="wait">
         <div key={activeTab}>{renderContent()}</div>
       </AnimatePresence>
@@ -3063,261 +4924,343 @@ export function StatsOverview() {
  * - Semantic similarity search
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { storeEmbedding, getAllEmbeddings, type FileEmbedding } from '@/lib/db';
+import { useAIStore, type AIStatus } from '@/store';
 
-export type AIStatus = 'idle' | 'loading' | 'ready' | 'error' | 'disabled';
+export type { AIStatus } from '@/store';
 
 interface AIWorkerMessage {
-  id?: string;
-  type: string;
-  payload?: unknown;
+    id?: string;
+    type: string;
+    payload?: unknown;
 }
 
 interface SearchResult {
-  path: string;
-  score: number;
+    path: string;
+    score: number;
 }
 
 interface UseAISearchOptions {
-  enabled?: boolean;
+    enabled?: boolean;
 }
 
 interface UseAISearchReturn {
-  status: AIStatus;
-  statusMessage: string;
-  isReady: boolean;
-  initialize: () => Promise<void>;
-  generateEmbeddings: (texts: string[]) => Promise<number[][]>;
-  indexFiles: (files: { path: string; name: string }[]) => Promise<void>;
-  search: (query: string, folderId?: string) => Promise<SearchResult[]>;
-  progress: { current: number; total: number } | null;
+    status: AIStatus;
+    statusMessage: string;
+    isReady: boolean;
+    initialize: () => Promise<void>;
+    retry: () => Promise<void>;
+    generateEmbeddings: (texts: string[]) => Promise<number[][]>;
+    indexFiles: (files: { path: string; name: string }[]) => Promise<void>;
+    search: (query: string, folderId?: string) => Promise<SearchResult[]>;
+    progress: { current: number; total: number } | null;
+}
+
+// Module-level singleton for the AI worker (shared across all hook instances)
+let sharedWorker: Worker | null = null;
+let sharedPendingCalls = new Map<
+    string,
+    { resolve: (value: unknown) => void; reject: (error: Error) => void }
+>();
+let callIdCounter = 0;
+let workerInitialized = false;
+
+function getOrCreateWorker(): Worker | null {
+    if (typeof window === 'undefined') return null;
+
+    if (!sharedWorker) {
+        console.log('[useAISearch] Creating new AI worker...');
+        try {
+            // Use dynamic import path for better bundler compatibility
+            sharedWorker = new Worker(
+                new URL('../workers/ai.worker.ts', import.meta.url),
+                { type: 'module' }
+            );
+            console.log('[useAISearch] Worker object created');
+
+            // Add error handler for worker loading issues
+            sharedWorker.addEventListener('error', (e) => {
+                console.error('[useAISearch] Worker error event:', e.message, e.filename, e.lineno);
+            });
+
+        } catch (error) {
+            console.error('[useAISearch] Failed to create AI worker:', error);
+            const store = useAIStore.getState();
+            store.setAIStatus('error');
+            store.setAIStatusMessage(`Failed to create AI worker: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return null;
+        }
+
+        sharedWorker.onmessage = (event: MessageEvent<AIWorkerMessage>) => {
+            const { id, type, payload } = event.data;
+            console.log('[useAISearch] Received message from worker:', type, payload);
+
+            // Handle status updates - update global store directly
+            if (type === 'status' && payload && typeof payload === 'object') {
+                const statusPayload = payload as { status?: string; message?: string };
+                const store = useAIStore.getState();
+                if (statusPayload.status === 'loading') {
+                    store.setAIStatus('loading');
+                    store.setAIStatusMessage(statusPayload.message || 'Loading model...');
+                } else if (statusPayload.status === 'ready') {
+                    store.setAIStatus('ready');
+                    store.setAIStatusMessage(statusPayload.message || 'Ready');
+                } else if (statusPayload.status === 'error') {
+                    store.setAIStatus('error');
+                    store.setAIStatusMessage(statusPayload.message || 'Error');
+                } else if (statusPayload.status === 'initialized') {
+                    // Worker is ready to receive commands
+                    console.log('AI Worker initialized and ready');
+                }
+            }
+
+            // Handle responses to calls
+            if (id) {
+                const pending = sharedPendingCalls.get(id);
+                if (pending) {
+                    if (type === 'error') {
+                        const errorPayload = payload as { message?: string };
+                        pending.reject(new Error(errorPayload?.message || 'Worker error'));
+                    } else {
+                        pending.resolve(payload);
+                    }
+                    sharedPendingCalls.delete(id);
+                }
+            }
+        };
+
+        sharedWorker.onerror = (error) => {
+            console.error('AI Worker error:', error);
+            const store = useAIStore.getState();
+            store.setAIStatus('error');
+            store.setAIStatusMessage(`Worker error: ${error.message || 'Unknown error'}`);
+        };
+    }
+
+    return sharedWorker;
+}
+
+function terminateWorker() {
+    if (sharedWorker) {
+        sharedWorker.terminate();
+        sharedWorker = null;
+        workerInitialized = false;
+        sharedPendingCalls.clear();
+    }
 }
 
 export function useAISearch(options: UseAISearchOptions = {}): UseAISearchReturn {
-  const { enabled = true } = options;
+    const { enabled = true } = options;
 
-  const workerRef = useRef<Worker | null>(null);
-  const pendingCallsRef = useRef<
-    Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>
-  >(new Map());
-  const callIdRef = useRef(0);
+    const initializingRef = useRef(false);
 
-  const [status, setStatus] = useState<AIStatus>(enabled ? 'idle' : 'disabled');
-  const [statusMessage, setStatusMessage] = useState(enabled ? '' : 'AI features are disabled');
-  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+    // Use global store for AI status (shared across all components)
+    const status = useAIStore((state) => state.aiStatus);
+    const statusMessage = useAIStore((state) => state.aiStatusMessage);
+    const progress = useAIStore((state) => state.aiProgress);
+    const setStatus = useAIStore((state) => state.setAIStatus);
+    const setStatusMessage = useAIStore((state) => state.setAIStatusMessage);
+    const setProgress = useAIStore((state) => state.setAIProgress);
 
-  // Initialize worker only when enabled
-  useEffect(() => {
-    if (!enabled) {
-      // Clean up existing worker if disabled
-      if (workerRef.current) {
-        workerRef.current.terminate();
-        workerRef.current = null;
-      }
-      setStatus('disabled');
-      setStatusMessage('AI features are disabled');
-      return;
-    }
-
-    // Create worker - using the bundled worker file
-    const worker = new Worker(new URL('../workers/ai.worker.ts', import.meta.url), {
-      type: 'module',
-    });
-
-    worker.onmessage = (event: MessageEvent<AIWorkerMessage>) => {
-      const { id, type, payload } = event.data;
-
-      // Handle status updates
-      if (type === 'status' && payload && typeof payload === 'object') {
-        const statusPayload = payload as { status?: string; message?: string };
-        if (statusPayload.status === 'loading') {
-          setStatus('loading');
-          setStatusMessage(statusPayload.message || 'Loading model...');
-        } else if (statusPayload.status === 'ready') {
-          setStatus('ready');
-          setStatusMessage(statusPayload.message || 'Ready');
-        } else if (statusPayload.status === 'error') {
-          setStatus('error');
-          setStatusMessage(statusPayload.message || 'Error');
+    // Sync disabled state
+    useEffect(() => {
+        if (!enabled && status !== 'disabled') {
+            setStatus('disabled');
+            setStatusMessage('AI features are disabled');
+            terminateWorker();
+        } else if (enabled && status === 'disabled') {
+            setStatus('idle');
+            setStatusMessage('');
         }
-      }
+    }, [enabled, status, setStatus, setStatusMessage]);
 
-      // Handle responses to calls
-      if (id) {
-        const pending = pendingCallsRef.current.get(id);
-        if (pending) {
-          if (type === 'error') {
-            const errorPayload = payload as { message?: string };
-            pending.reject(new Error(errorPayload?.message || 'Worker error'));
-          } else {
-            pending.resolve(payload);
-          }
-          pendingCallsRef.current.delete(id);
+    // Initialize worker when enabled
+    useEffect(() => {
+        console.log('[useAISearch] Effect running, enabled:', enabled);
+        if (enabled) {
+            console.log('[useAISearch] Calling getOrCreateWorker...');
+            const worker = getOrCreateWorker();
+            console.log('[useAISearch] Worker result:', worker ? 'created' : 'null');
         }
-      }
-    };
+    }, [enabled]);
 
-    worker.onerror = (error) => {
-      console.error('AI Worker error:', error);
-      setStatus('error');
-      setStatusMessage('Worker error');
-    };
+    // Send message to worker and wait for response
+    const sendMessage = useCallback(
+        <T>(type: string, payload?: unknown, timeoutMs = 120000): Promise<T> => {
+            return new Promise((resolve, reject) => {
+                const worker = getOrCreateWorker();
+                if (!worker) {
+                    reject(new Error('Worker not initialized'));
+                    return;
+                }
 
-    workerRef.current = worker;
+                const id = `call-${++callIdCounter}`;
 
-    return () => {
-      worker.terminate();
-      workerRef.current = null;
-    };
-  }, [enabled]);
+                const timeoutId = setTimeout(() => {
+                    if (sharedPendingCalls.has(id)) {
+                        sharedPendingCalls.delete(id);
+                        reject(
+                            new Error(`Worker call timed out after ${timeoutMs / 1000}s for operation: ${type}`)
+                        );
+                    }
+                }, timeoutMs);
 
-  // Send message to worker and wait for response
-  const sendMessage = useCallback(
-    <T>(type: string, payload?: unknown, timeoutMs = 120000): Promise<T> => {
-      return new Promise((resolve, reject) => {
-        if (!workerRef.current) {
-          reject(new Error('Worker not initialized'));
-          return;
-        }
+                sharedPendingCalls.set(id, {
+                    resolve: (value: unknown) => {
+                        clearTimeout(timeoutId);
+                        resolve(value as T);
+                    },
+                    reject: (error: Error) => {
+                        clearTimeout(timeoutId);
+                        reject(error);
+                    },
+                });
 
-        const id = `call-${++callIdRef.current}`;
-
-        const timeoutId = setTimeout(() => {
-          if (pendingCallsRef.current.has(id)) {
-            pendingCallsRef.current.delete(id);
-            reject(
-              new Error(`Worker call timed out after ${timeoutMs / 1000}s for operation: ${type}`)
-            );
-          }
-        }, timeoutMs);
-
-        pendingCallsRef.current.set(id, {
-          resolve: (value: unknown) => {
-            clearTimeout(timeoutId);
-            resolve(value as T);
-          },
-          reject: (error: Error) => {
-            clearTimeout(timeoutId);
-            reject(error);
-          },
-        });
-
-        workerRef.current.postMessage({ id, type, payload });
-      });
-    },
-    []
-  );
-
-  // Initialize the model
-  const initialize = useCallback(async () => {
-    if (!enabled) return;
-    if (status === 'ready' || status === 'loading') return;
-    setStatus('loading');
-    try {
-      // Model loading/downloading can take 5+ minutes on slow connections
-      await sendMessage('init', undefined, 300000);
-    } catch (error) {
-      console.error('Failed to initialize AI model:', error);
-      setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : 'Failed to initialize');
-    }
-  }, [enabled, status, sendMessage]);
-
-  // Generate embeddings for texts
-  const generateEmbeddings = useCallback(
-    async (texts: string[]): Promise<number[][]> => {
-      if (!enabled) return [];
-      // Embedding generation: 60 seconds should be enough for a batch
-      const result = await sendMessage<{ embeddings: number[][] }>('embed', { texts }, 60000);
-      return result.embeddings;
-    },
-    [enabled, sendMessage]
-  );
-
-  // Index files - generate and store embeddings
-  const indexFiles = useCallback(
-    async (files: { path: string; name: string }[]) => {
-      if (!enabled) return;
-      if (files.length === 0) return;
-
-      setProgress({ current: 0, total: files.length });
-
-      const batchSize = 10;
-
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batch = files.slice(i, i + batchSize);
-        const texts = batch.map((f) => `${f.name} ${f.path}`);
-
-        try {
-          const embeddings = await generateEmbeddings(texts);
-
-          // Save to IndexedDB
-          for (let j = 0; j < batch.length; j++) {
-            await storeEmbedding({
-              path: batch[j].path,
-              embedding: embeddings[j],
-              model: 'all-MiniLM-L6-v2',
-              createdAt: Date.now(),
+                worker.postMessage({ id, type, payload });
             });
-          }
-        } catch (error) {
-          console.error('Error indexing batch:', error);
-        }
-
-        setProgress({ current: Math.min(i + batchSize, files.length), total: files.length });
-      }
-
-      setProgress(null);
-    },
-    [enabled, generateEmbeddings]
-  );
-
-  // Semantic search
-  const search = useCallback(
-    async (query: string, folderId?: string): Promise<SearchResult[]> => {
-      if (!enabled) return [];
-      if (!query.trim()) return [];
-
-      // Get stored embeddings
-      const storedEmbeddings = await getAllEmbeddings();
-
-      // TODO: Filter by folderId if provided (need to join with files table)
-      const embeddings = storedEmbeddings.map((e: FileEmbedding) => ({
-        path: e.path,
-        embedding: e.embedding,
-      }));
-
-      if (embeddings.length === 0) {
-        return [];
-      }
-
-      // Search should be fast, 30 seconds is plenty
-      const result = await sendMessage<{ results: SearchResult[] }>(
-        'search',
-        {
-          query,
-          embeddings,
-          topK: 20,
         },
-        30000
-      );
+        []
+    );
 
-      return result.results;
-    },
-    [enabled, sendMessage]
-  );
+    // Initialize the model
+    const initialize = useCallback(async () => {
+        if (!enabled) return;
+        if (status === 'ready' || status === 'loading' || status === 'error') return;
+        if (initializingRef.current) return;
 
-  return {
-    status,
-    statusMessage,
-    isReady: status === 'ready',
-    initialize,
-    generateEmbeddings,
-    indexFiles,
-    search,
-    progress,
-  };
+        initializingRef.current = true;
+        setStatus('loading');
+        setStatusMessage('Downloading AI model (~23MB)...');
+        try {
+            // Model loading/downloading can take 10+ minutes on slow connections
+            // The model is ~23MB and needs to be downloaded from Hugging Face
+            await sendMessage('init', undefined, 600000); // 10 minute timeout
+        } catch (error) {
+            console.error('Failed to initialize AI model:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to initialize';
+            const isTimeout = errorMessage.includes('timed out');
+            setStatus('error');
+            setStatusMessage(
+                isTimeout
+                    ? 'Model download timed out after 10 minutes. This could be a network issue or the Hugging Face server may be slow. Try again later.'
+                    : errorMessage
+            );
+        } finally {
+            initializingRef.current = false;
+        }
+    }, [enabled, status, sendMessage, setStatus, setStatusMessage]);
+
+    // Retry initialization after an error
+    const retry = useCallback(async () => {
+        if (!enabled) return;
+        // Reset status to idle so initialize() can run again
+        setStatus('idle');
+        setStatusMessage('');
+        // Terminate the existing worker and create a new one
+        terminateWorker();
+        // Small delay to ensure cleanup
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Re-create worker and initialize
+        getOrCreateWorker();
+        // Initialize will be called by the effect or manually
+    }, [enabled, setStatus, setStatusMessage]);
+
+    // Generate embeddings for texts
+    const generateEmbeddings = useCallback(
+        async (texts: string[]): Promise<number[][]> => {
+            if (!enabled) return [];
+            // Embedding generation: 60 seconds should be enough for a batch
+            const result = await sendMessage<{ embeddings: number[][] }>('embed', { texts }, 60000);
+            return result.embeddings;
+        },
+        [enabled, sendMessage]
+    );
+
+    // Index files - generate and store embeddings
+    const indexFiles = useCallback(
+        async (files: { path: string; name: string }[]) => {
+            if (!enabled) return;
+            if (files.length === 0) return;
+
+            setProgress({ current: 0, total: files.length });
+
+            const batchSize = 10;
+
+            for (let i = 0; i < files.length; i += batchSize) {
+                const batch = files.slice(i, i + batchSize);
+                const texts = batch.map((f) => `${f.name} ${f.path}`);
+
+                try {
+                    const embeddings = await generateEmbeddings(texts);
+
+                    // Save to IndexedDB
+                    for (let j = 0; j < batch.length; j++) {
+                        await storeEmbedding({
+                            path: batch[j].path,
+                            embedding: embeddings[j],
+                            model: 'all-MiniLM-L6-v2',
+                            createdAt: Date.now(),
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error indexing batch:', error);
+                }
+
+                setProgress({ current: Math.min(i + batchSize, files.length), total: files.length });
+            }
+
+            setProgress(null);
+        },
+        [enabled, generateEmbeddings, setProgress]
+    );
+
+    // Semantic search
+    const search = useCallback(
+        async (query: string, folderId?: string): Promise<SearchResult[]> => {
+            if (!enabled) return [];
+            if (!query.trim()) return [];
+
+            // Get stored embeddings
+            const storedEmbeddings = await getAllEmbeddings();
+
+            // TODO: Filter by folderId if provided (need to join with files table)
+            const embeddings = storedEmbeddings.map((e: FileEmbedding) => ({
+                path: e.path,
+                embedding: e.embedding,
+            }));
+
+            if (embeddings.length === 0) {
+                return [];
+            }
+
+            // Search should be fast, 30 seconds is plenty
+            const result = await sendMessage<{ results: SearchResult[] }>(
+                'search',
+                {
+                    query,
+                    embeddings,
+                    topK: 20,
+                },
+                30000
+            );
+
+            return result.results;
+        },
+        [enabled, sendMessage]
+    );
+
+    return {
+        status,
+        statusMessage,
+        isReady: status === 'ready',
+        initialize,
+        retry,
+        generateEmbeddings,
+        indexFiles,
+        search,
+        progress,
+    };
 }
 </file>
 
@@ -6543,75 +8486,101 @@ export function formatUptime(seconds: number): string {
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type AIStatus = 'idle' | 'loading' | 'ready' | 'error' | 'disabled';
+
 interface AppState {
-  // UI State
-  sidebarOpen: boolean;
-  activeTab: 'dashboard' | 'folders' | 'devices' | 'settings' | 'logs';
-  theme: 'light' | 'dark' | 'system';
+    // UI State
+    sidebarOpen: boolean;
+    activeTab: 'dashboard' | 'folders' | 'devices' | 'settings' | 'logs';
+    theme: 'light' | 'dark' | 'system';
 
-  // Settings
-  pollingInterval: number; // in milliseconds
-  nativeNotificationsEnabled: boolean;
-  aiEnabled: boolean; // Enable AI-powered semantic search
+    // Settings
+    pollingInterval: number; // in milliseconds
+    nativeNotificationsEnabled: boolean;
+    aiEnabled: boolean; // Enable AI-powered semantic search
 
-  // Actions
-  setSidebarOpen: (open: boolean) => void;
-  toggleSidebar: () => void;
-  setActiveTab: (tab: AppState['activeTab']) => void;
-  setTheme: (theme: AppState['theme']) => void;
-  setPollingInterval: (interval: number) => void;
-  setNativeNotificationsEnabled: (enabled: boolean) => void;
-  setAiEnabled: (enabled: boolean) => void;
+    // Actions
+    setSidebarOpen: (open: boolean) => void;
+    toggleSidebar: () => void;
+    setActiveTab: (tab: AppState['activeTab']) => void;
+    setTheme: (theme: AppState['theme']) => void;
+    setPollingInterval: (interval: number) => void;
+    setNativeNotificationsEnabled: (enabled: boolean) => void;
+    setAiEnabled: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
-  persist(
-    (set) => ({
-      // Initial State
-      sidebarOpen: true,
-      activeTab: 'dashboard',
-      theme: 'dark',
-      pollingInterval: 5000,
-      nativeNotificationsEnabled: true,
-      aiEnabled: false, // AI disabled by default
+    persist(
+        (set) => ({
+            // Initial State
+            sidebarOpen: true,
+            activeTab: 'dashboard',
+            theme: 'dark',
+            pollingInterval: 5000,
+            nativeNotificationsEnabled: true,
+            aiEnabled: false, // AI disabled by default
 
-      // Actions
-      setSidebarOpen: (open) => set({ sidebarOpen: open }),
-      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      setActiveTab: (tab) => set({ activeTab: tab }),
-      setTheme: (theme) => set({ theme }),
-      setPollingInterval: (interval) => set({ pollingInterval: interval }),
-      setNativeNotificationsEnabled: (enabled) => set({ nativeNotificationsEnabled: enabled }),
-      setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
-    }),
-    {
-      name: 'eigen-app-store',
-    }
-  )
+            // Actions
+            setSidebarOpen: (open) => set({ sidebarOpen: open }),
+            toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+            setActiveTab: (tab) => set({ activeTab: tab }),
+            setTheme: (theme) => set({ theme }),
+            setPollingInterval: (interval) => set({ pollingInterval: interval }),
+            setNativeNotificationsEnabled: (enabled) => set({ nativeNotificationsEnabled: enabled }),
+            setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
+        }),
+        {
+            name: 'eigen-app-store',
+        }
+    )
 );
 
-interface SyncState {
-  // Syncthing state
-  isConnected: boolean;
-  isSyncthingRunning: boolean;
-  lastError: string | null;
+interface AIState {
+    // AI Model state (shared across components)
+    aiStatus: AIStatus;
+    aiStatusMessage: string;
+    aiProgress: { current: number; total: number } | null;
 
-  // Actions
-  setConnected: (connected: boolean) => void;
-  setSyncthingRunning: (running: boolean) => void;
-  setLastError: (error: string | null) => void;
+    // Actions
+    setAIStatus: (status: AIStatus) => void;
+    setAIStatusMessage: (message: string) => void;
+    setAIProgress: (progress: { current: number; total: number } | null) => void;
+}
+
+export const useAIStore = create<AIState>()((set) => ({
+    // Initial State
+    aiStatus: 'idle',
+    aiStatusMessage: '',
+    aiProgress: null,
+
+    // Actions
+    setAIStatus: (status) => set({ aiStatus: status }),
+    setAIStatusMessage: (message) => set({ aiStatusMessage: message }),
+    setAIProgress: (progress) => set({ aiProgress: progress }),
+}));
+
+interface SyncState {
+    // Syncthing state
+    isConnected: boolean;
+    isSyncthingRunning: boolean;
+    lastError: string | null;
+
+    // Actions
+    setConnected: (connected: boolean) => void;
+    setSyncthingRunning: (running: boolean) => void;
+    setLastError: (error: string | null) => void;
 }
 
 export const useSyncStore = create<SyncState>()((set) => ({
-  // Initial State
-  isConnected: false,
-  isSyncthingRunning: false,
-  lastError: null,
+    // Initial State
+    isConnected: false,
+    isSyncthingRunning: false,
+    lastError: null,
 
-  // Actions
-  setConnected: (connected) => set({ isConnected: connected }),
-  setSyncthingRunning: (running) => set({ isSyncthingRunning: running }),
-  setLastError: (error) => set({ lastError: error }),
+    // Actions
+    setConnected: (connected) => set({ isConnected: connected }),
+    setSyncthingRunning: (running) => set({ isSyncthingRunning: running }),
+    setLastError: (error) => set({ lastError: error }),
 }));
 </file>
 
@@ -6633,23 +8602,23 @@ env.useBrowserCache = true;
 
 // Message types
 interface WorkerMessage {
-  id: string;
-  type: 'init' | 'embed' | 'search' | 'status';
-  payload?: unknown;
+    id: string;
+    type: 'init' | 'embed' | 'search' | 'status';
+    payload?: unknown;
 }
 
 interface InitPayload {
-  modelName?: string;
+    modelName?: string;
 }
 
 interface EmbedPayload {
-  texts: string[];
+    texts: string[];
 }
 
 interface SearchPayload {
-  query: string;
-  embeddings: { path: string; embedding: number[] }[];
-  topK?: number;
+    query: string;
+    embeddings: { path: string; embedding: number[] }[];
+    topK?: number;
 }
 
 // Worker state
@@ -6660,1946 +8629,519 @@ let modelName = 'Xenova/all-MiniLM-L6-v2'; // Small, fast model
 /**
  * Initialize the embedding pipeline
  */
-async function initModel(name?: string): Promise<void> {
-  if (isLoading) return;
-  if (embedder) return;
+async function initModel(name?: string): Promise<boolean> {
+    if (isLoading) {
+        // Already loading, return false to indicate no new load started
+        return false;
+    }
+    if (embedder) {
+        // Already loaded, return true
+        return true;
+    }
 
-  isLoading = true;
-  modelName = name || modelName;
+    isLoading = true;
+    modelName = name || modelName;
 
-  try {
-    postMessage({
-      type: 'status',
-      payload: { status: 'loading', message: `Loading model: ${modelName}` },
-    });
+    try {
+        postMessage({
+            type: 'status',
+            payload: { status: 'loading', message: `Downloading model: ${modelName}...` },
+        });
 
-    embedder = (await pipeline('feature-extraction', modelName, {
-      quantized: true, // Use quantized model for smaller size
-    })) as FeatureExtractionPipeline;
+        embedder = (await pipeline('feature-extraction', modelName, {
+            quantized: true, // Use quantized model for smaller size
+            progress_callback: (progress: { status: string; file?: string; progress?: number; loaded?: number; total?: number }) => {
+                // Report download progress
+                if (progress.status === 'download' || progress.status === 'progress') {
+                    const pct = progress.progress ? Math.round(progress.progress) : 0;
+                    const file = progress.file ? progress.file.split('/').pop() : '';
+                    postMessage({
+                        type: 'status',
+                        payload: {
+                            status: 'loading',
+                            message: `Downloading ${file}... ${pct}%`
+                        },
+                    });
+                } else if (progress.status === 'done') {
+                    postMessage({
+                        type: 'status',
+                        payload: { status: 'loading', message: 'Initializing model...' },
+                    });
+                }
+            },
+        })) as FeatureExtractionPipeline;
 
-    postMessage({
-      type: 'status',
-      payload: { status: 'ready', message: 'Model loaded successfully' },
-    });
-  } catch (error) {
-    postMessage({
-      type: 'status',
-      payload: {
-        status: 'error',
-        message: `Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      },
-    });
-  } finally {
-    isLoading = false;
-  }
+        postMessage({
+            type: 'status',
+            payload: { status: 'ready', message: 'Model loaded successfully' },
+        });
+    } catch (error) {
+        console.error('Model loading error:', error);
+        postMessage({
+            type: 'status',
+            payload: {
+                status: 'error',
+                message: `Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            },
+        });
+        return false;
+    } finally {
+        isLoading = false;
+    }
+    return true;
 }
 
 /**
  * Generate embeddings for texts
  */
 async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  if (!embedder) {
-    throw new Error('Model not initialized');
-  }
+    if (!embedder) {
+        throw new Error('Model not initialized');
+    }
 
-  const results: number[][] = [];
+    const results: number[][] = [];
 
-  for (const text of texts) {
-    const output = await embedder(text, {
-      pooling: 'mean',
-      normalize: true,
-    });
-    // Convert tensor to array
-    results.push(Array.from(output.data as Float32Array));
-  }
+    for (const text of texts) {
+        const output = await embedder(text, {
+            pooling: 'mean',
+            normalize: true,
+        });
+        // Convert tensor to array
+        results.push(Array.from(output.data as Float32Array));
+    }
 
-  return results;
+    return results;
 }
 
 /**
  * Compute cosine similarity between two vectors
  */
 function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0;
+    if (a.length !== b.length) return 0;
 
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
 
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
+    for (let i = 0; i < a.length; i++) {
+        dotProduct += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
 
-  normA = Math.sqrt(normA);
-  normB = Math.sqrt(normB);
+    normA = Math.sqrt(normA);
+    normB = Math.sqrt(normB);
 
-  if (normA === 0 || normB === 0) return 0;
+    if (normA === 0 || normB === 0) return 0;
 
-  return dotProduct / (normA * normB);
+    return dotProduct / (normA * normB);
 }
 
 /**
  * Semantic search - find most similar files to query
  */
 async function semanticSearch(
-  query: string,
-  embeddings: { path: string; embedding: number[] }[],
-  topK = 10
+    query: string,
+    embeddings: { path: string; embedding: number[] }[],
+    topK = 10
 ): Promise<{ path: string; score: number }[]> {
-  if (!embedder) {
-    throw new Error('Model not initialized');
-  }
+    if (!embedder) {
+        throw new Error('Model not initialized');
+    }
 
-  // Generate query embedding
-  const queryEmbedding = (await generateEmbeddings([query]))[0];
+    // Generate query embedding
+    const queryEmbedding = (await generateEmbeddings([query]))[0];
 
-  // Compute similarities
-  const results = embeddings.map((item) => ({
-    path: item.path,
-    score: cosineSimilarity(queryEmbedding, item.embedding),
-  }));
+    // Compute similarities
+    const results = embeddings.map((item) => ({
+        path: item.path,
+        score: cosineSimilarity(queryEmbedding, item.embedding),
+    }));
 
-  // Sort by similarity and return top K
-  return results.sort((a, b) => b.score - a.score).slice(0, topK);
+    // Sort by similarity and return top K
+    return results.sort((a, b) => b.score - a.score).slice(0, topK);
 }
 
 // Handle messages from main thread
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
-  const { id, type, payload } = event.data;
+    const { id, type, payload } = event.data;
 
-  try {
-    switch (type) {
-      case 'init': {
-        const initPayload = payload as InitPayload | undefined;
-        await initModel(initPayload?.modelName);
-        postMessage({ id, type: 'init', payload: { success: true } });
-        break;
-      }
+    console.log(`[AI Worker] Received message: ${type}`, id ? `(id: ${id})` : '');
 
-      case 'embed': {
-        const embedPayload = payload as EmbedPayload;
-        const embeddings = await generateEmbeddings(embedPayload.texts);
-        postMessage({ id, type: 'embed', payload: { embeddings } });
-        break;
-      }
+    try {
+        switch (type) {
+            case 'init': {
+                const initPayload = payload as InitPayload | undefined;
+                // If already loading, wait for it to complete
+                if (isLoading) {
+                    console.log('[AI Worker] Model already loading, waiting...');
+                    // Poll until loading is done
+                    while (isLoading) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+                const success = await initModel(initPayload?.modelName);
+                console.log(`[AI Worker] Init complete, success: ${success}, embedder: ${!!embedder}`);
+                postMessage({ id, type: 'init', payload: { success: !!embedder } });
+                break;
+            }
 
-      case 'search': {
-        const searchPayload = payload as SearchPayload;
-        const results = await semanticSearch(
-          searchPayload.query,
-          searchPayload.embeddings,
-          searchPayload.topK
-        );
-        postMessage({ id, type: 'search', payload: { results } });
-        break;
-      }
+            case 'embed': {
+                const embedPayload = payload as EmbedPayload;
+                const embeddings = await generateEmbeddings(embedPayload.texts);
+                postMessage({ id, type: 'embed', payload: { embeddings } });
+                break;
+            }
 
-      case 'status': {
+            case 'search': {
+                const searchPayload = payload as SearchPayload;
+                const results = await semanticSearch(
+                    searchPayload.query,
+                    searchPayload.embeddings,
+                    searchPayload.topK
+                );
+                postMessage({ id, type: 'search', payload: { results } });
+                break;
+            }
+
+            case 'status': {
+                postMessage({
+                    id,
+                    type: 'status',
+                    payload: {
+                        initialized: !!embedder,
+                        loading: isLoading,
+                        model: modelName,
+                    },
+                });
+                break;
+            }
+
+            default:
+                postMessage({
+                    id,
+                    type: 'error',
+                    payload: { message: `Unknown message type: ${type}` },
+                });
+        }
+    } catch (error) {
+        console.error('[AI Worker] Error handling message:', error);
         postMessage({
-          id,
-          type: 'status',
-          payload: {
-            initialized: !!embedder,
-            loading: isLoading,
-            model: modelName,
-          },
-        });
-        break;
-      }
-
-      default:
-        postMessage({
-          id,
-          type: 'error',
-          payload: { message: `Unknown message type: ${type}` },
+            id,
+            type: 'error',
+            payload: {
+                message: error instanceof Error ? error.message : 'Unknown error',
+            },
         });
     }
-  } catch (error) {
-    postMessage({
-      id,
-      type: 'error',
-      payload: {
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-    });
-  }
 };
 
 // Signal that worker is ready
+console.log('[AI Worker] Worker script loaded, signaling ready');
 postMessage({ type: 'status', payload: { status: 'initialized' } });
 </file>
 
-<file path="src-tauri/capabilities/default.json">
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "opener:default",
-    "notification:default",
-    "dialog:allow-open",
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "binaries/syncthing",
-          "sidecar": true,
-          "args": [
-            "-no-browser",
-            "-no-restart",
-            {
-              "validator": "\\S+"
-            }
-          ]
-        }
-      ]
-    },
-    "shell:allow-kill"
-  ]
-}
-</file>
+<file path="src-tauri/src/lib.rs">
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::sync::Mutex;
+use tauri::Manager;
+use tauri_plugin_shell::process::CommandChild;
 
-<file path="src-tauri/src/commands.rs">
-use crate::{SyncthingError, SyncthingState};
-use tauri::State;
-use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
-use serde::Serialize;
+pub mod commands;
 
-/// Information about Syncthing installation
-#[derive(Debug, Serialize)]
-pub struct SyncthingInfo {
-    pub installed: bool,
-    pub version: Option<String>,
-    pub path: Option<String>,
-    pub bundled: bool,
+#[derive(Debug, Clone)]
+pub struct SyncthingConfig {
+    pub api_key: String,
+    pub port: u16,
+    pub host: String,
 }
 
-/// Check if Syncthing is installed and get version info
-#[tauri::command]
-pub fn check_syncthing_installation() -> SyncthingInfo {
-    // Check for system-installed syncthing
-    use std::process::Command;
-    match Command::new("syncthing").arg("--version").output() {
-        Ok(output) => {
-            let version_str = String::from_utf8_lossy(&output.stdout);
-            let version = version_str
-                .lines()
-                .next()
-                .map(|s| s.to_string());
-            
-            // Try to get the path
-            let path = Command::new("which")
-                .arg("syncthing")
-                .output()
-                .ok()
-                .and_then(|o| {
-                    let p = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                    if p.is_empty() { None } else { Some(p) }
-                });
-            
-            SyncthingInfo {
-                installed: true,
-                version,
-                path,
-                bundled: false,
-            }
-        }
-        Err(_) => SyncthingInfo {
-            installed: true, // Bundled sidecar is always available
-            version: Some("bundled".to_string()),
-            path: Some("bundled sidecar".to_string()),
-            bundled: true,
-        },
-    }
-}
-
-/// Start the Syncthing sidecar process
-#[tauri::command]
-pub async fn start_syncthing_sidecar(
-    app: AppHandle,
-    state: State<'_, SyncthingState>,
-) -> Result<String, SyncthingError> {
-    let mut child_guard = state.sidecar_child.lock().map_err(|e| {
-        SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e))
-    })?;
-
-    if child_guard.is_some() {
-        return Ok("Syncthing already running".into());
-    }
-
-    // Use the bundled sidecar
-    let sidecar_command = app.shell()
-        .sidecar("syncthing")
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to create sidecar command: {}", e)))?
-        .args([
-            "-no-browser",
-            "-no-restart",
-            &format!("-gui-apikey={}", state.config.api_key),
-            &format!("-gui-address={}:{}", state.config.host, state.config.port),
-        ]);
-
-    let (_rx, child) = sidecar_command
-        .spawn()
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {}", e)))?;
-
-    *child_guard = Some(child);
-    Ok("Syncthing sidecar started successfully".into())
-}
-
-/// Stop the Syncthing sidecar process
-#[tauri::command]
-pub async fn stop_syncthing_sidecar(
-    state: State<'_, SyncthingState>,
-) -> Result<String, SyncthingError> {
-    let mut child_guard = state.sidecar_child.lock().map_err(|e| {
-        SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e))
-    })?;
-
-    if let Some(child) = child_guard.take() {
-        child.kill().map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to kill sidecar process: {}", e))
-        })?;
-        Ok("Syncthing sidecar stopped".into())
-    } else {
-        Ok("Syncthing sidecar was not running".into())
-    }
-}
-
-/// Get Syncthing system status
-#[tauri::command]
-pub async fn get_system_status(
-    state: State<'_, SyncthingState>,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/status",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Get Syncthing connections info
-#[tauri::command]
-pub async fn get_connections(
-    state: State<'_, SyncthingState>,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/connections",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Get Syncthing configuration
-#[tauri::command]
-pub async fn get_config(
-    state: State<'_, SyncthingState>,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Update global Syncthing options
-#[tauri::command]
-pub async fn update_options(
-    state: State<'_, SyncthingState>,
-    options: serde_json::Value,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    
-    // First get the current config
-    let get_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-
-    let current_config: serde_json::Value = client
-        .get(&get_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Merge options into current config
-    let mut updated_config = current_config.clone();
-    if let (Some(config_obj), Some(current_options)) = (
-        updated_config.as_object_mut(),
-        current_config.get("options"),
-    ) {
-        let mut new_options = current_options.clone();
-        if let (Some(opts_obj), Some(updates_obj)) = (
-            new_options.as_object_mut(),
-            options.as_object(),
-        ) {
-            for (key, value) in updates_obj {
-                opts_obj.insert(key.clone(), value.clone());
-            }
-        }
-        config_obj.insert("options".to_string(), new_options);
-    }
-
-    // Save the updated config
-    let put_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .put(&put_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&updated_config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    if !res.status().is_success() {
-        return Err(SyncthingError::HttpError(format!(
-            "Failed to update options: {}",
-            res.status()
-        )));
-    }
-
-    Ok(())
-}
-
-/// Get folder status
-#[tauri::command]
-pub async fn get_folder_status(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/db/status?folder={}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Pause a folder
-#[tauri::command]
-pub async fn pause_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    // Get current config
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Update paused status
-    config["paused"] = serde_json::Value::Bool(true);
-
-    // Put updated config
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Resume a folder
-#[tauri::command]
-pub async fn resume_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    // Get current config
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Update paused status
-    config["paused"] = serde_json::Value::Bool(false);
-
-    // Put updated config
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Force rescan of a folder
-#[tauri::command]
-pub async fn rescan_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/db/scan?folder={}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    client
-        .post(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Get the current API configuration (for debugging)
-#[tauri::command]
-pub fn get_api_config(state: State<'_, SyncthingState>) -> (String, u16) {
-    (state.config.host.clone(), state.config.port)
-}
-
-/// Get this device's ID
-#[tauri::command]
-pub async fn get_device_id(
-    state: State<'_, SyncthingState>,
-) -> Result<String, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/status",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    json["myID"]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| SyncthingError::ParseError("No device ID found".into()))
-}
-
-/// Add a new device to Syncthing
-#[tauri::command]
-pub async fn add_device(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-    name: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    
-    // First, get current config
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-    
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Check if device already exists
-    if let Some(devices) = config["devices"].as_array() {
-        for device in devices {
-            if device["deviceID"].as_str() == Some(&device_id) {
-                return Err(SyncthingError::ProcessError("Device already exists".into()));
-            }
-        }
-    }
-
-    // Create new device config
-    let new_device = serde_json::json!({
-        "deviceID": device_id,
-        "name": name,
-        "addresses": ["dynamic"],
-        "compression": "metadata",
-        "introducer": false,
-        "paused": false,
-        "autoAcceptFolders": false,
-    });
-
-    // Add to devices array
-    if let Some(devices) = config["devices"].as_array_mut() {
-        devices.push(new_device);
-    }
-
-    // Save updated config
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Remove a device from Syncthing
-#[tauri::command]
-pub async fn remove_device(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    client
-        .delete(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Add a new folder to Syncthing
-#[tauri::command]
-pub async fn add_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    folder_label: String,
-    folder_path: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    
-    // First, get current config
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-    
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Check if folder already exists
-    if let Some(folders) = config["folders"].as_array() {
-        for folder in folders {
-            if folder["id"].as_str() == Some(&folder_id) {
-                return Err(SyncthingError::ProcessError("Folder already exists".into()));
-            }
-        }
-    }
-
-    // Create new folder config
-    let new_folder = serde_json::json!({
-        "id": folder_id,
-        "label": folder_label,
-        "path": folder_path,
-        "type": "sendreceive",
-        "rescanIntervalS": 3600,
-        "fsWatcherEnabled": true,
-        "fsWatcherDelayS": 10,
-        "ignorePerms": false,
-        "autoNormalize": true,
-        "paused": false,
-        "devices": [],
-        "minDiskFree": {
-            "value": 1,
-            "unit": "%"
-        },
-        "versioning": {
-            "type": "",
-            "params": {},
-            "cleanupIntervalS": 3600,
-            "fsPath": "",
-            "fsType": "basic"
-        },
-        "copiers": 0,
-        "pullerMaxPendingKiB": 0,
-        "hashers": 0,
-        "order": "random",
-        "ignoreDelete": false,
-        "scanProgressIntervalS": 0,
-        "pullerPauseS": 0,
-        "maxConflicts": 10,
-        "disableSparseFiles": false,
-        "disableTempIndexes": false,
-        "weakHashThresholdPct": 25,
-        "markerName": ".stfolder",
-        "copyOwnershipFromParent": false,
-        "modTimeWindowS": 0,
-        "maxConcurrentWrites": 2,
-        "disableFsync": false,
-        "blockPullOrder": "standard",
-        "copyRangeMethod": "standard",
-        "caseSensitiveFS": false,
-        "junctionsAsDirs": false,
-        "syncOwnership": false,
-        "sendOwnership": false,
-        "syncXattrs": false,
-        "sendXattrs": false,
-        "xattrFilter": {
-            "entries": [],
-            "maxSingleEntrySize": 1024,
-            "maxTotalSize": 4096
-        }
-    });
-
-    // Add to folders array
-    if let Some(folders) = config["folders"].as_array_mut() {
-        folders.push(new_folder);
-    }
-
-    // Save updated config
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Remove a folder from Syncthing
-#[tauri::command]
-pub async fn remove_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    client
-        .delete(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Share a folder with a specific device
-#[tauri::command]
-pub async fn share_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    device_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    // 1. Get current folder config
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut folder_config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // 2. Check if device is already added
-    let mut device_exists = false;
-    if let Some(devices) = folder_config["devices"].as_array() {
-        for device in devices {
-            if device["deviceID"].as_str() == Some(&device_id) {
-                device_exists = true;
-                break;
-            }
-        }
-    }
-
-    // 3. Add device if not exists
-    if !device_exists {
-        let new_device_entry = serde_json::json!({
-            "deviceID": device_id,
-            "introducedBy": ""
-        });
-
-        if let Some(devices) = folder_config["devices"].as_array_mut() {
-            devices.push(new_device_entry);
-        }
-
-        // 4. Update config
-        client
-            .put(&url)
-            .header("X-API-Key", &state.config.api_key)
-            .json(&folder_config)
-            .send()
-            .await
-            .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-    }
-
-    Ok(())
-}
-
-// ============================================================================
-// Advanced Folder Configuration
-// ============================================================================
-
-/// Add a folder with advanced configuration options
-#[tauri::command]
-pub async fn add_folder_advanced(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    folder_label: String,
-    folder_path: String,
-    versioning_type: Option<String>,
-    versioning_params: Option<serde_json::Value>,
-    rescan_interval_s: Option<u32>,
-    fs_watcher_enabled: Option<bool>,
-    fs_watcher_delay_s: Option<u32>,
-    ignore_perms: Option<bool>,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-    
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Check if folder already exists
-    if let Some(folders) = config["folders"].as_array() {
-        for folder in folders {
-            if folder["id"].as_str() == Some(&folder_id) {
-                return Err(SyncthingError::ProcessError("Folder already exists".into()));
-            }
-        }
-    }
-
-    // Build versioning config
-    let versioning = match versioning_type.as_deref() {
-        Some("simple") => serde_json::json!({
-            "type": "simple",
-            "params": versioning_params.unwrap_or(serde_json::json!({
-                "keep": "5"
-            })),
-            "cleanupIntervalS": 3600,
-            "fsPath": "",
-            "fsType": "basic"
-        }),
-        Some("staggered") => serde_json::json!({
-            "type": "staggered",
-            "params": versioning_params.unwrap_or(serde_json::json!({
-                "cleanInterval": "3600",
-                "maxAge": "31536000"
-            })),
-            "cleanupIntervalS": 3600,
-            "fsPath": "",
-            "fsType": "basic"
-        }),
-        Some("trashcan") => serde_json::json!({
-            "type": "trashcan",
-            "params": versioning_params.unwrap_or(serde_json::json!({
-                "cleanoutDays": "0"
-            })),
-            "cleanupIntervalS": 3600,
-            "fsPath": "",
-            "fsType": "basic"
-        }),
-        Some("external") => serde_json::json!({
-            "type": "external",
-            "params": versioning_params.unwrap_or(serde_json::json!({
-                "command": ""
-            })),
-            "cleanupIntervalS": 3600,
-            "fsPath": "",
-            "fsType": "basic"
-        }),
-        _ => serde_json::json!({
-            "type": "",
-            "params": {},
-            "cleanupIntervalS": 3600,
-            "fsPath": "",
-            "fsType": "basic"
-        }),
-    };
-
-    let new_folder = serde_json::json!({
-        "id": folder_id,
-        "label": folder_label,
-        "path": folder_path,
-        "type": "sendreceive",
-        "rescanIntervalS": rescan_interval_s.unwrap_or(3600),
-        "fsWatcherEnabled": fs_watcher_enabled.unwrap_or(true),
-        "fsWatcherDelayS": fs_watcher_delay_s.unwrap_or(10),
-        "ignorePerms": ignore_perms.unwrap_or(false),
-        "autoNormalize": true,
-        "paused": false,
-        "devices": [],
-        "minDiskFree": { "value": 1, "unit": "%" },
-        "versioning": versioning,
-        "copiers": 0,
-        "pullerMaxPendingKiB": 0,
-        "hashers": 0,
-        "order": "random",
-        "ignoreDelete": false,
-        "scanProgressIntervalS": 0,
-        "pullerPauseS": 0,
-        "maxConflicts": 10,
-        "disableSparseFiles": false,
-        "disableTempIndexes": false,
-        "weakHashThresholdPct": 25,
-        "markerName": ".stfolder",
-        "copyOwnershipFromParent": false,
-        "modTimeWindowS": 0,
-        "maxConcurrentWrites": 2,
-        "disableFsync": false,
-        "blockPullOrder": "standard",
-        "copyRangeMethod": "standard",
-        "caseSensitiveFS": false,
-        "junctionsAsDirs": false,
-        "syncOwnership": false,
-        "sendOwnership": false,
-        "syncXattrs": false,
-        "sendXattrs": false,
-        "xattrFilter": {
-            "entries": [],
-            "maxSingleEntrySize": 1024,
-            "maxTotalSize": 4096
-        }
-    });
-
-    if let Some(folders) = config["folders"].as_array_mut() {
-        folders.push(new_folder);
-    }
-
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Update folder configuration
-#[tauri::command]
-pub async fn update_folder_config(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    updates: serde_json::Value,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut folder_config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Merge updates into folder config
-    if let (Some(config_obj), Some(updates_obj)) = (folder_config.as_object_mut(), updates.as_object()) {
-        for (key, value) in updates_obj {
-            config_obj.insert(key.clone(), value.clone());
-        }
-    }
-
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&folder_config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-// ============================================================================
-// Ignore Patterns (.stignore)
-// ============================================================================
-
-/// Get ignore patterns for a folder
-#[tauri::command]
-pub async fn get_folder_ignores(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/db/ignores?folder={}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Set ignore patterns for a folder
-#[tauri::command]
-pub async fn set_folder_ignores(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    ignore_patterns: Vec<String>,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/db/ignores?folder={}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    let body = serde_json::json!({
-        "ignore": ignore_patterns
-    });
-
-    client
-        .post(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-// ============================================================================
-// System Logs
-// ============================================================================
-
-/// Get Syncthing logs
-#[tauri::command]
-pub async fn get_system_logs(
-    state: State<'_, SyncthingState>,
-    since: Option<String>,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let mut url = format!(
-        "http://{}:{}/rest/system/log",
-        state.config.host, state.config.port
-    );
-
-    if let Some(since_time) = since {
-        url = format!("{}?since={}", url, since_time);
-    }
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-// ============================================================================
-// Event API
-// ============================================================================
-
-/// Get events from Syncthing (for real-time updates)
-#[tauri::command]
-pub async fn get_events(
-    state: State<'_, SyncthingState>,
-    since: Option<u64>,
-    limit: Option<u32>,
-    timeout: Option<u32>,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(timeout.unwrap_or(60) as u64 + 5))
-        .build()
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut url = format!(
-        "http://{}:{}/rest/events",
-        state.config.host, state.config.port
-    );
-
-    let mut params = Vec::new();
-    if let Some(s) = since {
-        params.push(format!("since={}", s));
-    }
-    if let Some(l) = limit {
-        params.push(format!("limit={}", l));
-    }
-    if let Some(t) = timeout {
-        params.push(format!("timeout={}", t));
-    }
-
-    if !params.is_empty() {
-        url = format!("{}?{}", url, params.join("&"));
-    }
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-// ============================================================================
-// Advanced Device Settings
-// ============================================================================
-
-/// Add device with advanced options
-#[tauri::command]
-pub async fn add_device_advanced(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-    name: String,
-    addresses: Option<Vec<String>>,
-    compression: Option<String>,
-    introducer: Option<bool>,
-    auto_accept_folders: Option<bool>,
-    max_send_kbps: Option<u32>,
-    max_recv_kbps: Option<u32>,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-    
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Check if device already exists
-    if let Some(devices) = config["devices"].as_array() {
-        for device in devices {
-            if device["deviceID"].as_str() == Some(&device_id) {
-                return Err(SyncthingError::ProcessError("Device already exists".into()));
-            }
-        }
-    }
-
-    let new_device = serde_json::json!({
-        "deviceID": device_id,
-        "name": name,
-        "addresses": addresses.unwrap_or_else(|| vec!["dynamic".to_string()]),
-        "compression": compression.unwrap_or_else(|| "metadata".to_string()),
-        "introducer": introducer.unwrap_or(false),
-        "paused": false,
-        "autoAcceptFolders": auto_accept_folders.unwrap_or(false),
-        "maxSendKbps": max_send_kbps.unwrap_or(0),
-        "maxRecvKbps": max_recv_kbps.unwrap_or(0),
-    });
-
-    if let Some(devices) = config["devices"].as_array_mut() {
-        devices.push(new_device);
-    }
-
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Update device configuration
-#[tauri::command]
-pub async fn update_device_config(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-    updates: serde_json::Value,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut device_config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Merge updates
-    if let (Some(config_obj), Some(updates_obj)) = (device_config.as_object_mut(), updates.as_object()) {
-        for (key, value) in updates_obj {
-            config_obj.insert(key.clone(), value.clone());
-        }
-    }
-
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&device_config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Pause a device
-#[tauri::command]
-pub async fn pause_device(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    // Get current config
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Update paused status
-    config["paused"] = serde_json::Value::Bool(true);
-
-    // Put updated config
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Resume a device
-#[tauri::command]
-pub async fn resume_device(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    // Get current config
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Update paused status
-    config["paused"] = serde_json::Value::Bool(false);
-
-    // Put updated config
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Unshare a folder from a device
-#[tauri::command]
-pub async fn unshare_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    device_id: String,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    // Get current folder config
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut folder_config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Remove device from the devices array
-    if let Some(devices) = folder_config["devices"].as_array_mut() {
-        devices.retain(|d| d["deviceID"].as_str() != Some(&device_id));
-    }
-
-    // Update config
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&folder_config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-// ============================================================================
-// System Management
-// ============================================================================
-
-/// Restart Syncthing
-#[tauri::command]
-pub async fn restart_syncthing(
-    state: State<'_, SyncthingState>,
-) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/restart",
-        state.config.host, state.config.port
-    );
-
-    client
-        .post(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Get detailed folder configuration
-#[tauri::command]
-pub async fn get_folder_config(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/folders/{}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Get detailed device configuration
-#[tauri::command]
-pub async fn get_device_config(
-    state: State<'_, SyncthingState>,
-    device_id: String,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-/// Open folder in file explorer
-#[tauri::command]
-pub async fn open_folder_in_explorer(folder_path: String) -> Result<(), SyncthingError> {
-    use std::process::Command;
-    
-    #[cfg(target_os = "linux")]
-    {
-        Command::new("xdg-open")
-            .arg(&folder_path)
-            .spawn()
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        Command::new("open")
-            .arg(&folder_path)
-            .spawn()
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        Command::new("explorer")
-            .arg(&folder_path)
-            .spawn()
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
-    }
-
-    Ok(())
-}
-
-/// Browse files in a folder (list directory contents)
-#[tauri::command]
-pub async fn browse_folder(
-    state: State<'_, SyncthingState>,
-    folder_id: String,
-    prefix: Option<String>,
-) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let mut url = format!(
-        "http://{}:{}/rest/db/browse?folder={}",
-        state.config.host, state.config.port, folder_id
-    );
-
-    if let Some(p) = prefix {
-        url = format!("{}&prefix={}", url, p);
-    }
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
-}
-
-// ============================================================================
-// File Conflict Resolution
-// ============================================================================
-
-/// Get list of conflict files for a folder by scanning the filesystem
-#[tauri::command]
-pub async fn scan_for_conflicts(
-    folder_path: String,
-) -> Result<Vec<serde_json::Value>, SyncthingError> {
-    let mut conflicts = Vec::new();
-    
-    fn scan_dir(dir: &std::path::Path, conflicts: &mut Vec<serde_json::Value>, base: &std::path::Path) {
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    // Skip hidden directories and .stversions
-                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        if !name.starts_with('.') && name != ".stversions" {
-                            scan_dir(&path, conflicts, base);
-                        }
-                    }
-                } else if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if name.contains(".sync-conflict-") {
-                        let relative_path = path.strip_prefix(base).unwrap_or(&path);
-                        if let Ok(metadata) = std::fs::metadata(&path) {
-                            // Extract original filename from conflict pattern
-                            // Pattern: filename.sync-conflict-YYYYMMDD-HHMMSS-DEVICEID.ext
-                            let original = extract_original_filename(name);
-                            conflicts.push(serde_json::json!({
-                                "name": relative_path.to_string_lossy(),
-                                "original": original,
-                                "size": metadata.len(),
-                                "modTime": metadata.modified().ok().map(|t| {
-                                    let duration = t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
-                                    duration.as_secs()
-                                }),
-                            }));
+impl SyncthingConfig {
+    /// Try to read API key from Syncthing's config file
+    fn read_api_key() -> Option<String> {
+        // Try common config locations
+        let home = std::env::var("HOME").ok()?;
+        let paths = [
+            format!("{}/.local/state/syncthing/config.xml", home),
+            format!("{}/.config/syncthing/config.xml", home),
+        ];
+        
+        for path in &paths {
+            if let Ok(content) = fs::read_to_string(path) {
+                // Simple XML parsing for apikey
+                if let Some(start) = content.find("<apikey>") {
+                    if let Some(end) = content[start..].find("</apikey>") {
+                        let key = &content[start + 8..start + end];
+                        if !key.is_empty() {
+                            return Some(key.to_string());
                         }
                     }
                 }
             }
         }
+        None
     }
-    
-    fn extract_original_filename(conflict_name: &str) -> String {
-        // Pattern: file.sync-conflict-20231201-120000-ABCDEFG.txt
-        // Should become: file.txt
-        if let Some(pos) = conflict_name.find(".sync-conflict-") {
-            let before = &conflict_name[..pos];
-            // Find the extension after the conflict marker
-            let after = &conflict_name[pos..];
-            if let Some(ext_pos) = after.rfind('.') {
-                let ext = &after[ext_pos..];
-                return format!("{}{}", before, ext);
+}
+
+impl Default for SyncthingConfig {
+    fn default() -> Self {
+        Self {
+            api_key: Self::read_api_key().unwrap_or_else(|| "no-api-key".to_string()),
+            port: 8384,
+            host: "127.0.0.1".to_string(),
+        }
+    }
+}
+
+pub struct SyncthingState {
+    pub config: SyncthingConfig,
+    pub sidecar_child: Mutex<Option<CommandChild>>,
+}
+
+impl Default for SyncthingState {
+    fn default() -> Self {
+        Self {
+            config: SyncthingConfig::default(),
+            sidecar_child: Mutex::new(None),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum SyncthingError {
+    NotRunning,
+    HttpError(String),
+    ParseError(String),
+    ProcessError(String),
+}
+
+impl std::fmt::Display for SyncthingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SyncthingError::NotRunning => write!(f, "Syncthing is not running"),
+            SyncthingError::HttpError(e) => write!(f, "HTTP error: {}", e),
+            SyncthingError::ParseError(e) => write!(f, "Parse error: {}", e),
+            SyncthingError::ProcessError(e) => write!(f, "Process error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for SyncthingError {}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
+        .manage(SyncthingState::default())
+        .setup(|app| {
+            // Set up tray menu
+            use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+            use tauri::tray::TrayIconBuilder;
+
+            let status = MenuItemBuilder::with_id("status", "Status: Checking...")
+                .enabled(false)
+                .build(app)?;
+            let separator1 = PredefinedMenuItem::separator(app)?;
+            let show = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
+            let hide = MenuItemBuilder::with_id("hide", "Hide to Tray").build(app)?;
+            let separator2 = PredefinedMenuItem::separator(app)?;
+            let open_syncthing = MenuItemBuilder::with_id("open_syncthing", "Open Syncthing Web UI").build(app)?;
+            let separator3 = PredefinedMenuItem::separator(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit Eigen").build(app)?;
+
+            let menu = MenuBuilder::new(app)
+                .item(&status)
+                .item(&separator1)
+                .item(&show)
+                .item(&hide)
+                .item(&separator2)
+                .item(&open_syncthing)
+                .item(&separator3)
+                .item(&quit)
+                .build()?;
+
+            // Load tray icon - embedded at compile time
+            let tray_icon_bytes = include_bytes!("../icons/tray_icon.png");
+            let tray_img = image::load_from_memory(tray_icon_bytes)
+                .expect("Failed to load tray icon");
+            let rgba = tray_img.to_rgba8();
+            let (width, height) = rgba.dimensions();
+            let tray_icon = tauri::image::Image::new_owned(rgba.into_raw(), width, height);
+
+            let _tray = TrayIconBuilder::with_id("main")
+                .icon(tray_icon)
+                .menu(&menu)
+                .tooltip("Eigen - Syncthing Manager")
+                .on_menu_event(|app, event| {
+                    match event.id().as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "hide" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.hide();
+                            }
+                        }
+                        "open_syncthing" => {
+                            // Open Syncthing web UI in browser
+                            let _ = open::that("http://127.0.0.1:8384");
+                        }
+                        "quit" => {
+                            // Stop syncthing sidecar before quitting
+                            let state = app.state::<SyncthingState>();
+                            if let Ok(mut child_guard) = state.sidecar_child.lock() {
+                                if let Some(child) = child_guard.take() {
+                                    let _ = child.kill();
+                                }
+                            }
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    use tauri::tray::TrayIconEvent;
+                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            // Toggle window visibility
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Handle window close to minimize to tray instead
+            if let Some(window) = app.get_webview_window("main") {
+                let window_clone = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        // Prevent the window from actually closing
+                        api.prevent_close();
+                        // Just hide it instead
+                        let _ = window_clone.hide();
+                    }
+                });
             }
-            return before.to_string();
-        }
-        conflict_name.to_string()
-    }
 
-    let base = std::path::Path::new(&folder_path);
-    if base.exists() {
-        scan_dir(base, &mut conflicts, base);
-    }
-
-    Ok(conflicts)
-}
-
-/// Delete a conflict file (resolve by keeping the original)
-#[tauri::command]
-pub async fn delete_conflict_file(
-    folder_path: String,
-    conflict_file: String,
-) -> Result<(), SyncthingError> {
-    let full_path = std::path::Path::new(&folder_path).join(&conflict_file);
-    
-    if full_path.exists() {
-        std::fs::remove_file(&full_path)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete conflict file: {}", e)))?;
-    }
-
-    Ok(())
-}
-
-/// Resolve conflict by replacing original with conflict file
-#[tauri::command]
-pub async fn resolve_conflict_keep_conflict(
-    folder_path: String,
-    original_file: String,
-    conflict_file: String,
-) -> Result<(), SyncthingError> {
-    let base_path = std::path::Path::new(&folder_path);
-    let original_path = base_path.join(&original_file);
-    let conflict_path = base_path.join(&conflict_file);
-    
-    // Delete original if it exists
-    if original_path.exists() {
-        std::fs::remove_file(&original_path)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete original: {}", e)))?;
-    }
-
-    // Rename conflict to original
-    if conflict_path.exists() {
-        std::fs::rename(&conflict_path, &original_path)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to rename conflict file: {}", e)))?;
-    }
-
-    Ok(())
-}
-
-// ============================================================================
-// File Versioning
-// ============================================================================
-
-/// Browse the .stversions folder for old file versions
-#[tauri::command]
-pub async fn browse_versions(
-    folder_path: String,
-    prefix: Option<String>,
-) -> Result<Vec<serde_json::Value>, SyncthingError> {
-    use std::path::Path;
-    use std::fs;
-
-    let versions_path = Path::new(&folder_path).join(".stversions");
-    let browse_path = if let Some(ref p) = prefix {
-        versions_path.join(p)
-    } else {
-        versions_path.clone()
-    };
-
-    if !browse_path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let mut entries = Vec::new();
-    
-    if let Ok(dir_entries) = fs::read_dir(&browse_path) {
-        for entry in dir_entries.flatten() {
-            let path = entry.path();
-            let name = path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("")
-                .to_string();
-
-            if let Ok(metadata) = entry.metadata() {
-                let is_dir = metadata.is_dir();
-                
-                // Parse version timestamp from filename if it's a file
-                // Pattern: filename~YYYYMMDD-HHMMSS.ext
-                let (original_name, version_time) = if !is_dir {
-                    parse_version_filename(&name)
-                } else {
-                    (name.clone(), None)
-                };
-
-                entries.push(serde_json::json!({
-                    "name": name,
-                    "originalName": original_name,
-                    "type": if is_dir { "directory" } else { "file" },
-                    "size": if is_dir { None::<u64> } else { Some(metadata.len()) },
-                    "modTime": metadata.modified().ok().map(|t| {
-                        t.duration_since(std::time::UNIX_EPOCH)
-                            .map(|d| d.as_secs())
-                            .unwrap_or(0)
-                    }),
-                    "versionTime": version_time,
-                }));
-            }
-        }
-    }
-
-    // Sort: directories first, then by modification time (newest first)
-    entries.sort_by(|a, b| {
-        let a_is_dir = a["type"].as_str() == Some("directory");
-        let b_is_dir = b["type"].as_str() == Some("directory");
-        
-        if a_is_dir != b_is_dir {
-            return if a_is_dir { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
-        }
-        
-        let a_time = a["modTime"].as_u64().unwrap_or(0);
-        let b_time = b["modTime"].as_u64().unwrap_or(0);
-        b_time.cmp(&a_time)
-    });
-
-    Ok(entries)
-}
-
-/// Parse versioned filename to extract original name and version timestamp
-fn parse_version_filename(name: &str) -> (String, Option<String>) {
-    // Pattern: filename~YYYYMMDD-HHMMSS.ext or filename~YYYYMMDD-HHMMSS
-    // Example: document~20231215-143022.pdf -> (document.pdf, 2023-12-15 14:30:22)
-    
-    if let Some(tilde_pos) = name.rfind('~') {
-        let before_tilde = &name[..tilde_pos];
-        let after_tilde = &name[tilde_pos + 1..];
-        
-        // Check if after_tilde matches version pattern
-        let version_part: String;
-        let extension: &str;
-        
-        if let Some(dot_pos) = after_tilde.find('.') {
-            version_part = after_tilde[..dot_pos].to_string();
-            extension = &after_tilde[dot_pos..];
-        } else {
-            version_part = after_tilde.to_string();
-            extension = "";
-        }
-        
-        // Validate version format: YYYYMMDD-HHMMSS (15 chars)
-        if version_part.len() == 15 && version_part.chars().nth(8) == Some('-') {
-            let original = format!("{}{}", before_tilde, extension);
-            
-            // Format the timestamp nicely
-            let formatted = format!(
-                "{}-{}-{} {}:{}:{}",
-                &version_part[0..4],   // Year
-                &version_part[4..6],   // Month
-                &version_part[6..8],   // Day
-                &version_part[9..11],  // Hour
-                &version_part[11..13], // Minute
-                &version_part[13..15]  // Second
-            );
-            
-            return (original, Some(formatted));
-        }
-    }
-    
-    (name.to_string(), None)
-}
-
-/// Restore a versioned file to its original location
-#[tauri::command]
-pub async fn restore_version(
-    folder_path: String,
-    version_path: String,
-    original_name: String,
-    overwrite: bool,
-) -> Result<(), SyncthingError> {
-    use std::path::Path;
-    use std::fs;
-
-    let source = Path::new(&folder_path).join(".stversions").join(&version_path);
-    let dest = Path::new(&folder_path).join(&original_name);
-
-    if !source.exists() {
-        return Err(SyncthingError::ProcessError("Version file not found".to_string()));
-    }
-
-    if dest.exists() && !overwrite {
-        return Err(SyncthingError::ProcessError(
-            "Destination file exists. Set overwrite=true to replace.".to_string()
-        ));
-    }
-
-    // Create parent directories if needed
-    if let Some(parent) = dest.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to create directories: {}", e)))?;
-    }
-
-    // Copy the version file to the original location
-    fs::copy(&source, &dest)
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to restore file: {}", e)))?;
-
-    Ok(())
-}
-
-// ============================================================================
-// Tray Status Update
-// ============================================================================
-
-/// Update the system tray tooltip with current status
-#[tauri::command]
-pub async fn update_tray_status(
-    app: tauri::AppHandle,
-    _status: String,
-    tooltip: String,
-) -> Result<(), SyncthingError> {
-    // Update the tray tooltip
-    if let Some(tray) = app.tray_by_id("main") {
-        let _ = tray.set_tooltip(Some(&tooltip));
-    }
-    
-    // Note: Tauri v2 menu items are immutable after creation,
-    // so we update via the tooltip instead
-    
-    Ok(())
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::check_syncthing_installation,
+            commands::start_syncthing_sidecar,
+            commands::stop_syncthing_sidecar,
+            commands::get_system_status,
+            commands::get_connections,
+            commands::get_config,
+            commands::update_options,
+            commands::get_folder_status,
+            commands::pause_folder,
+            commands::resume_folder,
+            commands::rescan_folder,
+            commands::get_api_config,
+            commands::get_device_id,
+            commands::add_device,
+            commands::remove_device,
+            commands::add_folder,
+            commands::remove_folder,
+            commands::share_folder,
+            // Advanced folder configuration
+            commands::add_folder_advanced,
+            commands::update_folder_config,
+            commands::get_folder_config,
+            // Ignore patterns
+            commands::get_folder_ignores,
+            commands::set_folder_ignores,
+            // System logs
+            commands::get_system_logs,
+            // Event API
+            commands::get_events,
+            // Advanced device settings
+            commands::add_device_advanced,
+            commands::update_device_config,
+            commands::get_device_config,
+            commands::pause_device,
+            commands::resume_device,
+            // Folder sharing
+            commands::unshare_folder,
+            // System management
+            commands::restart_syncthing,
+            // File browser
+            commands::open_folder_in_explorer,
+            commands::browse_folder,
+            commands::browse_folder_recursive,
+            // Conflict resolution
+            commands::scan_for_conflicts,
+            commands::delete_conflict_file,
+            commands::resolve_conflict_keep_conflict,
+            // File versioning
+            commands::browse_versions,
+            commands::restore_version,
+            // Tray
+            commands::update_tray_status,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
 </file>
 
-<file path="src-tauri/src/main.rs">
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+<file path=".gitignore">
+# Dependencies
+node_modules/
 
-fn main() {
-    eigen_lib::run()
-}
-</file>
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
-<file path="src-tauri/.gitignore">
-# Generated by Cargo
-# will have compiled files and executables
-/target/
+# Build outputs
+.next/
+out/
+dist/
+dist-ssr/
+build/
 
-# Generated by Tauri
-# will have schema files for capabilities auto-completion
-/gen/schemas
-</file>
+# Tauri / Rust
+target/
+gen/schemas/
+*.rs.bk
 
-<file path="src-tauri/build.rs">
-fn main() {
-    tauri_build::build()
-}
-</file>
+# Environment
+.env
+.env.local
+*.local
 
-<file path=".gitattributes">
-# Auto detect text files and perform LF normalization
-* text=auto
+# Editor
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cache
+.cache/
+.eslintcache
+
+# Testing
+coverage/
+.nyc_output/
 </file>
 
 <file path="next-env.d.ts">
@@ -8620,6 +9162,8 @@ const nextConfig = {
     unoptimized: true,
   },
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : undefined,
+  // Empty turbopack config to allow running without --turbopack flag
+  turbopack: {},
   // Enable Web Workers with webpack 5
   webpack: (config) => {
     config.resolve.alias = {
@@ -10043,7 +10587,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card border-border absolute top-full right-0 left-0 mt-2 rounded-lg border p-3 shadow-lg"
+          className="bg-card border-border absolute top-full right-0 left-0 z-100 mt-2 rounded-lg border p-3 shadow-lg"
         >
           <div className="flex items-center gap-3">
             <Loader2 className="text-primary h-5 w-5 animate-spin" />
@@ -10076,7 +10620,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-card border-border absolute top-full right-0 left-0 z-50 mt-2 max-h-[400px] overflow-y-auto rounded-lg border shadow-lg"
+            className="bg-card border-border absolute top-full right-0 left-0 z-100 mt-2 max-h-[400px] overflow-y-auto rounded-lg border shadow-lg"
           >
             <div className="p-2">
               <p className="text-muted-foreground px-2 py-1 text-xs">
@@ -10127,7 +10671,7 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-card border-border absolute top-full right-0 left-0 mt-2 rounded-lg border p-6 text-center shadow-lg"
+            className="bg-card border-border absolute top-full right-0 left-0 z-100 mt-2 rounded-lg border p-6 text-center shadow-lg"
           >
             <Search className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
             <p className="text-muted-foreground text-sm">No files found</p>
@@ -12474,9 +13018,9 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Zap,
   ScrollText,
 } from 'lucide-react';
+import Image from 'next/image';
 
 const navItems = [
   { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
@@ -12513,9 +13057,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-slate-800 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-indigo-500 to-purple-600">
-          <Zap className="h-4 w-4 text-white" />
-        </div>
+        <Image src="/app_icon.png" alt="Eigen" width={32} height={32} className="rounded-lg" />
         {sidebarOpen && <span className="text-lg font-bold text-white">Eigen</span>}
       </div>
 
@@ -13805,14 +14347,26 @@ export function useSyncthingEvents(options?: {
 
             // Also check for timeout errors which are expected during long polling
             const errorStr = String(error);
+            const errorJson = JSON.stringify(error);
             const isTimeoutError = errorStr.includes('timeout') || errorStr.includes('Timeout');
 
+            // Check for connection errors when Syncthing isn't running
+            const isConnectionError = errorStr.includes('Connection') || errorStr.includes('connection') ||
+                errorStr.includes('ECONNREFUSED') || errorStr.includes('NetworkError');
+
+            // Check for parse errors (Syncthing returning unexpected data)
+            const isParseError = errorJson.includes('ParseError') || errorJson.includes('decoding') ||
+                errorStr.includes('ParseError') || errorStr.includes('decoding');
+
             // Skip logging for expected non-error conditions
-            if (isAbortError || isEmptyError || isNullish || isTimeoutError) {
+            if (isAbortError || isEmptyError || isNullish || isTimeoutError || isConnectionError || isParseError) {
                 return;
             }
 
-            console.error('Event polling error:', error);
+            // Only log if it's a real unexpected error
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('Event polling error:', error);
+            }
         } finally {
             setIsPolling(false);
         }
@@ -14486,263 +15040,6 @@ export function registerDefaultHealthChecks(_apiKey?: string) {
 export type { HealthCheck, HealthStatus };
 </file>
 
-<file path="src-tauri/src/lib.rs">
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::sync::Mutex;
-use tauri::Manager;
-use tauri_plugin_shell::process::CommandChild;
-
-pub mod commands;
-
-#[derive(Debug, Clone)]
-pub struct SyncthingConfig {
-    pub api_key: String,
-    pub port: u16,
-    pub host: String,
-}
-
-impl SyncthingConfig {
-    /// Try to read API key from Syncthing's config file
-    fn read_api_key() -> Option<String> {
-        // Try common config locations
-        let home = std::env::var("HOME").ok()?;
-        let paths = [
-            format!("{}/.local/state/syncthing/config.xml", home),
-            format!("{}/.config/syncthing/config.xml", home),
-        ];
-        
-        for path in &paths {
-            if let Ok(content) = fs::read_to_string(path) {
-                // Simple XML parsing for apikey
-                if let Some(start) = content.find("<apikey>") {
-                    if let Some(end) = content[start..].find("</apikey>") {
-                        let key = &content[start + 8..start + end];
-                        if !key.is_empty() {
-                            return Some(key.to_string());
-                        }
-                    }
-                }
-            }
-        }
-        None
-    }
-}
-
-impl Default for SyncthingConfig {
-    fn default() -> Self {
-        Self {
-            api_key: Self::read_api_key().unwrap_or_else(|| "no-api-key".to_string()),
-            port: 8384,
-            host: "127.0.0.1".to_string(),
-        }
-    }
-}
-
-pub struct SyncthingState {
-    pub config: SyncthingConfig,
-    pub sidecar_child: Mutex<Option<CommandChild>>,
-}
-
-impl Default for SyncthingState {
-    fn default() -> Self {
-        Self {
-            config: SyncthingConfig::default(),
-            sidecar_child: Mutex::new(None),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum SyncthingError {
-    NotRunning,
-    HttpError(String),
-    ParseError(String),
-    ProcessError(String),
-}
-
-impl std::fmt::Display for SyncthingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SyncthingError::NotRunning => write!(f, "Syncthing is not running"),
-            SyncthingError::HttpError(e) => write!(f, "HTTP error: {}", e),
-            SyncthingError::ParseError(e) => write!(f, "Parse error: {}", e),
-            SyncthingError::ProcessError(e) => write!(f, "Process error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for SyncthingError {}
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_shell::init())
-        .manage(SyncthingState::default())
-        .setup(|app| {
-            // Set up tray menu
-            use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
-            use tauri::tray::TrayIconBuilder;
-
-            let status = MenuItemBuilder::with_id("status", "Status: Checking...")
-                .enabled(false)
-                .build(app)?;
-            let separator1 = PredefinedMenuItem::separator(app)?;
-            let show = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
-            let hide = MenuItemBuilder::with_id("hide", "Hide to Tray").build(app)?;
-            let separator2 = PredefinedMenuItem::separator(app)?;
-            let open_syncthing = MenuItemBuilder::with_id("open_syncthing", "Open Syncthing Web UI").build(app)?;
-            let separator3 = PredefinedMenuItem::separator(app)?;
-            let quit = MenuItemBuilder::with_id("quit", "Quit Eigen").build(app)?;
-
-            let menu = MenuBuilder::new(app)
-                .item(&status)
-                .item(&separator1)
-                .item(&show)
-                .item(&hide)
-                .item(&separator2)
-                .item(&open_syncthing)
-                .item(&separator3)
-                .item(&quit)
-                .build()?;
-
-            // Load tray icon - embedded at compile time
-            let tray_icon_bytes = include_bytes!("../icons/tray_icon.png");
-            let tray_img = image::load_from_memory(tray_icon_bytes)
-                .expect("Failed to load tray icon");
-            let rgba = tray_img.to_rgba8();
-            let (width, height) = rgba.dimensions();
-            let tray_icon = tauri::image::Image::new_owned(rgba.into_raw(), width, height);
-
-            let _tray = TrayIconBuilder::with_id("main")
-                .icon(tray_icon)
-                .menu(&menu)
-                .tooltip("Eigen - Syncthing Manager")
-                .on_menu_event(|app, event| {
-                    match event.id().as_ref() {
-                        "show" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.unminimize();
-                                let _ = window.set_focus();
-                            }
-                        }
-                        "hide" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.hide();
-                            }
-                        }
-                        "open_syncthing" => {
-                            // Open Syncthing web UI in browser
-                            let _ = open::that("http://127.0.0.1:8384");
-                        }
-                        "quit" => {
-                            // Stop syncthing sidecar before quitting
-                            let state = app.state::<SyncthingState>();
-                            if let Ok(mut child_guard) = state.sidecar_child.lock() {
-                                if let Some(child) = child_guard.take() {
-                                    let _ = child.kill();
-                                }
-                            }
-                            app.exit(0);
-                        }
-                        _ => {}
-                    }
-                })
-                .on_tray_icon_event(|tray, event| {
-                    use tauri::tray::TrayIconEvent;
-                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            // Toggle window visibility
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.unminimize();
-                                let _ = window.set_focus();
-                            }
-                        }
-                    }
-                })
-                .build(app)?;
-
-            // Handle window close to minimize to tray instead
-            if let Some(window) = app.get_webview_window("main") {
-                let window_clone = window.clone();
-                window.on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                        // Prevent the window from actually closing
-                        api.prevent_close();
-                        // Just hide it instead
-                        let _ = window_clone.hide();
-                    }
-                });
-            }
-
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            commands::check_syncthing_installation,
-            commands::start_syncthing_sidecar,
-            commands::stop_syncthing_sidecar,
-            commands::get_system_status,
-            commands::get_connections,
-            commands::get_config,
-            commands::update_options,
-            commands::get_folder_status,
-            commands::pause_folder,
-            commands::resume_folder,
-            commands::rescan_folder,
-            commands::get_api_config,
-            commands::get_device_id,
-            commands::add_device,
-            commands::remove_device,
-            commands::add_folder,
-            commands::remove_folder,
-            commands::share_folder,
-            // Advanced folder configuration
-            commands::add_folder_advanced,
-            commands::update_folder_config,
-            commands::get_folder_config,
-            // Ignore patterns
-            commands::get_folder_ignores,
-            commands::set_folder_ignores,
-            // System logs
-            commands::get_system_logs,
-            // Event API
-            commands::get_events,
-            // Advanced device settings
-            commands::add_device_advanced,
-            commands::update_device_config,
-            commands::get_device_config,
-            commands::pause_device,
-            commands::resume_device,
-            // Folder sharing
-            commands::unshare_folder,
-            // System management
-            commands::restart_syncthing,
-            // File browser
-            commands::open_folder_in_explorer,
-            commands::browse_folder,
-            // Conflict resolution
-            commands::scan_for_conflicts,
-            commands::delete_conflict_file,
-            commands::resolve_conflict_keep_conflict,
-            // File versioning
-            commands::browse_versions,
-            commands::restore_version,
-            // Tray
-            commands::update_tray_status,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-</file>
-
 <file path="src-tauri/Cargo.toml">
 [package]
 name = "eigen"
@@ -14843,51 +15140,6 @@ image = "0.25"
 }
 </file>
 
-<file path=".gitignore">
-# Dependencies
-node_modules/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Build outputs
-.next/
-out/
-dist/
-dist-ssr/
-build/
-
-# Tauri / Rust
-target/
-gen/schemas/
-*.rs.bk
-
-# Environment
-.env
-.env.local
-*.local
-
-# Editor
-.idea/
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Cache
-.cache/
-.eslintcache
-
-# Testing
-coverage/
-.nyc_output/
-</file>
-
 <file path="package.json">
 {
   "name": "eigen",
@@ -14895,7 +15147,8 @@ coverage/
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack --port 3000",
+    "dev": "next dev --webpack --port 3000",
+    "dev:turbo": "next dev --turbopack --port 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

@@ -59,8 +59,10 @@ export function FileIndexer() {
   const aiEnabled = useAppStore((state) => state.aiEnabled);
   const {
     status: aiStatus,
+    statusMessage: aiStatusMessage,
     isReady,
     initialize,
+    retry,
     indexFiles,
     progress: embeddingProgress,
   } = useAISearch({ enabled: aiEnabled });
@@ -92,10 +94,9 @@ export function FileIndexer() {
       });
 
       try {
-        // Get files from Syncthing using browse_folder command
-        const files = await invoke<BrowseFile[]>('browse_folder', {
+        // Get all files recursively from Syncthing using browse_folder_recursive command
+        const files = await invoke<BrowseFile[]>('browse_folder_recursive', {
           folderId,
-          prefix: null,
         });
 
         if (!files || files.length === 0) {
@@ -279,7 +280,7 @@ export function FileIndexer() {
       {/* AI Status */}
       <div
         className={cn(
-          'mb-4 flex items-center gap-2 rounded-lg p-2',
+          'mb-4 rounded-lg p-2',
           aiStatus === 'ready'
             ? 'bg-green-500/10 text-green-600'
             : aiStatus === 'loading'
@@ -289,19 +290,40 @@ export function FileIndexer() {
                 : 'bg-muted/50 text-muted-foreground'
         )}
       >
-        {aiStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
-        {aiStatus === 'ready' && <CheckCircle2 className="h-4 w-4" />}
-        {aiStatus === 'error' && <AlertCircle className="h-4 w-4" />}
-        {aiStatus === 'idle' && <Brain className="h-4 w-4" />}
-        <span className="text-sm">
-          {aiStatus === 'ready'
-            ? 'AI Model Ready'
-            : aiStatus === 'loading'
-              ? 'Loading AI Model...'
-              : aiStatus === 'error'
-                ? 'AI Model Error'
-                : 'AI Model Idle'}
-        </span>
+        <div className="flex items-center gap-2">
+          {aiStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
+          {aiStatus === 'ready' && <CheckCircle2 className="h-4 w-4" />}
+          {aiStatus === 'error' && <AlertCircle className="h-4 w-4" />}
+          {aiStatus === 'idle' && <Brain className="h-4 w-4" />}
+          <span className="flex-1 text-sm">
+            {aiStatus === 'ready'
+              ? 'AI Model Ready'
+              : aiStatus === 'loading'
+                ? 'Loading AI Model...'
+                : aiStatus === 'error'
+                  ? 'AI Model Error'
+                  : 'AI Model Idle'}
+          </span>
+          {aiStatus === 'error' && (
+            <button
+              onClick={retry}
+              className="rounded bg-red-500/20 px-2 py-1 text-xs font-medium hover:bg-red-500/30"
+            >
+              Retry
+            </button>
+          )}
+          {aiStatus === 'idle' && (
+            <button
+              onClick={initialize}
+              className="text-primary rounded bg-blue-500/20 px-2 py-1 text-xs font-medium hover:bg-blue-500/30"
+            >
+              Load Model
+            </button>
+          )}
+        </div>
+        {aiStatus === 'error' && aiStatusMessage && (
+          <p className="mt-1 text-xs opacity-80">{aiStatusMessage}</p>
+        )}
       </div>
 
       {/* Status */}
