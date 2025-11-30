@@ -14,21 +14,23 @@ export default function Home() {
 
   return (
     <div className="bg-background flex h-screen w-screen overflow-hidden">
-      {/* Focus Mode Toggle Button */}
+      {/* Focus Mode Toggle Button - Prominent FAB style */}
       <motion.div
-        className="fixed right-4 bottom-4 z-50 md:right-6 md:bottom-6"
+        className="fixed right-4 bottom-20 z-50 md:right-6 md:bottom-6"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.5 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
       >
         <Button
-          variant="outline"
+          variant="default"
           size="icon"
           onClick={toggleFocusMode}
-          className="border-border bg-card/80 hover:bg-accent/80 h-10 w-10 rounded-full shadow-lg backdrop-blur-md"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/25 h-12 w-12 rounded-full shadow-lg"
           title={focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
         >
-          {focusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {focusMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
         </Button>
       </motion.div>
 

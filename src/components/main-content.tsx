@@ -30,13 +30,13 @@ function DashboardView() {
   return (
     <MotionPage>
       <BentoGrid className="lg:grid-cols-4">
-        {/* Network Graph - Large tile spanning 2 cols and 2 rows with shine border */}
-        <BentoCard colSpan={2} rowSpan={2} spotlightColor="rgba(99, 102, 241, 0.15)" shineBorder>
-          <div className="mb-2 flex items-center justify-between">
+        {/* Network Graph - Large tile spanning 2 cols and 2 rows */}
+        <BentoCard colSpan={2} rowSpan={2} spotlightColor="rgba(99, 102, 241, 0.15)">
+          <div className="mb-3 flex items-center justify-between">
             <h3 className="text-muted-foreground text-sm font-medium">Network Topology</h3>
             <Network className="text-muted-foreground h-4 w-4" />
           </div>
-          <div className="flex-1">
+          <div className="relative -mx-6 -mb-6 flex-1 overflow-hidden rounded-b-xl">
             <NetworkGraphLive />
           </div>
         </BentoCard>
@@ -49,7 +49,7 @@ function DashboardView() {
             <h3 className="text-muted-foreground text-sm font-medium">Status</h3>
             <Activity className="text-muted-foreground h-4 w-4" />
           </div>
-          <div className="mt-4 flex flex-1 items-center gap-3">
+          <div className="mt-auto flex items-center gap-3">
             <motion.div
               className="text-foreground text-3xl font-bold"
               initial={{ opacity: 0, scale: 0.8 }}
@@ -69,7 +69,7 @@ function DashboardView() {
             <h3 className="text-muted-foreground text-sm font-medium">Devices</h3>
             <Network className="text-muted-foreground h-4 w-4" />
           </div>
-          <div className="mt-4 flex flex-1 items-center gap-3">
+          <div className="mt-auto flex items-center gap-3">
             <span className="text-foreground text-3xl font-bold">
               {connectedDevices}/{totalDevices}
             </span>
@@ -85,7 +85,7 @@ function DashboardView() {
             <h3 className="text-muted-foreground text-sm font-medium">Downloaded</h3>
             <ArrowDownToLine className="text-muted-foreground h-4 w-4" />
           </div>
-          <div className="mt-4 flex-1">
+          <div className="mt-auto">
             <span className="text-foreground text-3xl font-bold">
               <Counter value={inBytes} formattingFn={formatBytes} />
             </span>
@@ -98,15 +98,15 @@ function DashboardView() {
             <h3 className="text-muted-foreground text-sm font-medium">Uploaded</h3>
             <ArrowUpFromLine className="text-muted-foreground h-4 w-4" />
           </div>
-          <div className="mt-4 flex-1">
+          <div className="mt-auto">
             <span className="text-foreground text-3xl font-bold">
               <Counter value={outBytes} formattingFn={formatBytes} />
             </span>
           </div>
         </BentoCard>
 
-        {/* Folders Preview - Large tile */}
-        <BentoCard colSpan={2} rowSpan={2} spotlightColor="rgba(99, 102, 241, 0.1)">
+        {/* Folders Preview - Full width */}
+        <BentoCard colSpan={2} spotlightColor="rgba(99, 102, 241, 0.1)">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-muted-foreground text-sm font-medium">Synced Folders</h3>
             <Folder className="text-muted-foreground h-4 w-4" />

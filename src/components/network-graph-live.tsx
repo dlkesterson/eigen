@@ -97,19 +97,29 @@ export function NetworkGraphLive() {
     return { nodes, links };
   }, [connections, config, resolvedTheme]);
 
-  // Adjust engine forces
+  // Adjust engine forces and center the graph
   useEffect(() => {
     if (fgRef.current) {
-      fgRef.current.d3Force('charge')?.strength(-120);
-      fgRef.current.d3Force('link')?.distance(70);
+      fgRef.current.d3Force('charge')?.strength(-80);
+      fgRef.current.d3Force('link')?.distance(50);
+      fgRef.current
+        .d3Force('center')
+        ?.x(dimensions.width / 2)
+        ?.y(dimensions.height / 2);
+      // Zoom to fit after initial render
+      setTimeout(() => {
+        if (fgRef.current) {
+          fgRef.current.zoomToFit(400, 50);
+        }
+      }, 500);
     }
-  }, [graphData]);
+  }, [graphData, dimensions]);
 
   const isLoading = connectionsLoading || configLoading;
 
   if (isLoading) {
     return (
-      <div className="border-border bg-card/50 h-64 w-full overflow-hidden rounded-xl border backdrop-blur-md">
+      <div className="bg-card/30 flex h-full w-full items-center justify-center">
         <Skeleton className="h-full w-full" />
       </div>
     );
@@ -117,17 +127,14 @@ export function NetworkGraphLive() {
 
   if (graphData.nodes.length === 0) {
     return (
-      <div className="border-border bg-card/50 flex h-64 w-full items-center justify-center overflow-hidden rounded-xl border backdrop-blur-md">
+      <div className="bg-card/30 flex h-full min-h-[200px] w-full items-center justify-center">
         <p className="text-muted-foreground text-sm">No devices configured</p>
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="border-border bg-card/50 h-64 w-full overflow-hidden rounded-xl border backdrop-blur-md"
-    >
+    <div ref={containerRef} className="bg-card/30 h-full min-h-[280px] w-full">
       <ForceGraph2D
         ref={fgRef}
         graphData={graphData}
@@ -154,6 +161,7 @@ export function NetworkGraphLive() {
           const nodeSize = ((node as GraphNode).val || 10) / 2;
           const nodeColor = (node as GraphNode).color || '#6366f1';
           const nodeGroup = (node as GraphNode).group;
+          const isDark = resolvedTheme === 'dark';
 
           // Draw node circle
           ctx.beginPath();
@@ -170,12 +178,33 @@ export function NetworkGraphLive() {
             ctx.stroke();
           }
 
-          // Draw label
-          ctx.font = `${fontSize}px 'DM Sans', sans-serif`;
+          // Draw label with background for better readability
+          const labelY = (node.y || 0) + nodeSize + fontSize + 4;
+          ctx.font = `500 ${fontSize}px 'DM Sans', sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillStyle = resolvedTheme === 'dark' ? '#f8fafc' : '#1e293b';
-          ctx.fillText(label, node.x || 0, (node.y || 0) + nodeSize + fontSize + 2);
+
+          // Measure text for background
+          const textMetrics = ctx.measureText(label);
+          const padding = 4 / globalScale;
+          const bgHeight = fontSize + padding * 2;
+          const bgWidth = textMetrics.width + padding * 2;
+
+          // Draw text background pill
+          ctx.beginPath();
+          ctx.roundRect(
+            (node.x || 0) - bgWidth / 2,
+            labelY - bgHeight / 2,
+            bgWidth,
+            bgHeight,
+            4 / globalScale
+          );
+          ctx.fillStyle = isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+          ctx.fill();
+
+          // Draw text
+          ctx.fillStyle = isDark ? '#f1f5f9' : '#1e293b';
+          ctx.fillText(label, node.x || 0, labelY);
         }}
       />
     </div>

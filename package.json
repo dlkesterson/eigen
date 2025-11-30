@@ -20,7 +20,11 @@
     "tauri:fmt:check": "cd src-tauri && cargo fmt --all -- --check",
     "tauri:check": "cd src-tauri && cargo check --all-targets",
     "download:syncthing": "node scripts/download-syncthing.js",
-    "prebuild": "node scripts/download-syncthing.js"
+    "prebuild": "node scripts/download-syncthing.js",
+    "ci": "./scripts/check.sh",
+    "ci:frontend": "./scripts/check.sh --frontend",
+    "ci:backend": "./scripts/check.sh --backend",
+    "ci:all": "./scripts/check.sh --all"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",
