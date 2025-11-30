@@ -88,7 +88,9 @@ async function main() {
     fs.mkdirSync(tempDir, { recursive: true });
 
     const extension = platformInfo.os === 'windows' ? '.exe' : '';
-    const archiveExt = platformInfo.os === 'windows' ? 'zip' : 'tar.gz';
+    // Windows and macOS use zip, Linux uses tar.gz
+    const archiveExt =
+      platformInfo.os === 'windows' || platformInfo.os === 'macos' ? 'zip' : 'tar.gz';
     const archiveName = `syncthing-${platformInfo.os}-${platformInfo.arch}-${SYNCTHING_VERSION}`;
     const downloadUrl = `https://github.com/syncthing/syncthing/releases/download/${SYNCTHING_VERSION}/${archiveName}.${archiveExt}`;
 
@@ -105,7 +107,7 @@ async function main() {
 
     // Extract
     console.log('Extracting...');
-    if (platformInfo.os === 'windows') {
+    if (archiveExt === 'zip') {
       await extractZip(archivePath, tempDir);
     } else {
       await extractTarGz(archivePath, tempDir);
