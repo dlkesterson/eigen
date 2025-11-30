@@ -21,7 +21,10 @@ pub fn check_syncthing_installation() -> SyncthingInfo {
     match Command::new("syncthing").arg("--version").output() {
         Ok(output) => {
             let version_str = String::from_utf8_lossy(&output.stdout);
-            let version = version_str.lines().next().map(|s| s.to_string());
+            let version = version_str
+                .lines()
+                .next()
+                .map(std::string::ToString::to_string);
 
             // Try to get the path
             let path = Command::new("which")
@@ -62,7 +65,7 @@ pub async fn start_syncthing_sidecar(
     let mut child_guard = state
         .sidecar_child
         .lock()
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e)))?;
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {e}")))?;
 
     if child_guard.is_some() {
         return Ok("Syncthing already running".into());
@@ -73,7 +76,7 @@ pub async fn start_syncthing_sidecar(
         .shell()
         .sidecar("syncthing")
         .map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to create sidecar command: {}", e))
+            SyncthingError::ProcessError(format!("Failed to create sidecar command: {e}"))
         })?
         .args([
             "-no-browser",
@@ -83,10 +86,11 @@ pub async fn start_syncthing_sidecar(
         ]);
 
     let (_rx, child) = sidecar_command.spawn().map_err(|e| {
-        SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {}", e))
+        SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {e}"))
     })?;
 
     *child_guard = Some(child);
+    drop(child_guard);
     Ok("Syncthing sidecar started successfully".into())
 }
 
@@ -98,11 +102,11 @@ pub async fn stop_syncthing_sidecar(
     let mut child_guard = state
         .sidecar_child
         .lock()
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {}", e)))?;
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {e}")))?;
 
     if let Some(child) = child_guard.take() {
         child.kill().map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to kill sidecar process: {}", e))
+            SyncthingError::ProcessError(format!("Failed to kill sidecar process: {e}"))
         })?;
         Ok("Syncthing sidecar stopped".into())
     } else {
@@ -384,6 +388,7 @@ pub async fn rescan_folder(
 
 /// Get the current API configuration (for debugging)
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
 pub fn get_api_config(state: State<'_, SyncthingState>) -> (String, u16) {
     (state.config.host.clone(), state.config.port)
 }
@@ -411,7 +416,7 @@ pub async fn get_device_id(state: State<'_, SyncthingState>) -> Result<String, S
 
     json["myID"]
         .as_str()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .ok_or_else(|| SyncthingError::ParseError("No device ID found".into()))
 }
 
@@ -699,6 +704,7 @@ pub async fn share_folder(
 
 /// Add a folder with advanced configuration options
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn add_folder_advanced(
     state: State<'_, SyncthingState>,
     folder_id: String,
@@ -743,7 +749,7 @@ pub async fn add_folder_advanced(
     let versioning = match versioning_type.as_deref() {
         Some("simple") => serde_json::json!({
             "type": "simple",
-            "params": versioning_params.unwrap_or(serde_json::json!({
+            "params": versioning_params.clone().unwrap_or_else(|| serde_json::json!({
                 "keep": "5"
             })),
             "cleanupIntervalS": 3600,
@@ -752,7 +758,7 @@ pub async fn add_folder_advanced(
         }),
         Some("staggered") => serde_json::json!({
             "type": "staggered",
-            "params": versioning_params.unwrap_or(serde_json::json!({
+            "params": versioning_params.clone().unwrap_or_else(|| serde_json::json!({
                 "cleanInterval": "3600",
                 "maxAge": "31536000"
             })),
@@ -762,7 +768,7 @@ pub async fn add_folder_advanced(
         }),
         Some("trashcan") => serde_json::json!({
             "type": "trashcan",
-            "params": versioning_params.unwrap_or(serde_json::json!({
+            "params": versioning_params.clone().unwrap_or_else(|| serde_json::json!({
                 "cleanoutDays": "0"
             })),
             "cleanupIntervalS": 3600,
@@ -771,7 +777,7 @@ pub async fn add_folder_advanced(
         }),
         Some("external") => serde_json::json!({
             "type": "external",
-            "params": versioning_params.unwrap_or(serde_json::json!({
+            "params": versioning_params.unwrap_or_else(|| serde_json::json!({
                 "command": ""
             })),
             "cleanupIntervalS": 3600,
@@ -968,7 +974,7 @@ pub async fn get_system_logs(
     );
 
     if let Some(since_time) = since {
-        url = format!("{}?since={}", url, since_time);
+        url = format!("{url}?since={since_time}");
     }
 
     let res = client
@@ -1000,7 +1006,7 @@ pub async fn get_events(
 ) -> Result<serde_json::Value, SyncthingError> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(
-            timeout.unwrap_or(60) as u64 + 5,
+            u64::from(timeout.unwrap_or(60)) + 5,
         ))
         .build()
         .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
@@ -1012,13 +1018,13 @@ pub async fn get_events(
 
     let mut params = Vec::new();
     if let Some(s) = since {
-        params.push(format!("since={}", s));
+        params.push(format!("since={s}"));
     }
     if let Some(l) = limit {
-        params.push(format!("limit={}", l));
+        params.push(format!("limit={l}"));
     }
     if let Some(t) = timeout {
-        params.push(format!("timeout={}", t));
+        params.push(format!("timeout={t}"));
     }
 
     if !params.is_empty() {
@@ -1046,6 +1052,7 @@ pub async fn get_events(
 
 /// Add device with advanced options
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn add_device_advanced(
     state: State<'_, SyncthingState>,
     device_id: String,
@@ -1367,7 +1374,7 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<(), Syncthin
         Command::new("xdg-open")
             .arg(&folder_path)
             .spawn()
-            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {}", e)))?;
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to open folder: {e}")))?;
     }
 
     #[cfg(target_os = "macos")]
@@ -1404,7 +1411,7 @@ pub async fn browse_folder(
     );
 
     if let Some(p) = prefix {
-        url = format!("{}&prefix={}", url, p);
+        url = format!("{url}&prefix={p}");
     }
 
     let res = client
@@ -1469,7 +1476,7 @@ fn flatten_browse_response(
             let full_path = if parent_path.is_empty() {
                 name.to_string()
             } else {
-                format!("{}/{}", parent_path, name)
+                format!("{parent_path}/{name}")
             };
 
             let item_type = obj.get("type").and_then(|t| t.as_str()).unwrap_or("");
@@ -1478,7 +1485,7 @@ fn flatten_browse_response(
             // Add the item with its full path
             let flat_item = serde_json::json!({
                 "name": full_path,
-                "size": obj.get("size").and_then(|s| s.as_i64()).unwrap_or(0),
+                "size": obj.get("size").and_then(serde_json::Value::as_i64).unwrap_or(0),
                 "modTime": obj.get("modTime").cloned().unwrap_or(serde_json::Value::Null),
                 "type": if is_directory { "directory" } else { "file" }
             });
@@ -1502,8 +1509,6 @@ fn flatten_browse_response(
 pub async fn scan_for_conflicts(
     folder_path: String,
 ) -> Result<Vec<serde_json::Value>, SyncthingError> {
-    let mut conflicts = Vec::new();
-
     fn scan_dir(
         dir: &std::path::Path,
         conflicts: &mut Vec<serde_json::Value>,
@@ -1551,13 +1556,14 @@ pub async fn scan_for_conflicts(
             let after = &conflict_name[pos..];
             if let Some(ext_pos) = after.rfind('.') {
                 let ext = &after[ext_pos..];
-                return format!("{}{}", before, ext);
+                return format!("{before}{ext}");
             }
             return before.to_string();
         }
         conflict_name.to_string()
     }
 
+    let mut conflicts = Vec::new();
     let base = std::path::Path::new(&folder_path);
     if base.exists() {
         scan_dir(base, &mut conflicts, base);
@@ -1576,7 +1582,7 @@ pub async fn delete_conflict_file(
 
     if full_path.exists() {
         std::fs::remove_file(&full_path).map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to delete conflict file: {}", e))
+            SyncthingError::ProcessError(format!("Failed to delete conflict file: {e}"))
         })?;
     }
 
@@ -1596,15 +1602,14 @@ pub async fn resolve_conflict_keep_conflict(
 
     // Delete original if it exists
     if original_path.exists() {
-        std::fs::remove_file(&original_path).map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to delete original: {}", e))
-        })?;
+        std::fs::remove_file(&original_path)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to delete original: {e}")))?;
     }
 
     // Rename conflict to original
     if conflict_path.exists() {
         std::fs::rename(&conflict_path, &original_path).map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to rename conflict file: {}", e))
+            SyncthingError::ProcessError(format!("Failed to rename conflict file: {e}"))
         })?;
     }
 
@@ -1628,7 +1633,7 @@ pub async fn browse_versions(
     let browse_path = if let Some(ref p) = prefix {
         versions_path.join(p)
     } else {
-        versions_path.clone()
+        versions_path
     };
 
     if !browse_path.exists() {
@@ -1651,10 +1656,10 @@ pub async fn browse_versions(
 
                 // Parse version timestamp from filename if it's a file
                 // Pattern: filename~YYYYMMDD-HHMMSS.ext
-                let (original_name, version_time) = if !is_dir {
-                    parse_version_filename(&name)
-                } else {
+                let (original_name, version_time) = if is_dir {
                     (name.clone(), None)
+                } else {
+                    parse_version_filename(&name)
                 };
 
                 entries.push(serde_json::json!({
@@ -1704,20 +1709,14 @@ fn parse_version_filename(name: &str) -> (String, Option<String>) {
         let after_tilde = &name[tilde_pos + 1..];
 
         // Check if after_tilde matches version pattern
-        let version_part: String;
-        let extension: &str;
-
-        if let Some(dot_pos) = after_tilde.find('.') {
-            version_part = after_tilde[..dot_pos].to_string();
-            extension = &after_tilde[dot_pos..];
-        } else {
-            version_part = after_tilde.to_string();
-            extension = "";
-        }
+        let (version_part, extension) = after_tilde.find('.').map_or_else(
+            || (after_tilde.to_string(), ""),
+            |dot_pos| (after_tilde[..dot_pos].to_string(), &after_tilde[dot_pos..]),
+        );
 
         // Validate version format: YYYYMMDD-HHMMSS (15 chars)
         if version_part.len() == 15 && version_part.chars().nth(8) == Some('-') {
-            let original = format!("{}{}", before_tilde, extension);
+            let original = format!("{before_tilde}{extension}");
 
             // Format the timestamp nicely
             let formatted = format!(
@@ -1768,13 +1767,13 @@ pub async fn restore_version(
     // Create parent directories if needed
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to create directories: {}", e))
+            SyncthingError::ProcessError(format!("Failed to create directories: {e}"))
         })?;
     }
 
     // Copy the version file to the original location
     fs::copy(&source, &dest)
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to restore file: {}", e)))?;
+        .map_err(|e| SyncthingError::ProcessError(format!("Failed to restore file: {e}")))?;
 
     Ok(())
 }

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { useAISearch } from '@/hooks/useAISearch';
+import { type TabId } from '@/constants';
 
 interface SearchResult {
   path: string;
@@ -64,7 +65,7 @@ export function CommandMenu() {
     return () => clearTimeout(timeout);
   }, [search, aiEnabled, isReady, aiSearch]);
 
-  const navigateTo = (tab: 'dashboard' | 'folders' | 'devices' | 'settings' | 'logs') => {
+  const navigateTo = (tab: TabId) => {
     setActiveTab(tab);
     setOpen(false);
     setSearch('');

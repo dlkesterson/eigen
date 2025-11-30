@@ -13,9 +13,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useDeviceId } from './useSyncthing';
 import { logger } from '@/lib/logger';
 
-// ============================================================================
+// ---
 // Types
-// ============================================================================
+// ---
 
 export interface DeviceInvitation {
   /** Device ID to add */
@@ -33,17 +33,17 @@ export interface PendingInvitation extends DeviceInvitation {
   receivedAt: number;
 }
 
-// ============================================================================
+// ---
 // Constants
-// ============================================================================
+// ---
 
 const INVITE_SCHEME = 'eigen';
 const INVITE_HOST = 'invite';
 const DEFAULT_EXPIRY_HOURS = 24;
 
-// ============================================================================
+// ---
 // Utility Functions
-// ============================================================================
+// ---
 
 /**
  * Generate an invitation URL for the current device
@@ -151,9 +151,9 @@ export async function generateQRCodeDataUrl(content: string): Promise<string> {
   }
 }
 
-// ============================================================================
+// ---
 // Hook
-// ============================================================================
+// ---
 
 interface UseDeviceInviteReturn {
   /** Current device ID */

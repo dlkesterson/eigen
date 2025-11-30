@@ -122,9 +122,9 @@ export async function getDB(): Promise<IDBPDatabase<EigenDB>> {
   return dbInstance;
 }
 
-// ============================================================================
+// ---
 // File Operations
-// ============================================================================
+// ---
 
 /**
  * Add or update file metadata
@@ -182,9 +182,9 @@ export async function clearFilesForFolder(folderId: string): Promise<void> {
   await Promise.all([...files.map((file) => tx.store.delete(file.path)), tx.done]);
 }
 
-// ============================================================================
+// ---
 // Embedding Operations
-// ============================================================================
+// ---
 
 /**
  * Store embedding for a file
@@ -229,9 +229,9 @@ export async function getFilesWithoutEmbeddings(): Promise<FileMetadata[]> {
   return files.filter((file) => !embeddingPaths.has(file.path));
 }
 
-// ============================================================================
+// ---
 // Activity Logging
-// ============================================================================
+// ---
 
 /**
  * Log an activity
@@ -273,9 +273,9 @@ export async function getMostAccessedFiles(limit = 50): Promise<{ path: string; 
     .slice(0, limit);
 }
 
-// ============================================================================
+// ---
 // Search History
-// ============================================================================
+// ---
 
 /**
  * Log a search query
@@ -303,9 +303,9 @@ export async function getRecentSearches(limit = 10): Promise<SearchHistoryEntry[
   return entries.slice(-limit).reverse();
 }
 
-// ============================================================================
+// ---
 // Database Management
-// ============================================================================
+// ---
 
 /**
  * Clear all data

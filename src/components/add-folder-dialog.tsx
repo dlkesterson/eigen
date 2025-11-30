@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { logger } from '@/lib/logger';
 
 interface AddFolderDialogProps {
   open: boolean;
@@ -206,7 +207,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                         setFolderPath(selected as string);
                       }
                     } catch (err) {
-                      console.error('Failed to open folder picker:', err);
+                      logger.warn('Failed to open folder picker', { error: err });
                     }
                   }}
                 >

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { X, Laptop, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface FolderDevice {
   deviceID: string;
@@ -43,7 +44,7 @@ export function ShareFolderDialog({
       onOpenChange(false);
       setSelectedDevice(null);
     } catch (error) {
-      console.error('Share folder error:', error);
+      logger.error('Share folder error', { error, folderId, deviceId: selectedDevice });
       toast.error(
         `Failed to share folder: ${error instanceof Error ? error.message : String(error)}`
       );

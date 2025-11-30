@@ -139,7 +139,7 @@ export function FileIndexer() {
 
         return fileMetadata.filter((f) => !f.isDirectory);
       } catch (error) {
-        console.error(`Error indexing folder ${folderId}:`, error);
+        logger.error(`Error indexing folder ${folderId}`, { error, folderId });
         throw error;
       }
     },

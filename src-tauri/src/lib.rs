@@ -19,8 +19,8 @@ impl SyncthingConfig {
         // Try common config locations
         let home = std::env::var("HOME").ok()?;
         let paths = [
-            format!("{}/.local/state/syncthing/config.xml", home),
-            format!("{}/.config/syncthing/config.xml", home),
+            format!("{home}/.local/state/syncthing/config.xml"),
+            format!("{home}/.config/syncthing/config.xml"),
         ];
 
         for path in &paths {
@@ -75,10 +75,10 @@ pub enum SyncthingError {
 impl std::fmt::Display for SyncthingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SyncthingError::NotRunning => write!(f, "Syncthing is not running"),
-            SyncthingError::HttpError(e) => write!(f, "HTTP error: {}", e),
-            SyncthingError::ParseError(e) => write!(f, "Parse error: {}", e),
-            SyncthingError::ProcessError(e) => write!(f, "Process error: {}", e),
+            Self::NotRunning => write!(f, "Syncthing is not running"),
+            Self::HttpError(e) => write!(f, "HTTP error: {e}"),
+            Self::ParseError(e) => write!(f, "Parse error: {e}"),
+            Self::ProcessError(e) => write!(f, "Process error: {e}"),
         }
     }
 }

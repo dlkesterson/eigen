@@ -111,8 +111,8 @@ fi
 if [ "$RUN_BACKEND" = true ]; then
     print_header "Rust Lint & Format Checks"
     
-    run_check "Rust formatting" "cd src-tauri && cargo fmt --all -- --check" || true
-    run_check "Clippy lints" "cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings" || true
+    run_check "Rust formatting" "(cd src-tauri && cargo fmt --all -- --check)" || true
+    run_check "Clippy lints" "(cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings)" || true
 fi
 
 # Build verification
@@ -120,7 +120,7 @@ if [ "$RUN_BUILD" = true ]; then
     print_header "Build Verification"
     
     run_check "Frontend build" "pnpm build" || true
-    run_check "Tauri check" "cd src-tauri && cargo check --all-targets" || true
+    run_check "Tauri check" "(cd src-tauri && cargo check --all-targets)" || true
 fi
 
 # Summary

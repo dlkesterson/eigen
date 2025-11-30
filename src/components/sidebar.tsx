@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { TABS, type TabId } from '@/constants';
 import {
   LayoutDashboard,
   Folder,
@@ -16,22 +18,29 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 
-const navItems = [
-  { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'folders' as const, label: 'Folders', icon: Folder },
-  { id: 'devices' as const, label: 'Devices', icon: Laptop },
-  { id: 'logs' as const, label: 'Logs', icon: ScrollText },
-  { id: 'settings' as const, label: 'Settings', icon: Settings },
-];
+const iconMap = {
+  dashboard: LayoutDashboard,
+  folders: Folder,
+  devices: Laptop,
+  logs: ScrollText,
+  settings: Settings,
+} as const;
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const { sidebarOpen, toggleSidebar, activeTab, setActiveTab } = useAppStore();
+
+  const navItems = TABS.map((id) => ({
+    id,
+    label: t(`nav.${id}`),
+    icon: iconMap[id],
+  }));
 
   // Listen for navigation events from toast notifications
   useEffect(() => {
     const handleNavigate = (event: CustomEvent<string>) => {
-      const tab = event.detail as typeof activeTab;
-      if (['dashboard', 'folders', 'devices', 'settings', 'logs'].includes(tab)) {
+      const tab = event.detail as TabId;
+      if (TABS.includes(tab as TabId)) {
         setActiveTab(tab);
       }
     };

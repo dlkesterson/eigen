@@ -2,106 +2,108 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { type TabId, DEFAULT_TAB, type Theme, type AIStatus, DEFAULTS } from '@/constants';
 
-export type AIStatus = 'idle' | 'loading' | 'ready' | 'error' | 'disabled';
+// Re-export types from constants for backward compatibility
+export type { AIStatus } from '@/constants';
 
 interface AppState {
-    // UI State
-    sidebarOpen: boolean;
-    activeTab: 'dashboard' | 'folders' | 'devices' | 'settings' | 'logs';
-    theme: 'light' | 'dark' | 'system';
-    focusMode: boolean; // Zen mode - hides sidebar and header
+  // UI State
+  sidebarOpen: boolean;
+  activeTab: TabId;
+  theme: Theme;
+  focusMode: boolean;
 
-    // Settings
-    pollingInterval: number; // in milliseconds
-    nativeNotificationsEnabled: boolean;
-    aiEnabled: boolean; // Enable AI-powered semantic search
+  // Settings
+  pollingInterval: number;
+  nativeNotificationsEnabled: boolean;
+  aiEnabled: boolean;
 
-    // Actions
-    setSidebarOpen: (open: boolean) => void;
-    toggleSidebar: () => void;
-    setActiveTab: (tab: AppState['activeTab']) => void;
-    setTheme: (theme: AppState['theme']) => void;
-    setPollingInterval: (interval: number) => void;
-    setNativeNotificationsEnabled: (enabled: boolean) => void;
-    setAiEnabled: (enabled: boolean) => void;
-    toggleFocusMode: () => void;
-    setFocusMode: (enabled: boolean) => void;
+  // Actions
+  setSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
+  setActiveTab: (tab: TabId) => void;
+  setTheme: (theme: Theme) => void;
+  setPollingInterval: (interval: number) => void;
+  setNativeNotificationsEnabled: (enabled: boolean) => void;
+  setAiEnabled: (enabled: boolean) => void;
+  toggleFocusMode: () => void;
+  setFocusMode: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
-    persist(
-        (set) => ({
-            // Initial State
-            sidebarOpen: true,
-            activeTab: 'dashboard',
-            theme: 'dark',
-            pollingInterval: 5000,
-            nativeNotificationsEnabled: true,
-            aiEnabled: false, // AI disabled by default
-            focusMode: false,
+  persist(
+    (set) => ({
+      // Initial State
+      sidebarOpen: DEFAULTS.SIDEBAR_OPEN,
+      activeTab: DEFAULT_TAB,
+      theme: DEFAULTS.THEME,
+      pollingInterval: DEFAULTS.POLLING_INTERVAL,
+      nativeNotificationsEnabled: DEFAULTS.NATIVE_NOTIFICATIONS_ENABLED,
+      aiEnabled: DEFAULTS.AI_ENABLED,
+      focusMode: DEFAULTS.FOCUS_MODE,
 
-            // Actions
-            setSidebarOpen: (open) => set({ sidebarOpen: open }),
-            toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-            setActiveTab: (tab) => set({ activeTab: tab }),
-            setTheme: (theme) => set({ theme }),
-            setPollingInterval: (interval) => set({ pollingInterval: interval }),
-            setNativeNotificationsEnabled: (enabled) => set({ nativeNotificationsEnabled: enabled }),
-            setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
-            toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
-            setFocusMode: (enabled) => set({ focusMode: enabled }),
-        }),
-        {
-            name: 'eigen-app-store',
-        }
-    )
+      // Actions
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setActiveTab: (tab) => set({ activeTab: tab }),
+      setTheme: (theme) => set({ theme }),
+      setPollingInterval: (interval) => set({ pollingInterval: interval }),
+      setNativeNotificationsEnabled: (enabled) => set({ nativeNotificationsEnabled: enabled }),
+      setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
+      toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
+      setFocusMode: (enabled) => set({ focusMode: enabled }),
+    }),
+    {
+      name: 'eigen-app-store',
+    }
+  )
 );
 
 interface AIState {
-    // AI Model state (shared across components)
-    aiStatus: AIStatus;
-    aiStatusMessage: string;
-    aiProgress: { current: number; total: number } | null;
+  // AI Model state (shared across components)
+  aiStatus: AIStatus;
+  aiStatusMessage: string;
+  aiProgress: { current: number; total: number } | null;
 
-    // Actions
-    setAIStatus: (status: AIStatus) => void;
-    setAIStatusMessage: (message: string) => void;
-    setAIProgress: (progress: { current: number; total: number } | null) => void;
+  // Actions
+  setAIStatus: (status: AIStatus) => void;
+  setAIStatusMessage: (message: string) => void;
+  setAIProgress: (progress: { current: number; total: number } | null) => void;
 }
 
 export const useAIStore = create<AIState>()((set) => ({
-    // Initial State
-    aiStatus: 'idle',
-    aiStatusMessage: '',
-    aiProgress: null,
+  // Initial State
+  aiStatus: 'idle',
+  aiStatusMessage: '',
+  aiProgress: null,
 
-    // Actions
-    setAIStatus: (status) => set({ aiStatus: status }),
-    setAIStatusMessage: (message) => set({ aiStatusMessage: message }),
-    setAIProgress: (progress) => set({ aiProgress: progress }),
+  // Actions
+  setAIStatus: (status) => set({ aiStatus: status }),
+  setAIStatusMessage: (message) => set({ aiStatusMessage: message }),
+  setAIProgress: (progress) => set({ aiProgress: progress }),
 }));
 
 interface SyncState {
-    // Syncthing state
-    isConnected: boolean;
-    isSyncthingRunning: boolean;
-    lastError: string | null;
+  // Syncthing state
+  isConnected: boolean;
+  isSyncthingRunning: boolean;
+  lastError: string | null;
 
-    // Actions
-    setConnected: (connected: boolean) => void;
-    setSyncthingRunning: (running: boolean) => void;
-    setLastError: (error: string | null) => void;
+  // Actions
+  setConnected: (connected: boolean) => void;
+  setSyncthingRunning: (running: boolean) => void;
+  setLastError: (error: string | null) => void;
 }
 
 export const useSyncStore = create<SyncState>()((set) => ({
-    // Initial State
-    isConnected: false,
-    isSyncthingRunning: false,
-    lastError: null,
+  // Initial State
+  isConnected: false,
+  isSyncthingRunning: false,
+  lastError: null,
 
-    // Actions
-    setConnected: (connected) => set({ isConnected: connected }),
-    setSyncthingRunning: (running) => set({ isSyncthingRunning: running }),
-    setLastError: (error) => set({ lastError: error }),
+  // Actions
+  setConnected: (connected) => set({ isConnected: connected }),
+  setSyncthingRunning: (running) => set({ isSyncthingRunning: running }),
+  setLastError: (error) => set({ lastError: error }),
 }));

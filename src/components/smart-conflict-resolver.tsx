@@ -28,6 +28,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { cn, formatBytes } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 
 interface SmartConflictResolverProps {
@@ -83,7 +84,7 @@ function getAIWorker(): Worker | null {
         }
       };
     } catch {
-      console.warn('Failed to create AI worker');
+      logger.warn('Failed to create AI worker');
       return null;
     }
   }

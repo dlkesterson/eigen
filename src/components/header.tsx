@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/store';
 import { useSystemStatus } from '@/hooks/useSyncthing';
 import { Button } from '@/components/ui/button';
@@ -8,17 +9,11 @@ import { AISearchBar } from '@/components/ai-search-bar';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 export function Header() {
+  const { t } = useTranslation();
   const { activeTab, setActiveTab } = useAppStore();
   const { data: status, isError, refetch, isRefetching } = useSystemStatus();
 
   const isOnline = !isError && status?.myID;
-
-  const titles: Record<string, string> = {
-    dashboard: 'Dashboard',
-    folders: 'Folders',
-    devices: 'Devices',
-    settings: 'Settings',
-  };
 
   const handleSearchResultSelect = (_path: string) => {
     // Navigate to folders tab and potentially open file browser
@@ -30,7 +25,7 @@ export function Header() {
     <header className="border-border bg-card/50 relative z-40 flex h-16 items-center justify-between border-b px-6 backdrop-blur-xl">
       <div className="flex items-center gap-4">
         <h1 className="text-foreground text-xl font-semibold">
-          {titles[activeTab] || 'Dashboard'}
+          {t(`nav.${activeTab}`, { defaultValue: t('nav.dashboard') })}
         </h1>
       </div>
 
@@ -48,7 +43,7 @@ export function Header() {
             <WifiOff className="h-4 w-4 text-red-400" />
           )}
           <Badge variant={isOnline ? 'success' : 'destructive'}>
-            {isOnline ? 'Connected' : 'Offline'}
+            {isOnline ? t('common.connected') : t('common.disconnected')}
           </Badge>
         </div>
 
@@ -59,7 +54,7 @@ export function Header() {
           onClick={() => refetch()}
           disabled={isRefetching}
           className="text-muted-foreground hover:text-foreground h-8 w-8"
-          title="Refresh status"
+          title={t('common.refresh')}
         >
           <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
         </Button>

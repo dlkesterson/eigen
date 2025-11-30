@@ -1,8 +1,5 @@
 'use client';
 
-/* eslint-disable no-console */
-// Console statements are intentional here for debugging Syncthing sidecar lifecycle
-
 import { useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
@@ -14,6 +11,7 @@ import {
 } from '@/hooks/useSyncthing';
 import { useNativeNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 /**
  * Updates the system tray tooltip with current sync status
@@ -27,7 +25,7 @@ async function updateTrayStatus(status: string, details: string) {
     });
   } catch (error) {
     // Silently fail - tray might not be available
-    console.debug('Could not update tray status:', error);
+    logger.debug('Could not update tray status', { error });
   }
 }
 
@@ -241,7 +239,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
         },
       });
     } else if (installation?.installed && installation.version) {
-      console.log('Syncthing found:', installation.version, 'at', installation.path);
+      logger.info('Syncthing found', { version: installation.version, path: installation.path });
     }
   }, [installation, checkingInstallation]);
 
@@ -254,17 +252,17 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
     if (isError && !startSyncthing.isPending) {
       hasAttemptedStart.current = true;
 
-      console.log('Syncthing not responding, attempting to start...');
+      logger.info('Syncthing not responding, attempting to start...');
 
       startSyncthing.mutate(undefined, {
         onSuccess: (message) => {
-          console.log('Syncthing start result:', message);
+          logger.info('Syncthing start result', { message });
           toast.success('Starting Syncthing...', {
             description: 'Please wait while Syncthing initializes.',
           });
         },
         onError: (err) => {
-          console.error('Failed to start Syncthing:', err);
+          logger.error('Failed to start Syncthing', { error: err });
           toast.error('Failed to start Syncthing', {
             description: err instanceof Error ? err.message : 'Unknown error',
             duration: 10000,

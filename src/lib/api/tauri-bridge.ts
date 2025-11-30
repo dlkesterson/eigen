@@ -34,9 +34,9 @@ import {
 } from '@/hooks/useSyncthing';
 
 export class TauriBridge implements SyncthingClient {
-  // ============================================================================
+  // ---
   // System Operations
-  // ============================================================================
+  // ---
   system = {
     checkInstallation: async (): Promise<SyncthingInfo> => {
       const data = await invoke('check_syncthing_installation');
@@ -80,9 +80,9 @@ export class TauriBridge implements SyncthingClient {
     },
   };
 
-  // ============================================================================
+  // ---
   // Configuration Operations
-  // ============================================================================
+  // ---
   config = {
     get: async (): Promise<Config> => {
       const data = await invoke('get_config');
@@ -94,9 +94,9 @@ export class TauriBridge implements SyncthingClient {
     },
   };
 
-  // ============================================================================
+  // ---
   // Device Operations
-  // ============================================================================
+  // ---
   devices = {
     getLocalId: async (): Promise<string> => {
       return await invoke<string>('get_device_id');
@@ -137,9 +137,9 @@ export class TauriBridge implements SyncthingClient {
     },
   };
 
-  // ============================================================================
+  // ---
   // Folder Operations
-  // ============================================================================
+  // ---
   folders = {
     add: async (folderId: string, folderLabel: string, folderPath: string): Promise<void> => {
       await invoke('add_folder', { folderId, folderLabel, folderPath });
@@ -220,9 +220,9 @@ export class TauriBridge implements SyncthingClient {
     },
   };
 
-  // ============================================================================
+  // ---
   // File Browser Operations
-  // ============================================================================
+  // ---
   files = {
     browse: async (folderId: string, prefix?: string): Promise<FileEntry[]> => {
       const data = await invoke('browse_folder', {
@@ -258,9 +258,9 @@ export class TauriBridge implements SyncthingClient {
     },
   };
 
-  // ============================================================================
+  // ---
   // Conflict Resolution
-  // ============================================================================
+  // ---
   conflicts = {
     scan: async (folderPath: string): Promise<unknown[]> => {
       const data = await invoke('scan_for_conflicts', { folderPath });
@@ -280,9 +280,9 @@ export class TauriBridge implements SyncthingClient {
     },
   };
 
-  // ============================================================================
+  // ---
   // Events
-  // ============================================================================
+  // ---
   events = {
     subscribe: (callback: (event: SyncthingEvent) => void): (() => void) => {
       // For Tauri, we use long-polling via the hook

@@ -1,0 +1,193 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "close": "Close",
+    "confirm": "Confirm",
+    "search": "Search",
+    "settings": "Settings",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "pause": "Pause",
+    "resume": "Resume",
+    "actions": "Actions",
+    "status": "Status",
+    "name": "Name",
+    "path": "Path",
+    "size": "Size",
+    "date": "Date",
+    "type": "Type",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "paused": "Paused",
+    "syncing": "Syncing",
+    "idle": "Idle",
+    "scanning": "Scanning",
+    "unknown": "Unknown"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "folders": "Folders",
+    "devices": "Devices",
+    "logs": "Logs",
+    "settings": "Settings",
+    "network": "Network"
+  },
+  "header": {
+    "title": "Eigen",
+    "subtitle": "Syncthing Manager",
+    "running": "Running",
+    "stopped": "Stopped"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "systemStatus": "System Status",
+    "uptime": "Uptime",
+    "totalFolders": "Total Folders",
+    "totalDevices": "Total Devices",
+    "connectedDevices": "Connected Devices",
+    "syncProgress": "Sync Progress",
+    "transferRate": "Transfer Rate"
+  },
+  "folders": {
+    "title": "Folders",
+    "addFolder": "Add Folder",
+    "noFolders": "No folders configured",
+    "noFoldersDescription": "Add a folder to start syncing files",
+    "folderId": "Folder ID",
+    "folderLabel": "Folder Label",
+    "folderPath": "Folder Path",
+    "selectPath": "Select Path",
+    "sharedWith": "Shared with",
+    "notShared": "Not shared",
+    "share": "Share",
+    "unshare": "Unshare",
+    "rescan": "Rescan",
+    "openInExplorer": "Open in Explorer",
+    "ignorePatterns": "Ignore Patterns",
+    "versioning": "Versioning",
+    "versioningType": {
+      "none": "None",
+      "simple": "Simple",
+      "staggered": "Staggered",
+      "trashcan": "Trash Can",
+      "external": "External"
+    },
+    "state": {
+      "idle": "Up to Date",
+      "scanning": "Scanning",
+      "syncing": "Syncing",
+      "error": "Error",
+      "paused": "Paused",
+      "unknown": "Unknown"
+    }
+  },
+  "devices": {
+    "title": "Devices",
+    "addDevice": "Add Device",
+    "noDevices": "No devices configured",
+    "noDevicesDescription": "Add a device to start syncing",
+    "deviceId": "Device ID",
+    "deviceName": "Device Name",
+    "thisDevice": "This Device",
+    "copyId": "Copy Device ID",
+    "addresses": "Addresses",
+    "compression": "Compression",
+    "introducer": "Introducer",
+    "autoAcceptFolders": "Auto Accept Folders",
+    "connectionType": "Connection Type",
+    "lastSeen": "Last Seen"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "network": "Network",
+    "advanced": "Advanced",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "globalAnnounce": "Global Announce",
+    "localAnnounce": "Local Announce",
+    "relays": "Relays",
+    "nat": "NAT Traversal",
+    "listenAddresses": "Listen Addresses",
+    "maxSendRate": "Max Send Rate",
+    "maxRecvRate": "Max Receive Rate",
+    "restartRequired": "Restart required for changes to take effect"
+  },
+  "logs": {
+    "title": "Logs",
+    "noLogs": "No logs available",
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "clearLogs": "Clear Logs",
+    "exportLogs": "Export Logs",
+    "autoScroll": "Auto-scroll"
+  },
+  "network": {
+    "title": "Network",
+    "graph": "Connection Graph",
+    "noConnections": "No active connections"
+  },
+  "conflicts": {
+    "title": "Conflicts",
+    "noConflicts": "No conflicts found",
+    "keepOriginal": "Keep Original",
+    "keepConflict": "Keep Conflict",
+    "viewDiff": "View Diff",
+    "conflictFile": "Conflict File",
+    "originalFile": "Original File"
+  },
+  "versions": {
+    "title": "File History",
+    "noVersions": "No previous versions",
+    "restore": "Restore",
+    "versionedAt": "Versioned at"
+  },
+  "dialogs": {
+    "addDevice": {
+      "title": "Add Device",
+      "description": "Enter the device ID and name to add a new device",
+      "pasteId": "Paste or scan the device ID"
+    },
+    "addFolder": {
+      "title": "Add Folder",
+      "description": "Configure a new folder for synchronization"
+    },
+    "shareFolder": {
+      "title": "Share Folder",
+      "description": "Select devices to share this folder with"
+    },
+    "ignorePatterns": {
+      "title": "Ignore Patterns",
+      "description": "Configure patterns to exclude files from syncing",
+      "placeholder": "Enter patterns (one per line)",
+      "examples": "Examples: *.tmp, .DS_Store, node_modules/"
+    }
+  },
+  "errors": {
+    "connectionFailed": "Connection failed",
+    "syncthingNotRunning": "Syncthing is not running",
+    "operationFailed": "Operation failed",
+    "invalidDeviceId": "Invalid device ID",
+    "folderNotFound": "Folder not found",
+    "permissionDenied": "Permission denied"
+  },
+  "ai": {
+    "searchPlaceholder": "Ask about your files...",
+    "thinking": "Thinking...",
+    "ready": "Ready",
+    "noResults": "No results found"
+  }
+}
