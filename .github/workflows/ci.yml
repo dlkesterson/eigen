@@ -3,8 +3,6 @@ name: CI
 on:
   push:
     branches: [main, master]
-    tags-ignore:
-      - 'v*'
   pull_request:
     branches: [main, master]
 
@@ -142,3 +140,194 @@ jobs:
       - name: Build Tauri (check only)
         working-directory: src-tauri
         run: cargo check --all-targets
+
+  # Build distributable apps on main branch
+  build-release:
+    name: Build Release (${{ matrix.settings.os }})
+    needs: [frontend-lint, rust-lint]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ${{ matrix.settings.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            syncthing-os: linux
+            syncthing-arch: amd64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            syncthing-os: macos
+            syncthing-arch: amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            syncthing-os: macos
+            syncthing-arch: arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            syncthing-os: windows
+            syncthing-arch: amd64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Get or generate version
+        id: get-version
+        shell: bash
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Check if current commit has a tag
+          CURRENT_TAG=$(git tag --points-at HEAD 2>/dev/null | grep "^v" | head -1 || echo "")
+          
+          if [ -n "$CURRENT_TAG" ]; then
+            # Use the existing tag
+            VERSION="$CURRENT_TAG"
+            echo "Using existing tag: $VERSION"
+          else
+            # Auto-increment patch version
+            # Remove 'v' prefix for parsing
+            VERSION_NUM="${LATEST_TAG#v}"
+            
+            # Split into major.minor.patch
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NUM"
+            
+            # Handle cases where parsing might fail
+            MAJOR=${MAJOR:-0}
+            MINOR=${MINOR:-0}
+            PATCH=${PATCH:-0}
+            
+            # Increment patch version
+            PATCH=$((PATCH + 1))
+            
+            VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+            echo "Auto-incremented version: $VERSION"
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Final version: $VERSION"
+
+      - name: Install Linux dependencies
+        if: matrix.settings.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.settings.target }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download Syncthing binary
+        shell: bash
+        env:
+          SYNCTHING_VERSION: v1.27.12
+        run: |
+          mkdir -p src-tauri/binaries
+
+          if [ "${{ matrix.settings.syncthing-os }}" = "windows" ]; then
+            ARCHIVE_EXT="zip"
+            BIN_EXT=".exe"
+          else
+            ARCHIVE_EXT="tar.gz"
+            BIN_EXT=""
+          fi
+
+          ARCHIVE_NAME="syncthing-${{ matrix.settings.syncthing-os }}-${{ matrix.settings.syncthing-arch }}-${SYNCTHING_VERSION}"
+          DOWNLOAD_URL="https://github.com/syncthing/syncthing/releases/download/${SYNCTHING_VERSION}/${ARCHIVE_NAME}.${ARCHIVE_EXT}"
+
+          echo "Downloading Syncthing from: $DOWNLOAD_URL"
+
+          if [ "${{ matrix.settings.syncthing-os }}" = "windows" ]; then
+            curl -L -o syncthing.zip "$DOWNLOAD_URL"
+            unzip syncthing.zip
+            mv "${ARCHIVE_NAME}/syncthing.exe" "src-tauri/binaries/syncthing-${{ matrix.settings.target }}.exe"
+          else
+            curl -L -o syncthing.tar.gz "$DOWNLOAD_URL"
+            tar -xzf syncthing.tar.gz
+            mv "${ARCHIVE_NAME}/syncthing" "src-tauri/binaries/syncthing-${{ matrix.settings.target }}"
+            chmod +x "src-tauri/binaries/syncthing-${{ matrix.settings.target }}"
+          fi
+
+          ls -la src-tauri/binaries/
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ steps.get-version.outputs.version }}
+          releaseName: 'Eigen ${{ steps.get-version.outputs.version }}'
+          releaseBody: |
+            ## Automated Build
+
+            This is an automated build from the main branch.
+
+            **Commit:** ${{ github.sha }}
+            **Version:** ${{ steps.get-version.outputs.version }}
+
+            See the [commit history](https://github.com/${{ github.repository }}/commits/main) for details.
+
+            ## Installation
+
+            ### Windows
+            - Download `Eigen_*_x64-setup.exe` for the installer
+            - Or download `Eigen_*_x64_en-US.msi` for MSI
+
+            ### macOS
+            - **Intel Macs**: Download `Eigen_*_x64.dmg`
+            - **Apple Silicon (M1/M2/M3)**: Download `Eigen_*_aarch64.dmg`
+
+            ### Linux
+            - **Debian/Ubuntu**: Download `eigen_*_amd64.deb`
+            - **Other distros**: Download `eigen_*_amd64.AppImage`
+          releaseDraft: false
+          prerelease: true
+          args: --target ${{ matrix.settings.target }}

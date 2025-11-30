@@ -7,9 +7,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v0.1.0)'
+        description: 'Version to release (e.g., v0.1.0). Creates a stable release with this version.'
         required: false
         type: string
+
+# This workflow creates stable (non-prerelease) releases when:
+# 1. A version tag is pushed (e.g., v1.0.0)
+# 2. Manually triggered via workflow_dispatch
+# 
+# For automatic builds on every push to main, see ci.yml which creates prerelease builds.
 
 env:
   CARGO_TERM_COLOR: always
