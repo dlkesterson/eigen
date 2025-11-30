@@ -8,6 +8,12 @@ import { X, Laptop, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+interface FolderDevice {
+  deviceID: string;
+  introducedBy?: string;
+  encryptionPassword?: string;
+}
+
 interface ShareFolderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,9 +58,8 @@ export function ShareFolderDialog({
     const currentFolder = config.folders?.find((f) => f.id === folderId);
     // Check if this device is already in the folder's device list
     // Note: The backend returns 'devices' as an array of objects with 'deviceID'
-    const isAlreadyShared = (currentFolder as any)?.devices?.some(
-      (d: any) => d.deviceID === device.deviceID
-    );
+    const devices = currentFolder?.devices as FolderDevice[] | undefined;
+    const isAlreadyShared = devices?.some((d) => d.deviceID === device.deviceID);
     return !isAlreadyShared;
   });
 
@@ -72,7 +77,7 @@ export function ShareFolderDialog({
           </Button>
           <CardTitle className="text-foreground text-xl">Share Folder</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Select a device to sync "{folderLabel || folderId}" with.
+            Select a device to sync &quot;{folderLabel || folderId}&quot; with.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

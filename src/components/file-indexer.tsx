@@ -30,6 +30,7 @@ import {
   type FileMetadata,
 } from '@/lib/db';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface IndexingStatus {
   phase: 'idle' | 'scanning' | 'storing' | 'embedding' | 'complete' | 'error';
@@ -67,11 +68,6 @@ export function FileIndexer() {
     progress: embeddingProgress,
   } = useAISearch({ enabled: aiEnabled });
 
-  // Update stats on mount
-  useEffect(() => {
-    updateStats();
-  }, []);
-
   // Update stats
   const updateStats = useCallback(async () => {
     try {
@@ -80,9 +76,14 @@ export function FileIndexer() {
       const embeddings = await getAllEmbeddings();
       setTotalEmbeddings(embeddings.length);
     } catch (e) {
-      console.error('Error updating stats:', e);
+      logger.warn('Error updating stats', { error: String(e) });
     }
   }, []);
+
+  // Update stats on mount
+  useEffect(() => {
+    updateStats();
+  }, [updateStats]);
 
   // Index a single folder
   const indexFolder = useCallback(
@@ -240,7 +241,7 @@ export function FileIndexer() {
         phase: 'complete',
         message: 'Index cleared',
       });
-    } catch (error) {
+    } catch {
       setStatus({
         phase: 'error',
         message: 'Failed to clear index',

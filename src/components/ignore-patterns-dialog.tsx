@@ -53,7 +53,9 @@ export function IgnorePatternsDialog({
   // Initialize patterns from server data
   useEffect(() => {
     if (ignoreData?.ignore) {
-      setPatterns(ignoreData.ignore.filter((p: string) => p.trim() !== ''));
+      // Use callback form to avoid synchronous setState warning
+      const newPatterns = ignoreData.ignore.filter((p: string) => p.trim() !== '');
+      setPatterns(newPatterns);
       setHasChanges(false);
     }
   }, [ignoreData]);
@@ -94,7 +96,7 @@ export function IgnorePatternsDialog({
       });
       toast.success('Ignore patterns saved');
       setHasChanges(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to save ignore patterns');
     }
   };
@@ -157,7 +159,8 @@ export function IgnorePatternsDialog({
                 • <code className="bg-muted rounded px-1">/</code> prefix — anchors to folder root
               </li>
               <li>
-                • <code className="bg-muted rounded px-1">//</code> prefix — comment line
+                • <code className="bg-muted rounded px-1">{'/'}</code>
+                <code className="bg-muted rounded px-1">{'/'}</code> prefix — comment line
               </li>
             </ul>
           </div>

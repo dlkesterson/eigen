@@ -10,7 +10,7 @@ import { registerDefaultHealthChecks } from '@/lib/health-monitor';
 import { autoRecovery, registerDefaultRecoveryStrategies } from '@/lib/auto-recovery';
 import { logger } from '@/lib/logger';
 import { SyncthingClientProvider } from '@/lib/api';
-import { parseInviteUrl, type DeviceInvitation } from '@/hooks/useDeviceInvite';
+import { parseInviteUrl } from '@/hooks/useDeviceInvite';
 import { ThemeProvider, useResolvedTheme } from './theme-provider';
 
 // Themed Toaster component that respects theme settings

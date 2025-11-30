@@ -20,11 +20,10 @@ export function Header() {
     settings: 'Settings',
   };
 
-  const handleSearchResultSelect = (path: string) => {
+  const handleSearchResultSelect = (_path: string) => {
     // Navigate to folders tab and potentially open file browser
     setActiveTab('folders');
     // TODO: Open file browser at the selected path
-    console.log('Selected file:', path);
   };
 
   return (

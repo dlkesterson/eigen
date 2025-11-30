@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   useScanConflicts,
   useDeleteConflict,
@@ -91,7 +91,7 @@ function getAIWorker(): Worker | null {
   return aiWorker;
 }
 
-async function analyzeDiffWithAI(
+async function _analyzeDiffWithAI(
   contentA: string,
   contentB: string,
   labelA: string,
@@ -388,8 +388,8 @@ function SmartConflictCard({
                 </div>
               ) : !isAnalyzing ? (
                 <p className="text-muted-foreground text-xs">
-                  Click "Analyze Differences" to get an AI-powered summary of the changes between
-                  versions.
+                  Click &quot;Analyze Differences&quot; to get an AI-powered summary of the changes
+                  between versions.
                 </p>
               ) : (
                 <div className="text-muted-foreground flex items-center gap-2 text-sm">

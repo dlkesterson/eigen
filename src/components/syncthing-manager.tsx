@@ -1,5 +1,8 @@
 'use client';
 
+/* eslint-disable no-console */
+// Console statements are intentional here for debugging Syncthing sidecar lifecycle
+
 import { useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {

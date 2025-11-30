@@ -26,7 +26,7 @@ import {
   Play,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AddDeviceDialog, MyDeviceId } from './add-device-dialog';
+import { AddDeviceDialog } from './add-device-dialog';
 import { toast } from 'sonner';
 
 function DeviceCard({
@@ -77,18 +77,10 @@ function DeviceCard({
 
   const isPauseResumePending = pauseDevice.isPending || resumeDevice.isPending;
 
-  const getDeviceIcon = () => {
-    const type = connectionInfo?.type?.toLowerCase() || '';
-    if (type.includes('mobile') || type.includes('phone')) {
-      return Smartphone;
-    }
-    if (type.includes('server')) {
-      return Server;
-    }
-    return Laptop;
-  };
-
-  const DeviceIcon = getDeviceIcon();
+  // Determine device icon based on connection type
+  const connectionType = connectionInfo?.type?.toLowerCase() || '';
+  const isMobile = connectionType.includes('mobile') || connectionType.includes('phone');
+  const isServer = connectionType.includes('server');
 
   return (
     <Card
@@ -107,16 +99,40 @@ function DeviceCard({
                 isConnected ? 'bg-emerald-500/20' : isLocalDevice ? 'bg-violet-500/20' : 'bg-muted'
               )}
             >
-              <DeviceIcon
-                className={cn(
-                  'h-5 w-5',
-                  isConnected
-                    ? 'text-emerald-400'
-                    : isLocalDevice
-                      ? 'text-violet-400'
-                      : 'text-muted-foreground'
-                )}
-              />
+              {isMobile ? (
+                <Smartphone
+                  className={cn(
+                    'h-5 w-5',
+                    isConnected
+                      ? 'text-emerald-400'
+                      : isLocalDevice
+                        ? 'text-violet-400'
+                        : 'text-muted-foreground'
+                  )}
+                />
+              ) : isServer ? (
+                <Server
+                  className={cn(
+                    'h-5 w-5',
+                    isConnected
+                      ? 'text-emerald-400'
+                      : isLocalDevice
+                        ? 'text-violet-400'
+                        : 'text-muted-foreground'
+                  )}
+                />
+              ) : (
+                <Laptop
+                  className={cn(
+                    'h-5 w-5',
+                    isConnected
+                      ? 'text-emerald-400'
+                      : isLocalDevice
+                        ? 'text-violet-400'
+                        : 'text-muted-foreground'
+                  )}
+                />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <CardTitle className="text-foreground flex items-center gap-2 truncate text-lg">

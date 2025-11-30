@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store';
 
 export function useResolvedTheme(): 'light' | 'dark' {
   const theme = useAppStore((state) => state.theme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
 
-  useEffect(() => {
+  const updateResolvedTheme = useCallback(() => {
     if (theme === 'system') {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
@@ -18,8 +18,10 @@ export function useResolvedTheme(): 'light' | 'dark' {
     }
   }, [theme]);
 
-  // Listen for system theme changes
   useEffect(() => {
+    updateResolvedTheme();
+
+    // Listen for system theme changes only when theme is 'system'
     if (theme !== 'system') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -29,7 +31,7 @@ export function useResolvedTheme(): 'light' | 'dark' {
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, [theme, updateResolvedTheme]);
 
   return resolvedTheme;
 }

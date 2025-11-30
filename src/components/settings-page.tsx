@@ -329,7 +329,7 @@ function NetworkSettings() {
       await updateOptions.mutateAsync(localOptions);
       toast.success('Network settings saved');
       setHasChanges(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to save network settings');
     }
   };
@@ -489,7 +489,7 @@ export function SettingsPage() {
     try {
       await restartSyncthing.mutateAsync();
       toast.success('Syncthing is restarting...');
-    } catch (error) {
+    } catch {
       toast.error('Failed to restart Syncthing');
     }
   };

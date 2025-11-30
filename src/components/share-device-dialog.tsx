@@ -15,9 +15,8 @@ import {
   Clock,
   Shield,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useDeviceInvite, generateInviteUrl } from '@/hooks/useDeviceInvite';
+import { useDeviceInvite } from '@/hooks/useDeviceInvite';
 
 interface ShareDeviceDialogProps {
   open: boolean;

@@ -168,7 +168,7 @@ export function VersionTimeline({
         `Restored ${fileName} to version from ${formatDate(selectedPoint.version.modTime)}`
       );
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to restore version');
     }
   };

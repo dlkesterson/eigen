@@ -1,9 +1,11 @@
 [package]
 name = "eigen"
 version = "0.1.0"
-description = "Eigen - A Modern Syncthing Manager"
-authors = ["Eigen Team"]
+description = "Eigen - A Modern Syncthing Manager with AI-powered semantic search and a beautiful UI built with Tauri and Next.js"
+authors = ["dlkesterson"]
+repository = "https://github.com/dlkesterson/eigen"
 edition = "2021"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

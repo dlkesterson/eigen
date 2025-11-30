@@ -98,7 +98,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
       toast.success('Device added successfully');
       resetForm();
       onClose();
-    } catch (error) {
+    } catch {
       toast.error('Failed to add device');
     }
   };
@@ -245,7 +245,8 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                   )}
                 />
                 <p className="text-muted-foreground text-xs">
-                  Use "dynamic" for auto-discovery, or specify addresses like tcp://hostname:22000
+                  Use &quot;dynamic&quot; for auto-discovery, or specify addresses like
+                  tcp://hostname:22000
                 </p>
               </div>
 

@@ -11,7 +11,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import type { SyncthingClient } from './client';
 import type { BridgeType, HttpConnectionSettings } from './types';
-import { TauriBridge, tauriBridge } from './tauri-bridge';
+import { tauriBridge } from './tauri-bridge';
 import { HttpBridge, createHttpBridge } from './http-bridge';
 
 // ============================================================================
@@ -125,13 +125,21 @@ export function SyncthingClientProvider({
     return isTauri ? 'tauri' : 'http';
   };
 
-  const [bridgeType, setBridgeType] = useState<BridgeType>(getInitialBridgeType);
+  const initialBridgeType = getInitialBridgeType();
+  const [bridgeType, setBridgeType] = useState<BridgeType>(initialBridgeType);
   const [remoteSettings, setRemoteSettings] = useState<HttpConnectionSettings | null>(
     initialHttpSettings || getSavedRemoteSettings()
   );
-  const [httpBridge, setHttpBridge] = useState<HttpBridge | null>(null);
+  const [httpBridge, setHttpBridge] = useState<HttpBridge | null>(() => {
+    // Initialize HTTP bridge immediately if needed
+    const settings = initialHttpSettings || getSavedRemoteSettings();
+    if (initialBridgeType === 'http' && settings) {
+      return createHttpBridge(settings);
+    }
+    return null;
+  });
 
-  // Initialize HTTP bridge if needed
+  // Update HTTP bridge if settings change
   useEffect(() => {
     if (bridgeType === 'http' && remoteSettings && !httpBridge) {
       setHttpBridge(createHttpBridge(remoteSettings));
@@ -148,16 +156,9 @@ export function SyncthingClientProvider({
       return httpBridge;
     }
 
-    // Fallback: create a new HTTP bridge if we have settings
-    if (remoteSettings) {
-      const newBridge = createHttpBridge(remoteSettings);
-      setHttpBridge(newBridge);
-      return newBridge;
-    }
-
-    // Last resort: return tauri bridge even if not in tauri (will fail gracefully)
+    // Fallback: return tauri bridge even if not in tauri (will fail gracefully)
     return tauriBridge;
-  }, [bridgeType, isTauri, httpBridge, remoteSettings]);
+  }, [bridgeType, isTauri, httpBridge]);
 
   // Connect to remote instance
   const connectToRemote = (settings: HttpConnectionSettings) => {

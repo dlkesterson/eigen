@@ -100,7 +100,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
       });
       toast.success('Folder added successfully');
       handleClose();
-    } catch (err) {
+    } catch {
       toast.error('Failed to add folder');
     }
   };

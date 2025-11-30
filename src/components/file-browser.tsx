@@ -124,7 +124,7 @@ export function FileBrowser({
         overwrite: true,
       });
       toast.success(`Restored ${entry.originalName}`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to restore file');
     }
   };
@@ -143,7 +143,7 @@ export function FileBrowser({
         currentPath.length > 0 ? `${folderPath}/${currentPath.join('/')}` : folderPath;
       await openInExplorer.mutateAsync(fullPath);
       toast.success('Opened in file explorer');
-    } catch (error) {
+    } catch {
       toast.error('Failed to open in file explorer');
     }
   };

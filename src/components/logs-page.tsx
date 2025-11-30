@@ -1,19 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSystemLogs, LogEntry } from '@/hooks/useSyncthing';
+import { useSystemLogs } from '@/hooks/useSyncthing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  RefreshCw,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  Bug,
-  Download,
-  Trash2,
-  ChevronDown,
-} from 'lucide-react';
+import { RefreshCw, AlertCircle, AlertTriangle, Info, Bug, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type LogLevel = 'all' | 'error' | 'warning' | 'info' | 'debug';

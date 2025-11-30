@@ -16,7 +16,6 @@ import {
   Trash2,
   Check,
   FileWarning,
-  File,
   Clock,
   HardDrive,
 } from 'lucide-react';
@@ -68,7 +67,7 @@ function ConflictCard({
       });
       toast.success('Conflict resolved - kept original file');
       onResolve();
-    } catch (error) {
+    } catch {
       toast.error('Failed to resolve conflict');
     } finally {
       setIsResolving(false);
@@ -85,7 +84,7 @@ function ConflictCard({
       });
       toast.success('Conflict resolved - kept newer version');
       onResolve();
-    } catch (error) {
+    } catch {
       toast.error('Failed to resolve conflict');
     } finally {
       setIsResolving(false);

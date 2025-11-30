@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Folder,
@@ -61,14 +62,27 @@ export function Sidebar() {
             key={item.id}
             variant="ghost"
             className={cn(
-              'text-muted-foreground hover:bg-accent hover:text-foreground w-full justify-start gap-3',
-              activeTab === item.id && 'bg-accent text-foreground',
+              'text-muted-foreground hover:bg-accent/50 hover:text-foreground relative w-full justify-start gap-3',
               !sidebarOpen && 'justify-center px-2'
             )}
             onClick={() => setActiveTab(item.id)}
           >
-            <item.icon className="h-5 w-5 shrink-0" />
-            {sidebarOpen && <span>{item.label}</span>}
+            {activeTab === item.id && (
+              <motion.div
+                layoutId="sidebar-active-indicator"
+                className="bg-accent/50 absolute inset-0 z-0 rounded-md"
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              />
+            )}
+            <span
+              className={cn(
+                'relative z-10 flex items-center gap-3',
+                activeTab === item.id && 'text-foreground'
+              )}
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              {sidebarOpen && <span>{item.label}</span>}
+            </span>
           </Button>
         ))}
       </nav>

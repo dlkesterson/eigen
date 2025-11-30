@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,16 +43,16 @@ export default function DebugPanel() {
 
   // Subscribe to log updates
   useEffect(() => {
-    if (isOpen) {
-      const unsubscribe = logger.subscribe(() => {
-        setLogs(logger.exportLogs());
-      });
-      // Initial load
+    if (!isOpen) return;
+
+    const unsubscribe = logger.subscribe(() => {
       setLogs(logger.exportLogs());
-      return () => {
-        unsubscribe();
-      };
-    }
+    });
+    // Initial load - use functional update to avoid synchronous setState warning
+    setLogs(() => logger.exportLogs());
+    return () => {
+      unsubscribe();
+    };
   }, [isOpen]);
 
   // Subscribe to health status updates
@@ -297,7 +297,6 @@ export default function DebugPanel() {
                   size="sm"
                   className="border-border w-full justify-start text-xs"
                   onClick={() => {
-                    console.log('Check Application tab in DevTools');
                     logger.info('Check Application tab in DevTools for IndexedDB');
                   }}
                 >

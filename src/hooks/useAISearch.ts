@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { storeEmbedding, getAllEmbeddings, type FileEmbedding } from '@/lib/db';
 import { useAIStore, type AIStatus } from '@/store';
+import { logger } from '@/lib/logger';
 
 export type { AIStatus } from '@/store';
 
@@ -46,26 +47,35 @@ let sharedPendingCalls = new Map<
   { resolve: (value: unknown) => void; reject: (error: Error) => void }
 >();
 let callIdCounter = 0;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let workerInitialized = false;
 
 function getOrCreateWorker(): Worker | null {
   if (typeof window === 'undefined') return null;
 
   if (!sharedWorker) {
-    console.log('[useAISearch] Creating new AI worker...');
+    logger.debug('Creating new AI worker...', { component: 'useAISearch' });
     try {
       // Use dynamic import path for better bundler compatibility
       sharedWorker = new Worker(new URL('../workers/ai.worker.ts', import.meta.url), {
         type: 'module',
       });
-      console.log('[useAISearch] Worker object created');
+      logger.debug('Worker object created', { component: 'useAISearch' });
 
       // Add error handler for worker loading issues
       sharedWorker.addEventListener('error', (e) => {
-        console.error('[useAISearch] Worker error event:', e.message, e.filename, e.lineno);
+        logger.error('Worker error event', {
+          component: 'useAISearch',
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+        });
       });
     } catch (error) {
-      console.error('[useAISearch] Failed to create AI worker:', error);
+      logger.error('Failed to create AI worker', {
+        component: 'useAISearch',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       const store = useAIStore.getState();
       store.setAIStatus('error');
       store.setAIStatusMessage(
@@ -76,7 +86,7 @@ function getOrCreateWorker(): Worker | null {
 
     sharedWorker.onmessage = (event: MessageEvent<AIWorkerMessage>) => {
       const { id, type, payload } = event.data;
-      console.log('[useAISearch] Received message from worker:', type, payload);
+      logger.debug('Received message from worker', { component: 'useAISearch', type, payload });
 
       // Handle status updates - update global store directly
       if (type === 'status' && payload && typeof payload === 'object') {
@@ -93,7 +103,7 @@ function getOrCreateWorker(): Worker | null {
           store.setAIStatusMessage(statusPayload.message || 'Error');
         } else if (statusPayload.status === 'initialized') {
           // Worker is ready to receive commands
-          console.log('AI Worker initialized and ready');
+          logger.info('AI Worker initialized and ready', { component: 'useAISearch' });
         }
       }
 
@@ -113,7 +123,10 @@ function getOrCreateWorker(): Worker | null {
     };
 
     sharedWorker.onerror = (error) => {
-      console.error('AI Worker error:', error);
+      logger.error('AI Worker error', {
+        component: 'useAISearch',
+        error: error.message || 'Unknown error',
+      });
       const store = useAIStore.getState();
       store.setAIStatus('error');
       store.setAIStatusMessage(`Worker error: ${error.message || 'Unknown error'}`);
@@ -159,11 +172,11 @@ export function useAISearch(options: UseAISearchOptions = {}): UseAISearchReturn
 
   // Initialize worker when enabled
   useEffect(() => {
-    console.log('[useAISearch] Effect running, enabled:', enabled);
+    logger.debug('Effect running', { component: 'useAISearch', enabled });
     if (enabled) {
-      console.log('[useAISearch] Calling getOrCreateWorker...');
+      logger.debug('Calling getOrCreateWorker...', { component: 'useAISearch' });
       const worker = getOrCreateWorker();
-      console.log('[useAISearch] Worker result:', worker ? 'created' : 'null');
+      logger.debug('Worker result', { component: 'useAISearch', created: !!worker });
     }
   }, [enabled]);
 
@@ -219,7 +232,10 @@ export function useAISearch(options: UseAISearchOptions = {}): UseAISearchReturn
       // The model is ~23MB and needs to be downloaded from Hugging Face
       await sendMessage('init', undefined, 600000); // 10 minute timeout
     } catch (error) {
-      console.error('Failed to initialize AI model:', error);
+      logger.error('Failed to initialize AI model', {
+        component: 'useAISearch',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       const errorMessage = error instanceof Error ? error.message : 'Failed to initialize';
       const isTimeout = errorMessage.includes('timed out');
       setStatus('error');
@@ -286,7 +302,10 @@ export function useAISearch(options: UseAISearchOptions = {}): UseAISearchReturn
             });
           }
         } catch (error) {
-          console.error('Error indexing batch:', error);
+          logger.error('Error indexing batch', {
+            component: 'useAISearch',
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
         }
 
         setProgress({ current: Math.min(i + batchSize, files.length), total: files.length });
@@ -299,7 +318,7 @@ export function useAISearch(options: UseAISearchOptions = {}): UseAISearchReturn
 
   // Semantic search
   const search = useCallback(
-    async (query: string, folderId?: string): Promise<SearchResult[]> => {
+    async (query: string, _folderId?: string): Promise<SearchResult[]> => {
       if (!enabled) return [];
       if (!query.trim()) return [];
 

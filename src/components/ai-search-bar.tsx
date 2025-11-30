@@ -6,8 +6,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Loader2, Brain, X, FileText, Folder, AlertCircle } from 'lucide-react';
-import { useAISearch, type AIStatus } from '@/hooks/useAISearch';
+import { Search, Sparkles, Loader2, Brain, X, FileText, AlertCircle } from 'lucide-react';
+import { useAISearch } from '@/hooks/useAISearch';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -55,15 +55,15 @@ export function AISearchBar({ onResultSelect, className }: AISearchBarProps) {
         const searchResults = await search(query);
         setResults(searchResults);
         setSelectedIndex(0);
-      } catch (error) {
-        console.error('Search error:', error);
+      } catch {
+        // Search error - silently fail
       } finally {
         setIsSearching(false);
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, isReady, search]);
+  }, [query, isReady, search, aiEnabled]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
