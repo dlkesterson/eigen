@@ -56,10 +56,10 @@ function StatCard({
         transition: { type: 'spring', stiffness: 400, damping: 25 },
       }}
     >
-      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+      <Card className="border-border bg-card/50 backdrop-blur-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle>
-          <Icon className="h-4 w-4 text-slate-400" />
+          <CardTitle className="text-muted-foreground text-sm font-medium">{title}</CardTitle>
+          <Icon className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -67,7 +67,7 @@ function StatCard({
           ) : (
             <div className="flex items-center gap-2">
               <motion.div
-                className="text-2xl font-bold text-white"
+                className="text-foreground text-2xl font-bold"
                 key={value}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}

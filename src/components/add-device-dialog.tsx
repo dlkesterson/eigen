@@ -118,38 +118,38 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
-      <Card className="w-full max-w-lg border-slate-700 bg-slate-900 shadow-2xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs">
+      <Card className="border-border bg-card w-full max-w-lg shadow-2xl">
         <CardHeader className="relative">
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            className="text-muted-foreground hover:text-foreground absolute top-4 right-4"
           >
             <X className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-xl text-white">Connect a Device</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground text-xl">Connect a Device</CardTitle>
+          <CardDescription>
             Share your Device ID with another device, or enter their Device ID to connect.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Your Device ID Section */}
           <div className="space-y-3">
-            <label className="text-sm font-medium text-slate-300">Your Device ID</label>
-            <p className="text-xs text-slate-500">
+            <label className="text-foreground text-sm font-medium">Your Device ID</label>
+            <p className="text-muted-foreground text-xs">
               Share this ID with other devices you want to connect to.
             </p>
             <div className="flex gap-2">
               <div
                 className={cn(
-                  'flex-1 rounded-lg border border-slate-700 bg-slate-800 p-3',
-                  'font-mono text-xs break-all text-slate-300'
+                  'border-border bg-secondary flex-1 rounded-lg border p-3',
+                  'text-muted-foreground font-mono text-xs break-all'
                 )}
               >
                 {deviceIdLoading ? (
-                  <span className="text-slate-500">Loading...</span>
+                  <span className="text-muted-foreground">Loading...</span>
                 ) : (
                   localDeviceId || 'Unable to get Device ID'
                 )}
@@ -159,7 +159,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                 size="icon"
                 onClick={handleCopyId}
                 disabled={!localDeviceId}
-                className="shrink-0 border-slate-700 bg-slate-800 hover:bg-slate-700"
+                className="shrink-0"
               >
                 {copied ? (
                   <Check className="h-4 w-4 text-emerald-400" />
@@ -172,32 +172,32 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-slate-700" />
+              <span className="border-border w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-slate-900 px-2 text-slate-500">Add Remote Device</span>
+              <span className="bg-card text-muted-foreground px-2">Add Remote Device</span>
             </div>
           </div>
 
           {/* Add Remote Device Section */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Remote Device ID</label>
+              <label className="text-foreground text-sm font-medium">Remote Device ID</label>
               <input
                 type="text"
                 value={remoteDeviceId}
                 onChange={(e) => setRemoteDeviceId(e.target.value)}
                 placeholder="XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX"
                 className={cn(
-                  'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
-                  'font-mono text-sm text-white placeholder:text-slate-600',
-                  'focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-hidden'
+                  'border-border bg-secondary w-full rounded-lg border px-3 py-2',
+                  'text-foreground placeholder:text-muted-foreground font-mono text-sm',
+                  'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-hidden'
                 )}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">
-                Device Name <span className="text-slate-500">(optional)</span>
+              <label className="text-foreground text-sm font-medium">
+                Device Name <span className="text-muted-foreground">(optional)</span>
               </label>
               <input
                 type="text"
@@ -205,9 +205,9 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                 onChange={(e) => setDeviceName(e.target.value)}
                 placeholder="e.g., My Laptop, Phone, etc."
                 className={cn(
-                  'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
-                  'text-sm text-white placeholder:text-slate-600',
-                  'focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-hidden'
+                  'border-border bg-secondary w-full rounded-lg border px-3 py-2',
+                  'text-foreground placeholder:text-muted-foreground text-sm',
+                  'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-hidden'
                 )}
               />
             </div>
@@ -217,7 +217,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-slate-300"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
           >
             <Settings2 className="h-4 w-4" />
             Advanced Settings
@@ -226,10 +226,10 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 
           {/* Advanced Options */}
           {showAdvanced && (
-            <div className="space-y-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+            <div className="border-border bg-secondary/50 space-y-4 rounded-lg border p-4">
               {/* Addresses */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                <label className="text-foreground flex items-center gap-2 text-sm font-medium">
                   <Network className="h-4 w-4" />
                   Addresses
                 </label>
@@ -239,19 +239,19 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                   onChange={(e) => setAddresses(e.target.value)}
                   placeholder="dynamic, tcp://hostname:port"
                   className={cn(
-                    'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
-                    'text-sm text-white placeholder:text-slate-600',
-                    'focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-hidden'
+                    'border-border bg-secondary w-full rounded-lg border px-3 py-2',
+                    'text-foreground placeholder:text-muted-foreground text-sm',
+                    'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-hidden'
                   )}
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-muted-foreground text-xs">
                   Use "dynamic" for auto-discovery, or specify addresses like tcp://hostname:22000
                 </p>
               </div>
 
               {/* Compression */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Compression</label>
+                <label className="text-foreground text-sm font-medium">Compression</label>
                 <div className="grid grid-cols-3 gap-2">
                   {compressionOptions.map((option) => (
                     <button
@@ -261,8 +261,8 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                       className={cn(
                         'rounded-lg border p-2 text-left transition-all',
                         compression === option.value
-                          ? 'border-violet-500 bg-violet-500/20 text-violet-300'
-                          : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
+                          ? 'border-primary bg-primary/20 text-primary'
+                          : 'border-border bg-secondary text-muted-foreground hover:border-muted-foreground'
                       )}
                     >
                       <div className="text-sm font-medium">{option.label}</div>
@@ -274,7 +274,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
               {/* Rate Limits */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                  <label className="text-foreground flex items-center gap-2 text-sm font-medium">
                     <Gauge className="h-4 w-4" />
                     Upload Limit (KB/s)
                   </label>
@@ -285,14 +285,14 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                     placeholder="0 = unlimited"
                     min={0}
                     className={cn(
-                      'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
-                      'text-sm text-white placeholder:text-slate-600',
-                      'focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-hidden'
+                      'border-border bg-secondary w-full rounded-lg border px-3 py-2',
+                      'text-foreground placeholder:text-muted-foreground text-sm',
+                      'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-hidden'
                     )}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                  <label className="text-foreground flex items-center gap-2 text-sm font-medium">
                     <Gauge className="h-4 w-4" />
                     Download Limit (KB/s)
                   </label>
@@ -303,9 +303,9 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                     placeholder="0 = unlimited"
                     min={0}
                     className={cn(
-                      'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2',
-                      'text-sm text-white placeholder:text-slate-600',
-                      'focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-hidden'
+                      'border-border bg-secondary w-full rounded-lg border px-3 py-2',
+                      'text-foreground placeholder:text-muted-foreground text-sm',
+                      'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-hidden'
                     )}
                   />
                 </div>
@@ -318,11 +318,11 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                     type="checkbox"
                     checked={introducer}
                     onChange={(e) => setIntroducer(e.target.checked)}
-                    className="rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500"
+                    className="border-border bg-secondary text-primary focus:ring-primary rounded"
                   />
                   <div>
-                    <div className="text-sm font-medium text-slate-300">Introducer</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-foreground text-sm font-medium">Introducer</div>
+                    <div className="text-muted-foreground text-xs">
                       This device can introduce us to other devices
                     </div>
                   </div>
@@ -332,11 +332,11 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                     type="checkbox"
                     checked={autoAcceptFolders}
                     onChange={(e) => setAutoAcceptFolders(e.target.checked)}
-                    className="rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500"
+                    className="border-border bg-secondary text-primary focus:ring-primary rounded"
                   />
                   <div>
-                    <div className="text-sm font-medium text-slate-300">Auto-accept Folders</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-foreground text-sm font-medium">Auto-accept Folders</div>
+                    <div className="text-muted-foreground text-xs">
                       Automatically accept folder share invitations from this device
                     </div>
                   </div>
@@ -346,17 +346,13 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="border-slate-700 bg-transparent hover:bg-slate-800"
-            >
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button
               onClick={handleAddDevice}
               disabled={!remoteDeviceId.trim() || addDevice.isPending}
-              className="bg-violet-600 hover:bg-violet-700"
+              className="bg-primary hover:bg-primary/90"
             >
               {addDevice.isPending ? (
                 <>
@@ -391,25 +387,23 @@ export function MyDeviceId() {
   };
 
   return (
-    <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+    <Card className="border-border bg-card/50 backdrop-blur-md">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg text-white">This Device</CardTitle>
-            <CardDescription className="text-slate-500">
-              Share this ID to connect other devices
-            </CardDescription>
+            <CardTitle className="text-foreground text-lg">This Device</CardTitle>
+            <CardDescription>Share this ID to connect other devices</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <QrCode className="h-5 w-5 text-slate-500" />
+            <QrCode className="text-muted-foreground h-5 w-5" />
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex gap-2">
-          <div className="flex-1 rounded-lg border border-slate-700 bg-slate-800 p-3 font-mono text-xs break-all text-slate-300">
+          <div className="border-border bg-secondary text-muted-foreground flex-1 rounded-lg border p-3 font-mono text-xs break-all">
             {isLoading ? (
-              <span className="text-slate-500">Loading...</span>
+              <span className="text-muted-foreground">Loading...</span>
             ) : (
               localDeviceId || 'Unable to get Device ID'
             )}
@@ -419,7 +413,7 @@ export function MyDeviceId() {
             size="icon"
             onClick={handleCopy}
             disabled={!localDeviceId}
-            className="shrink-0 border-slate-700 bg-slate-800 hover:bg-slate-700"
+            className="shrink-0"
           >
             {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
           </Button>

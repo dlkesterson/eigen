@@ -28,13 +28,15 @@ export function Header() {
   };
 
   return (
-    <header className="relative z-50 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950/50 px-6 backdrop-blur-xl">
+    <header className="border-border bg-card/50 relative z-40 flex h-16 items-center justify-between border-b px-6 backdrop-blur-xl">
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-white">{titles[activeTab] || 'Dashboard'}</h1>
+        <h1 className="text-foreground text-xl font-semibold">
+          {titles[activeTab] || 'Dashboard'}
+        </h1>
       </div>
 
       {/* AI Search Bar */}
-      <div className="relative z-50 mx-4 max-w-md flex-1">
+      <div className="relative z-40 mx-4 max-w-md flex-1">
         <AISearchBar onResultSelect={handleSearchResultSelect} className="w-full" />
       </div>
 
@@ -57,7 +59,7 @@ export function Header() {
           size="icon"
           onClick={() => refetch()}
           disabled={isRefetching}
-          className="h-8 w-8 text-slate-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground h-8 w-8"
           title="Refresh status"
         >
           <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />

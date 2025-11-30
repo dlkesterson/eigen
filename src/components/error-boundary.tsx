@@ -97,16 +97,16 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
-          <Card className="w-full max-w-2xl border-red-500/30 bg-slate-900">
+        <div className="bg-background flex min-h-screen items-center justify-center p-4">
+          <Card className="border-destructive/30 bg-card w-full max-w-2xl">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-500/20">
-                  <AlertTriangle className="h-6 w-6 text-red-400" />
+                <div className="bg-destructive/20 flex h-12 w-12 items-center justify-center rounded-lg">
+                  <AlertTriangle className="text-destructive h-6 w-6" />
                 </div>
                 <div>
-                  <CardTitle className="text-white">Something went wrong</CardTitle>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <CardTitle className="text-foreground">Something went wrong</CardTitle>
+                  <p className="text-muted-foreground mt-1 text-sm">
                     The application encountered an unexpected error
                   </p>
                 </div>
@@ -114,22 +114,22 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Error Details */}
-              <div className="rounded-lg bg-slate-800 p-4">
-                <p className="mb-2 text-sm font-medium text-red-400">
+              <div className="bg-secondary rounded-lg p-4">
+                <p className="text-destructive mb-2 text-sm font-medium">
                   {this.state.error?.name}: {this.state.error?.message}
                 </p>
-                <pre className="max-h-32 overflow-x-auto overflow-y-auto text-xs text-slate-400">
+                <pre className="text-muted-foreground max-h-32 overflow-x-auto overflow-y-auto text-xs">
                   {this.state.error?.stack}
                 </pre>
               </div>
 
               {/* Component Stack */}
               {this.state.errorInfo && (
-                <details className="rounded-lg bg-slate-800 p-4">
-                  <summary className="cursor-pointer text-sm font-medium text-slate-300 hover:text-slate-200">
+                <details className="bg-secondary rounded-lg p-4">
+                  <summary className="text-foreground/80 hover:text-foreground cursor-pointer text-sm font-medium">
                     Component Stack
                   </summary>
-                  <pre className="mt-2 max-h-48 overflow-x-auto overflow-y-auto text-xs text-slate-400">
+                  <pre className="text-muted-foreground mt-2 max-h-48 overflow-x-auto overflow-y-auto text-xs">
                     {this.state.errorInfo.componentStack}
                   </pre>
                 </details>
@@ -137,7 +137,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
               {/* Recovery count */}
               {this.state.errorCount > 0 && (
-                <p className="text-xs text-slate-500">
+                <p className="text-muted-foreground text-xs">
                   Recovery attempt {this.state.errorCount} of 3
                   {this.state.errorCount < 3 && ' - Auto-recovering in 3s...'}
                 </p>
@@ -147,7 +147,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={this.handleReset}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-primary hover:bg-primary/90 flex-1"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Try Again
@@ -155,7 +155,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button
                   onClick={this.handleDownloadLogs}
                   variant="outline"
-                  className="border-slate-700 bg-slate-800 hover:bg-slate-700"
+                  className="border-border bg-secondary hover:bg-secondary/80"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download Logs
@@ -163,7 +163,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button
                   onClick={this.handleReload}
                   variant="outline"
-                  className="border-slate-700 bg-slate-800 hover:bg-slate-700"
+                  className="border-border bg-secondary hover:bg-secondary/80"
                 >
                   Reload App
                 </Button>

@@ -132,25 +132,25 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center py-8">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center py-8">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={handleClose} />
-      <Card className="relative z-10 mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto border-slate-700 bg-slate-900/95 backdrop-blur-sm">
+      <Card className="border-border bg-card/95 relative z-10 mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto backdrop-blur-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/20">
-                <FolderPlus className="h-5 w-5 text-indigo-400" />
+              <div className="bg-primary/20 flex h-10 w-10 items-center justify-center rounded-lg">
+                <FolderPlus className="text-primary h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-white">Add Folder</CardTitle>
-                <p className="text-sm text-slate-400">Share a folder with your devices</p>
+                <CardTitle className="text-foreground">Add Folder</CardTitle>
+                <p className="text-muted-foreground text-sm">Share a folder with your devices</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleClose}
-              className="text-slate-400 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -159,38 +159,38 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Folder ID *</label>
+              <label className="text-foreground text-sm font-medium">Folder ID *</label>
               <input
                 type="text"
                 value={folderId}
                 onChange={(e) => setFolderId(e.target.value)}
                 placeholder="my-folder"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                className="border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-lg border px-3 py-2 focus:ring-1 focus:outline-hidden"
               />
-              <p className="text-xs text-slate-500">Unique identifier for this folder</p>
+              <p className="text-muted-foreground text-xs">Unique identifier for this folder</p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Label</label>
+              <label className="text-foreground text-sm font-medium">Label</label>
               <input
                 type="text"
                 value={folderLabel}
                 onChange={(e) => setFolderLabel(e.target.value)}
                 placeholder="My Folder"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                className="border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary w-full rounded-lg border px-3 py-2 focus:ring-1 focus:outline-hidden"
               />
-              <p className="text-xs text-slate-500">Human-readable name (optional)</p>
+              <p className="text-muted-foreground text-xs">Human-readable name (optional)</p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Path *</label>
+              <label className="text-foreground text-sm font-medium">Path *</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={folderPath}
                   onChange={(e) => setFolderPath(e.target.value)}
                   placeholder="/home/user/sync-folder"
-                  className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                  className="border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary flex-1 rounded-lg border px-3 py-2 font-mono text-sm focus:ring-1 focus:outline-hidden"
                 />
                 <Button
                   type="button"
@@ -209,19 +209,18 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                       console.error('Failed to open folder picker:', err);
                     }
                   }}
-                  className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
                 >
                   <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-slate-500">Absolute path to the folder</p>
+              <p className="text-muted-foreground text-xs">Absolute path to the folder</p>
             </div>
 
             <Button
               type="button"
               variant="ghost"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full justify-between text-slate-300 hover:text-white"
+              className="text-muted-foreground hover:text-foreground w-full justify-between"
             >
               <span>Advanced Options</span>
               {showAdvanced ? (
@@ -232,9 +231,9 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
             </Button>
 
             {showAdvanced && (
-              <div className="space-y-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+              <div className="border-border bg-secondary/50 space-y-4 rounded-lg border p-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">File Versioning</label>
+                  <label className="text-foreground text-sm font-medium">File Versioning</label>
                   <div className="grid gap-2">
                     {versioningOptions.map((option) => {
                       const Icon = option.icon;
@@ -246,28 +245,30 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                           className={cn(
                             'flex items-start gap-3 rounded-lg border p-3 text-left transition-colors',
                             versioning.type === option.value
-                              ? 'border-indigo-500 bg-indigo-500/10'
-                              : 'border-slate-700 hover:border-slate-600'
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-muted-foreground'
                           )}
                         >
                           <Icon
                             className={cn(
                               'mt-0.5 h-4 w-4',
                               versioning.type === option.value
-                                ? 'text-indigo-400'
-                                : 'text-slate-500'
+                                ? 'text-primary'
+                                : 'text-muted-foreground'
                             )}
                           />
                           <div>
                             <p
                               className={cn(
                                 'text-sm font-medium',
-                                versioning.type === option.value ? 'text-white' : 'text-slate-300'
+                                versioning.type === option.value
+                                  ? 'text-foreground'
+                                  : 'text-muted-foreground'
                               )}
                             >
                               {option.label}
                             </p>
-                            <p className="text-xs text-slate-500">{option.description}</p>
+                            <p className="text-muted-foreground text-xs">{option.description}</p>
                           </div>
                         </button>
                       );
@@ -277,7 +278,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
 
                 {versioning.type === 'simple' && (
                   <div className="space-y-2 pl-6">
-                    <label className="text-sm text-slate-400">Versions to keep</label>
+                    <label className="text-muted-foreground text-sm">Versions to keep</label>
                     <input
                       type="number"
                       min="1"
@@ -290,14 +291,14 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                           },
                         })
                       }
-                      className="w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white"
+                      className="border-border bg-secondary text-foreground w-full rounded border px-3 py-2"
                     />
                   </div>
                 )}
 
                 {versioning.type === 'staggered' && (
                   <div className="space-y-2 pl-6">
-                    <label className="text-sm text-slate-400">Max age (seconds)</label>
+                    <label className="text-muted-foreground text-sm">Max age (seconds)</label>
                     <select
                       value={versioning.params.maxAge || '31536000'}
                       onChange={(e) =>
@@ -308,7 +309,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                           },
                         })
                       }
-                      className="w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white"
+                      className="border-border bg-secondary text-foreground w-full rounded border px-3 py-2"
                     >
                       <option value="86400">1 day</option>
                       <option value="604800">1 week</option>
@@ -321,7 +322,7 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
 
                 {versioning.type === 'trashcan' && (
                   <div className="space-y-2 pl-6">
-                    <label className="text-sm text-slate-400">
+                    <label className="text-muted-foreground text-sm">
                       Clean out after (days, 0 = never)
                     </label>
                     <input
@@ -336,14 +337,14 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                           },
                         })
                       }
-                      className="w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white"
+                      className="border-border bg-secondary text-foreground w-full rounded border px-3 py-2"
                     />
                   </div>
                 )}
 
                 {versioning.type === 'external' && (
                   <div className="space-y-2 pl-6">
-                    <label className="text-sm text-slate-400">Command</label>
+                    <label className="text-muted-foreground text-sm">Command</label>
                     <input
                       type="text"
                       value={versioning.params.command || ''}
@@ -356,17 +357,17 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                         })
                       }
                       placeholder="/path/to/command %FOLDER_PATH% %FILE_PATH%"
-                      className="w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white"
+                      className="border-border bg-secondary text-foreground w-full rounded border px-3 py-2 font-mono text-sm"
                     />
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">Rescan Interval</label>
+                  <label className="text-foreground text-sm font-medium">Rescan Interval</label>
                   <select
                     value={rescanInterval}
                     onChange={(e) => setRescanInterval(parseInt(e.target.value))}
-                    className="w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white"
+                    className="border-border bg-secondary text-foreground w-full rounded border px-3 py-2"
                   >
                     <option value={60}>1 minute</option>
                     <option value={300}>5 minutes</option>
@@ -382,11 +383,11 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                       type="checkbox"
                       checked={fsWatcherEnabled}
                       onChange={(e) => setFsWatcherEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-500"
+                      className="border-border bg-secondary text-primary h-4 w-4 rounded"
                     />
                     <div>
-                      <span className="text-sm text-slate-300">Enable File Watcher</span>
-                      <p className="text-xs text-slate-500">Detect changes immediately</p>
+                      <span className="text-foreground text-sm">Enable File Watcher</span>
+                      <p className="text-muted-foreground text-xs">Detect changes immediately</p>
                     </div>
                   </label>
 
@@ -395,11 +396,13 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
                       type="checkbox"
                       checked={ignorePerms}
                       onChange={(e) => setIgnorePerms(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-500"
+                      className="border-border bg-secondary text-primary h-4 w-4 rounded"
                     />
                     <div>
-                      <span className="text-sm text-slate-300">Ignore Permissions</span>
-                      <p className="text-xs text-slate-500">Useful for FAT/NTFS filesystems</p>
+                      <span className="text-foreground text-sm">Ignore Permissions</span>
+                      <p className="text-muted-foreground text-xs">
+                        Useful for FAT/NTFS filesystems
+                      </p>
                     </div>
                   </label>
                 </div>
@@ -407,18 +410,13 @@ export function AddFolderDialog({ open, onOpenChange }: AddFolderDialogProps) {
             )}
 
             <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
-              >
+              <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={addFolder.isPending}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                className="bg-primary hover:bg-primary/90 flex-1"
               >
                 {addFolder.isPending ? 'Adding...' : 'Add Folder'}
               </Button>

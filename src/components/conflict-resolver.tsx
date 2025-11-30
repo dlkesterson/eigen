@@ -101,12 +101,14 @@ function ConflictCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate font-medium text-white">{conflict.original}</p>
-              <p className="mt-1 truncate text-xs text-slate-400">Conflict: {conflict.name}</p>
+              <p className="text-foreground truncate font-medium">{conflict.original}</p>
+              <p className="text-muted-foreground mt-1 truncate text-xs">
+                Conflict: {conflict.name}
+              </p>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+          <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-4 text-xs">
             <span className="flex items-center gap-1">
               <HardDrive className="h-3 w-3" />
               {formatBytes(conflict.size)}
@@ -169,7 +171,7 @@ export function ConflictResolver({
   const conflictList = conflicts || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
       <Card className="bg-background/95 border-border/50 flex max-h-[80vh] w-full max-w-2xl flex-col backdrop-blur-md">
         <CardHeader className="border-border/50 flex flex-row items-center justify-between space-y-0 border-b pb-4">
           <CardTitle className="flex items-center gap-2 text-xl font-semibold">
@@ -198,30 +200,30 @@ export function ConflictResolver({
 
         <CardContent className="flex-1 overflow-y-auto p-4">
           <div className="mb-4">
-            <p className="text-sm text-slate-400">
-              Folder: <span className="text-white">{folderLabel || folderId}</span>
+            <p className="text-muted-foreground text-sm">
+              Folder: <span className="text-foreground">{folderLabel || folderId}</span>
             </p>
-            <p className="mt-1 text-xs text-slate-500">{folderPath}</p>
+            <p className="text-muted-foreground mt-1 text-xs">{folderPath}</p>
           </div>
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
-              <p className="mt-4 text-sm text-slate-400">Scanning for conflicts...</p>
+              <RefreshCw className="text-muted-foreground h-8 w-8 animate-spin" />
+              <p className="text-muted-foreground mt-4 text-sm">Scanning for conflicts...</p>
             </div>
           ) : conflictList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
                 <Check className="h-8 w-8 text-emerald-400" />
               </div>
-              <p className="mt-4 text-lg font-medium text-white">No Conflicts</p>
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="text-foreground mt-4 text-lg font-medium">No Conflicts</p>
+              <p className="text-muted-foreground mt-2 text-sm">
                 This folder has no file conflicts to resolve.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-slate-400">
+              <p className="text-muted-foreground text-sm">
                 {conflictList.length} conflict
                 {conflictList.length !== 1 ? 's' : ''} found. Choose which version to keep for each
                 file.
@@ -240,7 +242,7 @@ export function ConflictResolver({
 
         <div className="border-border/50 border-t p-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">
+            <p className="text-muted-foreground text-xs">
               Conflicts occur when the same file is modified on multiple devices simultaneously.
             </p>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>

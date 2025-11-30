@@ -104,7 +104,7 @@ export default function DebugPanel() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 bottom-4 z-50 h-12 w-12 rounded-full bg-indigo-600 shadow-lg hover:bg-indigo-700"
+        className="bg-primary hover:bg-primary/90 fixed right-4 bottom-4 z-50 h-12 w-12 rounded-full shadow-lg"
         title="Open Debug Panel (Ctrl+Shift+D)"
       >
         <Bug className="h-5 w-5" />
@@ -113,14 +113,14 @@ export default function DebugPanel() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-      <Card className="flex h-[80vh] w-full max-w-6xl flex-col border-slate-700 bg-slate-900">
-        <CardHeader className="shrink-0 border-b border-slate-800">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+      <Card className="border-border bg-card flex h-[80vh] w-full max-w-6xl flex-col">
+        <CardHeader className="border-border shrink-0 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Bug className="h-6 w-6 text-indigo-400" />
-              <CardTitle className="text-white">Debug Panel</CardTitle>
-              <Badge variant="outline" className="text-xs text-slate-400">
+              <Bug className="text-primary h-6 w-6" />
+              <CardTitle className="text-foreground">Debug Panel</CardTitle>
+              <Badge variant="outline" className="text-muted-foreground text-xs">
                 Ctrl+Shift+D
               </Badge>
             </div>
@@ -132,7 +132,7 @@ export default function DebugPanel() {
                 variant="ghost"
                 size="sm"
                 onClick={handleDownloadLogs}
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <Download className="mr-1 h-4 w-4" />
                 Export
@@ -141,7 +141,7 @@ export default function DebugPanel() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearLogs}
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <Trash2 className="mr-1 h-4 w-4" />
                 Clear
@@ -150,7 +150,7 @@ export default function DebugPanel() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -160,17 +160,17 @@ export default function DebugPanel() {
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-64 shrink-0 space-y-4 overflow-y-auto border-r border-slate-800 p-4">
+          <div className="border-border w-64 shrink-0 space-y-4 overflow-y-auto border-r p-4">
             {/* Health Status */}
             <div>
-              <h3 className="mb-2 text-sm font-medium text-slate-400">System Health</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">System Health</h3>
               <div className="space-y-2">
                 {Array.from(healthStatus.entries()).map(([name, status]) => (
                   <div
                     key={name}
-                    className="flex items-center justify-between rounded bg-slate-800 p-2"
+                    className="bg-secondary flex items-center justify-between rounded p-2"
                   >
-                    <span className="truncate text-sm text-slate-300">{name}</span>
+                    <span className="text-foreground/80 truncate text-sm">{name}</span>
                     {status.healthy ? (
                       <CheckCircle className="h-4 w-4 shrink-0 text-green-400" />
                     ) : (
@@ -179,12 +179,14 @@ export default function DebugPanel() {
                   </div>
                 ))}
                 {healthStatus.size === 0 && (
-                  <p className="text-xs text-slate-500 italic">No health checks registered</p>
+                  <p className="text-muted-foreground text-xs italic">
+                    No health checks registered
+                  </p>
                 )}
 
                 {/* Health Summary */}
-                <div className="mt-2 flex items-center justify-between rounded border-t border-slate-700 bg-slate-800 p-2">
-                  <span className="text-sm text-slate-300">Overall</span>
+                <div className="border-border bg-secondary mt-2 flex items-center justify-between rounded border-t p-2">
+                  <span className="text-foreground/80 text-sm">Overall</span>
                   <Badge
                     variant={healthSummary.unhealthy === 0 ? 'default' : 'destructive'}
                     className="text-xs"
@@ -197,10 +199,10 @@ export default function DebugPanel() {
 
             {/* Circuit Breaker Status */}
             <div>
-              <h3 className="mb-2 text-sm font-medium text-slate-400">Circuit Breaker</h3>
-              <div className="space-y-2 rounded bg-slate-800 p-2">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">Circuit Breaker</h3>
+              <div className="bg-secondary space-y-2 rounded p-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-300">State</span>
+                  <span className="text-foreground/80 text-sm">State</span>
                   <Badge
                     variant={circuitState.state === 'closed' ? 'default' : 'destructive'}
                     className="text-xs uppercase"
@@ -208,7 +210,7 @@ export default function DebugPanel() {
                     {circuitState.state}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-400">
+                <div className="text-muted-foreground flex items-center justify-between text-xs">
                   <span>Failures: {circuitState.failureCount}</span>
                   <span>Successes: {circuitState.successCount}</span>
                 </div>
@@ -227,9 +229,9 @@ export default function DebugPanel() {
 
             {/* Stats */}
             <div>
-              <h3 className="mb-2 text-sm font-medium text-slate-400">Log Statistics</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">Log Statistics</h3>
               <div className="space-y-1 text-sm">
-                <div className="flex justify-between text-slate-300">
+                <div className="text-foreground/80 flex justify-between">
                   <span>Total Logs:</span>
                   <span className="font-mono">{stats.total}</span>
                 </div>
@@ -246,7 +248,7 @@ export default function DebugPanel() {
 
             {/* Filters */}
             <div>
-              <h3 className="mb-2 text-sm font-medium text-slate-400">Filters</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">Filters</h3>
               <div className="space-y-1">
                 {(['all', 'error', 'warn', 'info', 'debug'] as const).map((level) => (
                   <button
@@ -254,8 +256,8 @@ export default function DebugPanel() {
                     onClick={() => setFilter(level)}
                     className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
                       filter === level
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:bg-slate-800'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-secondary'
                     }`}
                   >
                     {level.charAt(0).toUpperCase() + level.slice(1)}
@@ -266,12 +268,12 @@ export default function DebugPanel() {
 
             {/* Quick Actions */}
             <div>
-              <h3 className="mb-2 text-sm font-medium text-slate-400">Quick Actions</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">Quick Actions</h3>
               <div className="space-y-1">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start border-slate-700 text-xs"
+                  className="border-border w-full justify-start text-xs"
                   onClick={() =>
                     logger.info('Test log entry', {
                       type: 'manual',
@@ -284,7 +286,7 @@ export default function DebugPanel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start border-slate-700 text-xs"
+                  className="border-border w-full justify-start text-xs"
                   onClick={() => healthMonitor.runAllChecks()}
                 >
                   <CheckCircle className="mr-2 h-3 w-3" />
@@ -293,7 +295,7 @@ export default function DebugPanel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start border-slate-700 text-xs"
+                  className="border-border w-full justify-start text-xs"
                   onClick={() => {
                     console.log('Check Application tab in DevTools');
                     logger.info('Check Application tab in DevTools for IndexedDB');
@@ -310,7 +312,7 @@ export default function DebugPanel() {
           <div className="min-w-0 flex-1 overflow-y-auto p-4">
             <div className="space-y-2 font-mono text-xs">
               {filteredLogs.length === 0 ? (
-                <div className="py-8 text-center text-slate-500">No logs to display</div>
+                <div className="text-muted-foreground py-8 text-center">No logs to display</div>
               ) : (
                 [...filteredLogs].reverse().map((log, i) => {
                   const Icon =
@@ -327,12 +329,12 @@ export default function DebugPanel() {
                       info: 'text-green-400',
                       warn: 'text-yellow-400',
                       error: 'text-red-400',
-                    }[log.level] || 'text-slate-400';
+                    }[log.level] || 'text-muted-foreground';
 
                   return (
                     <div
                       key={`${log.timestamp.getTime()}-${i}`}
-                      className="rounded border border-slate-700 bg-slate-800 p-3 transition-colors hover:border-slate-600"
+                      className="border-border bg-secondary hover:border-border/80 rounded border p-3 transition-colors"
                     >
                       <div className="flex items-start gap-2">
                         <Icon className={`mt-0.5 h-4 w-4 ${color} shrink-0`} />
@@ -341,18 +343,18 @@ export default function DebugPanel() {
                             <span className={`font-medium ${color}`}>
                               {log.level.toUpperCase()}
                             </span>
-                            <span className="flex items-center text-[10px] text-slate-500">
+                            <span className="text-muted-foreground flex items-center text-[10px]">
                               <Clock className="mr-1 h-3 w-3" />
                               {new Date(log.timestamp).toLocaleTimeString()}
                             </span>
                           </div>
-                          <p className="wrap-break-word text-slate-300">{log.message}</p>
+                          <p className="text-foreground/80 wrap-break-word">{log.message}</p>
                           {log.context && Object.keys(log.context).length > 0 && (
                             <details className="mt-2">
-                              <summary className="cursor-pointer text-slate-500 hover:text-slate-400">
+                              <summary className="text-muted-foreground hover:text-muted-foreground/80 cursor-pointer">
                                 Context
                               </summary>
-                              <pre className="mt-1 overflow-x-auto rounded bg-slate-900 p-2 text-[10px] text-slate-400">
+                              <pre className="bg-background text-muted-foreground mt-1 overflow-x-auto rounded p-2 text-[10px]">
                                 {JSON.stringify(log.context, null, 2)}
                               </pre>
                             </details>

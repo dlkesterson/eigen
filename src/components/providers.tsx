@@ -9,6 +9,62 @@ import DebugPanel from './debug-panel';
 import { registerDefaultHealthChecks } from '@/lib/health-monitor';
 import { autoRecovery, registerDefaultRecoveryStrategies } from '@/lib/auto-recovery';
 import { logger } from '@/lib/logger';
+import { SyncthingClientProvider } from '@/lib/api';
+import { parseInviteUrl, type DeviceInvitation } from '@/hooks/useDeviceInvite';
+import { ThemeProvider, useResolvedTheme } from './theme-provider';
+
+// Themed Toaster component that respects theme settings
+function ThemedToaster() {
+  const resolvedTheme = useResolvedTheme();
+  return <Toaster position="bottom-right" theme={resolvedTheme} richColors closeButton />;
+}
+
+// Deep link event handler
+function DeepLinkHandler() {
+  useEffect(() => {
+    // Handle deep links when app is already running
+    async function setupDeepLinkListener() {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const deepLink = await import('@tauri-apps/plugin-deep-link' as any);
+        const onOpenUrl = deepLink.onOpenUrl as (
+          callback: (urls: string[]) => void
+        ) => Promise<() => void>;
+
+        const unlisten = await onOpenUrl((urls: string[]) => {
+          for (const url of urls) {
+            const invitation = parseInviteUrl(url);
+            if (invitation) {
+              logger.info('Received device invitation via deep link', {
+                deviceId: invitation.deviceId,
+              });
+
+              // Dispatch event to trigger add device dialog
+              window.dispatchEvent(
+                new CustomEvent('device-invite-received', {
+                  detail: invitation,
+                })
+              );
+            }
+          }
+        });
+
+        return unlisten;
+      } catch {
+        // Not in Tauri environment or plugin not available
+        logger.debug('Deep link plugin not available');
+      }
+    }
+
+    const cleanupPromise = setupDeepLinkListener();
+
+    return () => {
+      cleanupPromise?.then((unlisten) => unlisten?.());
+    };
+  }, []);
+
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -43,9 +99,14 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SyncthingManager>{children}</SyncthingManager>
-        <Toaster position="bottom-right" theme="dark" richColors closeButton />
-        <DebugPanel />
+        <SyncthingClientProvider>
+          <ThemeProvider>
+            <DeepLinkHandler />
+            <SyncthingManager>{children}</SyncthingManager>
+            <ThemedToaster />
+            <DebugPanel />
+          </ThemeProvider>
+        </SyncthingClientProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

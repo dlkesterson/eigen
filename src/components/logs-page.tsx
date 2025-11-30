@@ -113,14 +113,14 @@ export function LogsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">System Logs</h2>
+        <h2 className="text-foreground text-lg font-semibold">System Logs</h2>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExport}
             disabled={!logEntries.length}
-            className="border-slate-700 bg-slate-800/50 hover:bg-slate-700"
+            className="border-border bg-secondary/50 hover:bg-secondary"
           >
             <Download className="mr-2 h-4 w-4" />
             Export
@@ -130,17 +130,17 @@ export function LogsPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isLoading || isRefetching}
-            className="border-slate-700 bg-slate-800/50 hover:bg-slate-700"
+            className="border-border bg-secondary/50 hover:bg-secondary"
           >
             <RefreshCw className={cn('h-4 w-4', (isLoading || isRefetching) && 'animate-spin')} />
           </Button>
         </div>
       </div>
 
-      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
-        <CardHeader className="border-b border-slate-800 pb-4">
+      <Card className="border-border bg-card/50 backdrop-blur-md">
+        <CardHeader className="border-border border-b pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base text-white">Log Output</CardTitle>
+            <CardTitle className="text-foreground text-base">Log Output</CardTitle>
             <div className="flex items-center gap-2">
               {/* Filter buttons */}
               {(['all', 'error', 'warning', 'info', 'debug'] as const).map((level) => (
@@ -152,8 +152,8 @@ export function LogsPage() {
                   className={cn(
                     'text-xs capitalize',
                     filter === level
-                      ? 'bg-indigo-600 hover:bg-indigo-700'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-primary hover:bg-primary/90'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   {level}
@@ -165,12 +165,12 @@ export function LogsPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
+              <RefreshCw className="text-muted-foreground h-8 w-8 animate-spin" />
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Info className="h-8 w-8 text-slate-500" />
-              <p className="mt-2 text-sm text-slate-400">No logs to display</p>
+              <Info className="text-muted-foreground h-8 w-8" />
+              <p className="text-muted-foreground mt-2 text-sm">No logs to display</p>
             </div>
           ) : (
             <div ref={logContainerRef} className="h-[500px] overflow-auto font-mono text-xs">
@@ -183,13 +183,13 @@ export function LogsPage() {
                   <div
                     key={index}
                     className={cn(
-                      'flex items-start gap-2 border-b border-slate-800/50 px-4 py-2 hover:bg-slate-800/30',
+                      'border-border/50 hover:bg-secondary/30 flex items-start gap-2 border-b px-4 py-2',
                       config.bg
                     )}
                   >
                     <Icon className={cn('mt-0.5 h-3 w-3 shrink-0', config.color)} />
-                    <span className="shrink-0 text-slate-500">{formatTime(log.when)}</span>
-                    <span className="flex-1 break-all text-slate-300">{log.message}</span>
+                    <span className="text-muted-foreground shrink-0">{formatTime(log.when)}</span>
+                    <span className="text-foreground/80 flex-1 break-all">{log.message}</span>
                   </div>
                 );
               })}
@@ -200,16 +200,16 @@ export function LogsPage() {
 
       {/* Auto-scroll toggle */}
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm text-slate-400">
+        <label className="text-muted-foreground flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={autoScroll}
             onChange={(e) => setAutoScroll(e.target.checked)}
-            className="rounded border-slate-600 bg-slate-800"
+            className="border-border bg-secondary rounded"
           />
           Auto-scroll to new logs
         </label>
-        <p className="text-xs text-slate-500">{filteredLogs.length} log entries</p>
+        <p className="text-muted-foreground text-xs">{filteredLogs.length} log entries</p>
       </div>
     </div>
   );

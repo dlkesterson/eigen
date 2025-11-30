@@ -148,21 +148,19 @@ function FolderCard({
   return (
     <Card
       className={cn(
-        'border-slate-800 bg-slate-900/50 backdrop-blur-md transition-all',
+        'border-border bg-card/50 backdrop-blur-md transition-all',
         isPaused && 'opacity-60'
       )}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/20">
-              <Folder className="h-5 w-5 text-indigo-400" />
+            <div className="bg-primary/20 flex h-10 w-10 items-center justify-center rounded-lg">
+              <Folder className="text-primary h-5 w-5" />
             </div>
             <div>
-              <CardTitle className="text-lg text-white">{folder.label || folder.id}</CardTitle>
-              <CardDescription className="font-mono text-xs text-slate-500">
-                {folder.path}
-              </CardDescription>
+              <CardTitle className="text-foreground text-lg">{folder.label || folder.id}</CardTitle>
+              <CardDescription className="font-mono text-xs">{folder.path}</CardDescription>
             </div>
           </div>
           {getStatusBadge()}
@@ -178,24 +176,26 @@ function FolderCard({
           <>
             <div className="mb-4 grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-slate-400">Local Files</p>
-                <p className="font-medium text-white">
+                <p className="text-muted-foreground">Local Files</p>
+                <p className="text-foreground font-medium">
                   {status?.localFiles?.toLocaleString() || 0}
                 </p>
               </div>
               <div>
-                <p className="text-slate-400">Local Size</p>
-                <p className="font-medium text-white">{formatBytes(status?.localBytes || 0)}</p>
+                <p className="text-muted-foreground">Local Size</p>
+                <p className="text-foreground font-medium">
+                  {formatBytes(status?.localBytes || 0)}
+                </p>
               </div>
               <div>
-                <p className="text-slate-400">Global Files</p>
-                <p className="font-medium text-white">
+                <p className="text-muted-foreground">Global Files</p>
+                <p className="text-foreground font-medium">
                   {status?.globalFiles?.toLocaleString() || 0}
                 </p>
               </div>
               <div>
-                <p className="text-slate-400">Need Sync</p>
-                <p className="font-medium text-white">
+                <p className="text-muted-foreground">Need Sync</p>
+                <p className="text-foreground font-medium">
                   {status?.needFiles?.toLocaleString() || 0} files
                 </p>
               </div>
@@ -204,7 +204,7 @@ function FolderCard({
             {/* Shared Devices */}
             {sharedDevices.length > 0 && (
               <div className="mb-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-slate-400">
+                <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
                   <Users className="h-4 w-4" />
                   <span>Shared with</span>
                 </div>
@@ -213,7 +213,7 @@ function FolderCard({
                     <Badge
                       key={device.deviceID}
                       variant="secondary"
-                      className="group/badge flex items-center gap-1 pr-1 hover:bg-slate-600"
+                      className="group/badge hover:bg-accent flex items-center gap-1 pr-1"
                     >
                       <span className="max-w-[100px] truncate">{device.name}</span>
                       <button
@@ -276,7 +276,7 @@ function FolderCard({
                 size="sm"
                 onClick={handleOpenInExplorer}
                 disabled={openInExplorer.isPending || !folder.path}
-                className="flex-1 text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground flex-1"
                 title="Open in file explorer"
               >
                 <ExternalLink className="mr-1 h-4 w-4" />
@@ -356,7 +356,7 @@ export function FolderList() {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="border-slate-800 bg-slate-900/50">
+          <Card key={i} className="border-border bg-card/50">
             <CardHeader>
               <Skeleton className="h-6 w-32" />
               <Skeleton className="h-4 w-48" />
@@ -376,14 +376,14 @@ export function FolderList() {
   if (isError || !config?.folders?.length) {
     return (
       <>
-        <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+        <Card className="border-border bg-card/50 backdrop-blur-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Folder className="mb-4 h-12 w-12 text-slate-600" />
-            <p className="text-lg font-medium text-slate-300">No folders configured</p>
-            <p className="mb-4 text-sm text-slate-500">Add folders to start syncing</p>
+            <Folder className="text-muted-foreground mb-4 h-12 w-12" />
+            <p className="text-foreground text-lg font-medium">No folders configured</p>
+            <p className="text-muted-foreground mb-4 text-sm">Add folders to start syncing</p>
             <Button
               onClick={() => setAddDialogOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-primary hover:bg-primary/90"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Folder
@@ -412,14 +412,14 @@ export function FolderList() {
         ))}
         {/* Add Folder Card */}
         <Card
-          className="flex cursor-pointer items-center justify-center border-2 border-dashed border-slate-700 bg-slate-900/30 transition-colors hover:border-indigo-500/50 hover:bg-slate-800/50"
+          className="border-border bg-card/30 hover:border-primary/50 hover:bg-secondary/50 flex cursor-pointer items-center justify-center border-2 border-dashed transition-colors"
           onClick={() => setAddDialogOpen(true)}
         >
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/20">
-              <Plus className="h-6 w-6 text-indigo-400" />
+            <div className="bg-primary/20 flex h-12 w-12 items-center justify-center rounded-full">
+              <Plus className="text-primary h-6 w-6" />
             </div>
-            <p className="mt-3 text-sm font-medium text-slate-300">Add Folder</p>
+            <p className="text-foreground/80 mt-3 text-sm font-medium">Add Folder</p>
           </CardContent>
         </Card>
       </div>

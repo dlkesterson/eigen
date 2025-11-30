@@ -45,15 +45,15 @@ interface SettingCardProps {
 
 function SettingCard({ title, description, icon: Icon, children }: SettingCardProps) {
   return (
-    <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+    <Card className="border-border bg-card/50 backdrop-blur-md">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/20">
-            <Icon className="h-5 w-5 text-indigo-400" />
+          <div className="bg-primary/20 flex h-10 w-10 items-center justify-center rounded-lg">
+            <Icon className="text-primary h-5 w-5" />
           </div>
           <div>
-            <CardTitle className="text-lg text-white">{title}</CardTitle>
-            <CardDescription className="text-slate-400">{description}</CardDescription>
+            <CardTitle className="text-foreground text-lg">{title}</CardTitle>
+            <CardDescription className="text-muted-foreground">{description}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -76,14 +76,14 @@ function ThemeSelector() {
       {themes.map(({ value, label, icon: Icon }) => (
         <Button
           key={value}
-          variant={theme === value ? 'default' : 'outline-solid'}
+          variant={theme === value ? 'default' : 'outline'}
           size="sm"
           onClick={() => setTheme(value)}
           className={cn(
             'flex-1 gap-2',
             theme === value
-              ? 'bg-indigo-600 hover:bg-indigo-700'
-              : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+              ? 'bg-primary hover:bg-primary/90'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
           )}
         >
           <Icon className="h-4 w-4" />
@@ -121,15 +121,10 @@ function DeviceIdDisplay() {
 
   return (
     <div className="flex items-center gap-2">
-      <code className="flex-1 truncate rounded-lg bg-slate-800 px-3 py-2 font-mono text-sm text-slate-300">
+      <code className="bg-secondary text-muted-foreground flex-1 truncate rounded-lg px-3 py-2 font-mono text-sm">
         {deviceId}
       </code>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleCopy}
-        className="shrink-0 border-slate-700 bg-slate-800/50 hover:bg-slate-700"
-      >
+      <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
         {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
       </Button>
     </div>
@@ -160,21 +155,21 @@ function SyncthingInfo() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-400">Status</span>
+        <span className="text-muted-foreground text-sm">Status</span>
         <Badge variant="success">Installed</Badge>
       </div>
       {installation.version && (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-400">Version</span>
-          <span className="font-mono text-sm text-white">
+          <span className="text-muted-foreground text-sm">Version</span>
+          <span className="text-foreground font-mono text-sm">
             {installation.version.split(' ')[1] || installation.version}
           </span>
         </div>
       )}
       {installation.path && (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-400">Path</span>
-          <code className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-300">
+          <span className="text-muted-foreground text-sm">Path</span>
+          <code className="bg-secondary text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
             {installation.path}
           </code>
         </div>
@@ -195,12 +190,12 @@ function PollingSettings() {
 
   return (
     <div className="space-y-3">
-      <label className="text-sm text-slate-400">Status polling interval</label>
+      <label className="text-muted-foreground text-sm">Status polling interval</label>
       <div className="flex flex-wrap gap-2">
         {intervals.map(({ value, label }) => (
           <Button
             key={value}
-            variant={pollingInterval === value ? 'default' : 'outline-solid'}
+            variant={pollingInterval === value ? 'default' : 'outline'}
             size="sm"
             onClick={() => {
               setPollingInterval(value);
@@ -208,15 +203,17 @@ function PollingSettings() {
             }}
             className={cn(
               pollingInterval === value
-                ? 'bg-indigo-600 hover:bg-indigo-700'
-                : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+                ? 'bg-primary hover:bg-primary/90'
+                : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
             )}
           >
             {label}
           </Button>
         ))}
       </div>
-      <p className="text-xs text-slate-500">How often to refresh connection and folder status</p>
+      <p className="text-muted-foreground text-xs">
+        How often to refresh connection and folder status
+      </p>
     </div>
   );
 }
@@ -228,11 +225,11 @@ function NotificationSettings() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-white">Native Notifications</p>
-          <p className="text-xs text-slate-500">Show OS notifications for sync events</p>
+          <p className="text-foreground text-sm">Native Notifications</p>
+          <p className="text-muted-foreground text-xs">Show OS notifications for sync events</p>
         </div>
         <Button
-          variant={nativeNotificationsEnabled ? 'default' : 'outline-solid'}
+          variant={nativeNotificationsEnabled ? 'default' : 'outline'}
           size="sm"
           onClick={() => {
             setNativeNotificationsEnabled(!nativeNotificationsEnabled);
@@ -245,13 +242,13 @@ function NotificationSettings() {
           className={cn(
             nativeNotificationsEnabled
               ? 'bg-emerald-600 hover:bg-emerald-700'
-              : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
           )}
         >
           {nativeNotificationsEnabled ? 'Enabled' : 'Disabled'}
         </Button>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-muted-foreground text-xs">
         Receive desktop notifications when devices connect/disconnect, folders sync, or errors
         occur. In-app toasts are always shown.
       </p>
@@ -266,11 +263,11 @@ function AISettings() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-white">Enable AI Search</p>
-          <p className="text-xs text-slate-500">Semantic file search using local AI model</p>
+          <p className="text-foreground text-sm">Enable AI Search</p>
+          <p className="text-muted-foreground text-xs">Semantic file search using local AI model</p>
         </div>
         <Button
-          variant={aiEnabled ? 'default' : 'outline-solid'}
+          variant={aiEnabled ? 'default' : 'outline'}
           size="sm"
           onClick={() => {
             setAiEnabled(!aiEnabled);
@@ -281,18 +278,18 @@ function AISettings() {
           className={cn(
             aiEnabled
               ? 'bg-emerald-600 hover:bg-emerald-700'
-              : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
           )}
         >
           {aiEnabled ? 'Enabled' : 'Disabled'}
         </Button>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-muted-foreground text-xs">
         AI search uses a local embedding model (all-MiniLM-L6-v2) to enable semantic file search.
         The model runs entirely on your device. Disabling saves memory and CPU resources.
       </p>
       {aiEnabled && (
-        <div className="border-t border-slate-800 pt-2">
+        <div className="border-border border-t pt-2">
           <FileIndexer />
         </div>
       )}
@@ -352,17 +349,17 @@ function NetworkSettings() {
       {/* Discovery Toggles */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-white">Global Discovery</p>
-          <p className="text-xs text-slate-500">Find devices over the internet</p>
+          <p className="text-foreground text-sm">Global Discovery</p>
+          <p className="text-muted-foreground text-xs">Find devices over the internet</p>
         </div>
         <Button
-          variant={localOptions.globalAnnounceEnabled ? 'default' : 'outline-solid'}
+          variant={localOptions.globalAnnounceEnabled ? 'default' : 'outline'}
           size="sm"
           onClick={() => updateField('globalAnnounceEnabled', !localOptions.globalAnnounceEnabled)}
           className={cn(
             localOptions.globalAnnounceEnabled
               ? 'bg-emerald-600 hover:bg-emerald-700'
-              : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
           )}
         >
           {localOptions.globalAnnounceEnabled ? 'On' : 'Off'}
@@ -371,17 +368,17 @@ function NetworkSettings() {
 
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-white">Local Discovery</p>
-          <p className="text-xs text-slate-500">Find devices on local network</p>
+          <p className="text-foreground text-sm">Local Discovery</p>
+          <p className="text-muted-foreground text-xs">Find devices on local network</p>
         </div>
         <Button
-          variant={localOptions.localAnnounceEnabled ? 'default' : 'outline-solid'}
+          variant={localOptions.localAnnounceEnabled ? 'default' : 'outline'}
           size="sm"
           onClick={() => updateField('localAnnounceEnabled', !localOptions.localAnnounceEnabled)}
           className={cn(
             localOptions.localAnnounceEnabled
               ? 'bg-emerald-600 hover:bg-emerald-700'
-              : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
           )}
         >
           {localOptions.localAnnounceEnabled ? 'On' : 'Off'}
@@ -390,17 +387,17 @@ function NetworkSettings() {
 
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-white">Relaying</p>
-          <p className="text-xs text-slate-500">Use relays when direct connection fails</p>
+          <p className="text-foreground text-sm">Relaying</p>
+          <p className="text-muted-foreground text-xs">Use relays when direct connection fails</p>
         </div>
         <Button
-          variant={localOptions.relaysEnabled ? 'default' : 'outline-solid'}
+          variant={localOptions.relaysEnabled ? 'default' : 'outline'}
           size="sm"
           onClick={() => updateField('relaysEnabled', !localOptions.relaysEnabled)}
           className={cn(
             localOptions.relaysEnabled
               ? 'bg-emerald-600 hover:bg-emerald-700'
-              : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
           )}
         >
           {localOptions.relaysEnabled ? 'On' : 'Off'}
@@ -408,38 +405,38 @@ function NetworkSettings() {
       </div>
 
       {/* Bandwidth Limits */}
-      <div className="border-t border-slate-800 pt-2">
-        <p className="mb-2 text-sm text-white">Bandwidth Limits</p>
+      <div className="border-border border-t pt-2">
+        <p className="text-foreground mb-2 text-sm">Bandwidth Limits</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-slate-500">Upload (KB/s)</label>
+            <label className="text-muted-foreground text-xs">Upload (KB/s)</label>
             <input
               type="number"
               value={localOptions.maxSendKbps ?? 0}
               onChange={(e) => updateField('maxSendKbps', parseInt(e.target.value) || 0)}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-hidden"
+              className="border-border bg-secondary text-foreground focus:border-primary mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden"
               placeholder="0 = unlimited"
               min={0}
             />
           </div>
           <div>
-            <label className="text-xs text-slate-500">Download (KB/s)</label>
+            <label className="text-muted-foreground text-xs">Download (KB/s)</label>
             <input
               type="number"
               value={localOptions.maxRecvKbps ?? 0}
               onChange={(e) => updateField('maxRecvKbps', parseInt(e.target.value) || 0)}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-hidden"
+              className="border-border bg-secondary text-foreground focus:border-primary mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden"
               placeholder="0 = unlimited"
               min={0}
             />
           </div>
         </div>
-        <p className="mt-1 text-xs text-slate-500">0 = unlimited bandwidth</p>
+        <p className="text-muted-foreground mt-1 text-xs">0 = unlimited bandwidth</p>
       </div>
 
       {/* Listen Addresses */}
-      <div className="border-t border-slate-800 pt-2">
-        <label className="text-sm text-white">Listen Addresses</label>
+      <div className="border-border border-t pt-2">
+        <label className="text-foreground text-sm">Listen Addresses</label>
         <input
           type="text"
           value={localOptions.listenAddresses?.join(', ') ?? ''}
@@ -450,10 +447,12 @@ function NetworkSettings() {
               .filter(Boolean);
             updateField('listenAddresses', addresses.length > 0 ? addresses : ['default']);
           }}
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-hidden"
+          className="border-border bg-secondary text-foreground focus:border-primary mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden"
           placeholder="default, tcp://0.0.0.0:22000"
         />
-        <p className="mt-1 text-xs text-slate-500">Comma-separated list of listen addresses</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Comma-separated list of listen addresses
+        </p>
       </div>
 
       {/* Save Button */}
@@ -463,7 +462,7 @@ function NetworkSettings() {
           size="sm"
           onClick={handleSave}
           disabled={updateOptions.isPending}
-          className="w-full bg-indigo-600 hover:bg-indigo-700"
+          className="bg-primary hover:bg-primary/90 w-full"
         >
           {updateOptions.isPending ? (
             <>
@@ -498,7 +497,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Settings</h2>
+        <h2 className="text-foreground text-lg font-semibold">Settings</h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -560,14 +559,14 @@ export function SettingsPage() {
         {/* System Logs */}
         <SettingCard title="System Logs" description="View Syncthing logs for debugging" icon={Bug}>
           <div className="space-y-3">
-            <p className="text-sm text-slate-400">
+            <p className="text-muted-foreground text-sm">
               View real-time logs from Syncthing for troubleshooting connection issues and errors.
             </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setLogViewerOpen(true)}
-              className="w-full border-slate-700 bg-slate-800/50 hover:bg-slate-700"
+              className="border-border bg-secondary/50 hover:bg-secondary w-full"
             >
               <Bug className="mr-2 h-4 w-4" />
               Open Log Viewer
@@ -578,7 +577,7 @@ export function SettingsPage() {
         {/* System Actions */}
         <SettingCard title="System Actions" description="Control Syncthing service" icon={RotateCw}>
           <div className="space-y-3">
-            <p className="text-sm text-slate-400">
+            <p className="text-muted-foreground text-sm">
               Restart Syncthing to apply configuration changes that require a restart.
             </p>
             <Button
@@ -605,22 +604,22 @@ export function SettingsPage() {
       </div>
 
       {/* About Section */}
-      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+      <Card className="border-border bg-card/50 backdrop-blur-md">
         <CardHeader>
-          <CardTitle className="text-white">About Eigen</CardTitle>
+          <CardTitle className="text-foreground">About Eigen</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-300">A modern Syncthing manager built with Tauri</p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="text-foreground/80">A modern Syncthing manager built with Tauri</p>
+              <p className="text-muted-foreground mt-1 text-sm">
                 Version 0.1.0 • Built with Next.js + Rust
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="border-slate-700 bg-slate-800/50 hover:bg-slate-700"
+              className="border-border bg-secondary/50 hover:bg-secondary"
               onClick={() => window.open('https://github.com/syncthing/syncthing', '_blank')}
             >
               Syncthing Docs

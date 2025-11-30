@@ -16,7 +16,7 @@ env.useBrowserCache = true;
 // Message types
 interface WorkerMessage {
     id: string;
-    type: 'init' | 'embed' | 'search' | 'status';
+    type: 'init' | 'embed' | 'search' | 'status' | 'diff';
     payload?: unknown;
 }
 
@@ -32,6 +32,21 @@ interface SearchPayload {
     query: string;
     embeddings: { path: string; embedding: number[] }[];
     topK?: number;
+}
+
+interface DiffPayload {
+    contentA: string;
+    contentB: string;
+    labelA?: string;
+    labelB?: string;
+}
+
+interface DiffSummary {
+    summary: string;
+    additions: number;
+    deletions: number;
+    modifications: number;
+    keyChanges: string[];
 }
 
 // Worker state
@@ -175,6 +190,87 @@ async function semanticSearch(
     return results.sort((a, b) => b.score - a.score).slice(0, topK);
 }
 
+/**
+ * Analyze differences between two text contents
+ * This is a lightweight diff analysis without requiring the LLM
+ */
+function analyzeDiff(contentA: string, contentB: string, labelA = 'Version A', labelB = 'Version B'): DiffSummary {
+    const linesA = contentA.split('\n');
+    const linesB = contentB.split('\n');
+
+    // Create sets for quick lookup
+    const setA = new Set(linesA.map(l => l.trim()).filter(l => l.length > 0));
+    const setB = new Set(linesB.map(l => l.trim()).filter(l => l.length > 0));
+
+    // Find additions (in B but not in A)
+    const addedLines = linesB.filter(l => l.trim().length > 0 && !setA.has(l.trim()));
+
+    // Find deletions (in A but not in B)
+    const deletedLines = linesA.filter(l => l.trim().length > 0 && !setB.has(l.trim()));
+
+    // Extract key changes (significant lines)
+    const keyChanges: string[] = [];
+
+    // Look for significant additions
+    for (const line of addedLines.slice(0, 3)) {
+        const trimmed = line.trim();
+        if (trimmed.length > 10 && trimmed.length < 100) {
+            keyChanges.push(`Added: "${trimmed.slice(0, 50)}${trimmed.length > 50 ? '...' : ''}"`);
+        }
+    }
+
+    // Look for significant deletions
+    for (const line of deletedLines.slice(0, 3)) {
+        const trimmed = line.trim();
+        if (trimmed.length > 10 && trimmed.length < 100) {
+            keyChanges.push(`Removed: "${trimmed.slice(0, 50)}${trimmed.length > 50 ? '...' : ''}"`);
+        }
+    }
+
+    // Calculate modifications (lines that changed)
+    const modifications = Math.min(addedLines.length, deletedLines.length);
+    const additions = Math.max(0, addedLines.length - modifications);
+    const deletions = Math.max(0, deletedLines.length - modifications);
+
+    // Generate summary
+    let summary = '';
+
+    if (additions === 0 && deletions === 0 && modifications === 0) {
+        summary = 'The files appear to be identical.';
+    } else {
+        const parts: string[] = [];
+
+        if (additions > 0) {
+            parts.push(`${additions} new line${additions !== 1 ? 's' : ''}`);
+        }
+        if (deletions > 0) {
+            parts.push(`${deletions} removed line${deletions !== 1 ? 's' : ''}`);
+        }
+        if (modifications > 0) {
+            parts.push(`${modifications} modified line${modifications !== 1 ? 's' : ''}`);
+        }
+
+        summary = `${labelB} has ${parts.join(', ')} compared to ${labelA}.`;
+
+        // Add size comparison
+        const sizeA = contentA.length;
+        const sizeB = contentB.length;
+        const sizeDiff = sizeB - sizeA;
+
+        if (Math.abs(sizeDiff) > 100) {
+            summary += ` Overall, the file is ${sizeDiff > 0 ? 'larger' : 'smaller'} by ${Math.abs(sizeDiff)} characters.`;
+        }
+    }
+
+    return {
+        summary,
+        additions,
+        deletions,
+        modifications,
+        keyChanges,
+    };
+}
+
 // Handle messages from main thread
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
     const { id, type, payload } = event.data;
@@ -214,6 +310,18 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
                     searchPayload.topK
                 );
                 postMessage({ id, type: 'search', payload: { results } });
+                break;
+            }
+
+            case 'diff': {
+                const diffPayload = payload as DiffPayload;
+                const diffResult = analyzeDiff(
+                    diffPayload.contentA,
+                    diffPayload.contentB,
+                    diffPayload.labelA,
+                    diffPayload.labelB
+                );
+                postMessage({ id, type: 'diff', payload: diffResult });
                 break;
             }
 

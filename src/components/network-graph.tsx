@@ -88,13 +88,13 @@ export function NetworkGraph() {
   }, [connections, config]);
 
   if (connectionsLoading || configLoading) {
-    return <Skeleton className="h-64 w-full rounded-xl bg-slate-800/50" />;
+    return <Skeleton className="bg-secondary/50 h-64 w-full rounded-xl" />;
   }
 
   if (nodes.length === 0) {
     return (
-      <div className="flex h-64 w-full items-center justify-center rounded-xl bg-slate-900/50 backdrop-blur-md">
-        <p className="text-sm text-slate-400">
+      <div className="bg-card/50 flex h-64 w-full items-center justify-center rounded-xl backdrop-blur-md">
+        <p className="text-muted-foreground text-sm">
           No devices connected. Start Syncthing to see your network.
         </p>
       </div>
@@ -102,7 +102,7 @@ export function NetworkGraph() {
   }
 
   return (
-    <div className="h-64 w-full overflow-hidden rounded-xl bg-slate-900/50 backdrop-blur-md">
+    <div className="bg-card/50 h-64 w-full overflow-hidden rounded-xl backdrop-blur-md">
       <svg viewBox="0 0 300 240" className="h-full w-full">
         {/* Connection lines */}
         {lines.map((line, i) => (

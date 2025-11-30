@@ -44,14 +44,14 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-slate-800 bg-slate-950/50 backdrop-blur-xl transition-all duration-300',
+        'border-border bg-card/50 z-30 flex h-full flex-col border-r backdrop-blur-xl transition-all duration-300',
         sidebarOpen ? 'w-64' : 'w-16'
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-slate-800 px-4">
+      <div className="border-border flex h-16 items-center gap-3 border-b px-4">
         <Image src="/app_icon.png" alt="Eigen" width={32} height={32} className="rounded-lg" />
-        {sidebarOpen && <span className="text-lg font-bold text-white">Eigen</span>}
+        {sidebarOpen && <span className="text-foreground text-lg font-bold">Eigen</span>}
       </div>
 
       {/* Navigation */}
@@ -61,8 +61,8 @@ export function Sidebar() {
             key={item.id}
             variant="ghost"
             className={cn(
-              'w-full justify-start gap-3 text-slate-400 hover:bg-slate-800/50 hover:text-white',
-              activeTab === item.id && 'bg-slate-800/50 text-white',
+              'text-muted-foreground hover:bg-accent hover:text-foreground w-full justify-start gap-3',
+              activeTab === item.id && 'bg-accent text-foreground',
               !sidebarOpen && 'justify-center px-2'
             )}
             onClick={() => setActiveTab(item.id)}
@@ -74,11 +74,11 @@ export function Sidebar() {
       </nav>
 
       {/* Toggle Button */}
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-border border-t p-3">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-center text-slate-400 hover:bg-slate-800/50 hover:text-white"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground w-full justify-center"
           onClick={toggleSidebar}
         >
           {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}

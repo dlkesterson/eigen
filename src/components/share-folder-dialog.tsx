@@ -59,26 +59,26 @@ export function ShareFolderDialog({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
-      <Card className="w-full max-w-md border-slate-700 bg-slate-900 shadow-2xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs">
+      <Card className="border-border bg-card w-full max-w-md shadow-2xl">
         <CardHeader className="relative">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            className="text-muted-foreground hover:text-foreground absolute top-4 right-4"
           >
             <X className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-xl text-white">Share Folder</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground text-xl">Share Folder</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Select a device to sync "{folderLabel || folderId}" with.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             {availableDevices?.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
+              <div className="text-muted-foreground py-8 text-center">
                 No new devices available to share with.
               </div>
             ) : (
@@ -89,27 +89,25 @@ export function ShareFolderDialog({
                   className={cn(
                     'flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all',
                     selectedDevice === device.deviceID
-                      ? 'border-indigo-500 bg-indigo-500/10'
-                      : 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-secondary hover:border-border/80'
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-700">
-                      <Laptop className="h-4 w-4 text-slate-300" />
+                    <div className="bg-secondary flex h-8 w-8 items-center justify-center rounded">
+                      <Laptop className="text-muted-foreground h-4 w-4" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-foreground text-sm font-medium">
                         {device.name || 'Unnamed Device'}
                       </span>
-                      <span className="font-mono text-[10px] text-slate-500">
+                      <span className="text-muted-foreground font-mono text-[10px]">
                         {device.deviceID.slice(0, 12)}
                         ...
                       </span>
                     </div>
                   </div>
-                  {selectedDevice === device.deviceID && (
-                    <Check className="h-4 w-4 text-indigo-400" />
-                  )}
+                  {selectedDevice === device.deviceID && <Check className="text-primary h-4 w-4" />}
                 </div>
               ))
             )}
@@ -119,14 +117,14 @@ export function ShareFolderDialog({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-slate-700 bg-transparent hover:bg-slate-800"
+              className="border-border hover:bg-secondary bg-transparent"
             >
               Cancel
             </Button>
             <Button
               onClick={handleShare}
               disabled={!selectedDevice || shareFolder.isPending}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-primary hover:bg-primary/90"
             >
               {shareFolder.isPending ? 'Sharing...' : 'Share'}
             </Button>

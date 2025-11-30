@@ -3,15 +3,24 @@
 import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { MainContent } from '@/components/main-content';
+import { MobileNav } from '@/components/mobile-nav';
 
 export default function Home() {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="bg-background flex h-screen w-screen overflow-hidden">
+      {/* Desktop Sidebar - hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col overflow-hidden pb-16 md:pb-0">
         <Header />
         <MainContent />
       </div>
+
+      {/* Mobile Bottom Navigation - hidden on desktop */}
+      <MobileNav />
     </div>
   );
 }

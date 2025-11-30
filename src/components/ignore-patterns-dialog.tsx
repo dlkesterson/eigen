@@ -107,7 +107,7 @@ export function IgnorePatternsDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
       <Card className="bg-background/95 border-border/50 flex max-h-[85vh] w-full max-w-2xl flex-col backdrop-blur-md">
         <CardHeader className="border-border/50 flex flex-row items-center justify-between space-y-0 border-b pb-4">
           <CardTitle className="flex items-center gap-2 text-xl font-semibold">

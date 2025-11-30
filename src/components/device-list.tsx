@@ -93,7 +93,7 @@ function DeviceCard({
   return (
     <Card
       className={cn(
-        'group border-slate-800 bg-slate-900/50 backdrop-blur-md transition-all',
+        'group border-border bg-card/50 backdrop-blur-md transition-all',
         isPaused && 'opacity-60',
         isConnected && 'border-emerald-500/30'
       )}
@@ -104,11 +104,7 @@ function DeviceCard({
             <div
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded-lg',
-                isConnected
-                  ? 'bg-emerald-500/20'
-                  : isLocalDevice
-                    ? 'bg-violet-500/20'
-                    : 'bg-slate-700/50'
+                isConnected ? 'bg-emerald-500/20' : isLocalDevice ? 'bg-violet-500/20' : 'bg-muted'
               )}
             >
               <DeviceIcon
@@ -118,12 +114,12 @@ function DeviceCard({
                     ? 'text-emerald-400'
                     : isLocalDevice
                       ? 'text-violet-400'
-                      : 'text-slate-400'
+                      : 'text-muted-foreground'
                 )}
               />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="flex items-center gap-2 truncate text-lg text-white">
+              <CardTitle className="text-foreground flex items-center gap-2 truncate text-lg">
                 {device.name || 'Unknown Device'}
                 {isLocalDevice && (
                   <Badge variant="outline" className="border-violet-500/50 text-xs text-violet-400">
@@ -131,7 +127,7 @@ function DeviceCard({
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription className="font-mono text-xs text-slate-500">
+              <CardDescription className="font-mono text-xs">
                 {device.deviceID.slice(0, 12)}...
               </CardDescription>
             </div>
@@ -141,7 +137,7 @@ function DeviceCard({
             {isConnected ? (
               <Wifi className="h-4 w-4 text-emerald-400" />
             ) : (
-              <WifiOff className="h-4 w-4 text-slate-500" />
+              <WifiOff className="text-muted-foreground h-4 w-4" />
             )}
             {!isLocalDevice && (
               <>
@@ -150,7 +146,7 @@ function DeviceCard({
                   size="icon"
                   onClick={handlePauseResume}
                   disabled={isPauseResumePending}
-                  className="h-8 w-8 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-400"
+                  className="text-muted-foreground h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-amber-500/10 hover:text-amber-400"
                   title={isPaused ? 'Resume syncing' : 'Pause syncing'}
                 >
                   {isPauseResumePending ? (
@@ -166,7 +162,7 @@ function DeviceCard({
                   size="icon"
                   onClick={handleRemove}
                   disabled={removeDevice.isPending}
-                  className="h-8 w-8 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                  className="text-muted-foreground h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
                 >
                   {removeDevice.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -182,25 +178,27 @@ function DeviceCard({
       <CardContent>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-slate-400">Status</p>
-            <p className="font-medium text-white">{isConnected ? 'Connected' : 'Disconnected'}</p>
+            <p className="text-muted-foreground">Status</p>
+            <p className="text-foreground font-medium">
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </p>
           </div>
           {connectionInfo?.address && (
             <div>
-              <p className="text-slate-400">Address</p>
-              <p className="truncate font-mono text-xs text-white">{connectionInfo.address}</p>
+              <p className="text-muted-foreground">Address</p>
+              <p className="text-foreground truncate font-mono text-xs">{connectionInfo.address}</p>
             </div>
           )}
           {connectionInfo?.clientVersion && (
             <div>
-              <p className="text-slate-400">Version</p>
-              <p className="font-medium text-white">{connectionInfo.clientVersion}</p>
+              <p className="text-muted-foreground">Version</p>
+              <p className="text-foreground font-medium">{connectionInfo.clientVersion}</p>
             </div>
           )}
           {connectionInfo?.type && (
             <div>
-              <p className="text-slate-400">Connection</p>
-              <p className="font-medium text-white">{connectionInfo.type}</p>
+              <p className="text-muted-foreground">Connection</p>
+              <p className="text-foreground font-medium">{connectionInfo.type}</p>
             </div>
           )}
         </div>
@@ -232,7 +230,7 @@ export function DeviceList() {
       return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="border-slate-800 bg-slate-900/50">
+            <Card key={i} className="border-border bg-card/50">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-10 w-10 rounded-lg" />
@@ -256,11 +254,11 @@ export function DeviceList() {
 
     if (configError || !config?.devices?.length) {
       return (
-        <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+        <Card className="border-border bg-card/50 backdrop-blur-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Laptop className="mb-4 h-12 w-12 text-slate-600" />
-            <p className="text-lg font-medium text-slate-300">No devices configured</p>
-            <p className="text-sm text-slate-500">Add devices to start syncing</p>
+            <Laptop className="text-muted-foreground mb-4 h-12 w-12" />
+            <p className="text-foreground text-lg font-medium">No devices configured</p>
+            <p className="text-muted-foreground text-sm">Add devices to start syncing</p>
           </CardContent>
         </Card>
       );
@@ -284,7 +282,7 @@ export function DeviceList() {
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
         {configFetching && !isInitialLoading && (
-          <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
         )}
         <Button
           onClick={() => setShowAddDialog(true)}
