@@ -172,7 +172,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for tags
+          fetch-depth: 0 # Fetch all history for tags
 
       - name: Get or generate version
         id: get-version
@@ -181,10 +181,10 @@ jobs:
           # Get the latest tag
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Latest tag: $LATEST_TAG"
-          
+
           # Check if current commit has a tag
           CURRENT_TAG=$(git tag --points-at HEAD 2>/dev/null | grep "^v" | head -1 || echo "")
-          
+
           if [ -n "$CURRENT_TAG" ]; then
             # Use the existing tag
             VERSION="$CURRENT_TAG"
@@ -208,7 +208,7 @@ jobs:
             VERSION="v${MAJOR}.${MINOR}.${PATCH}"
             echo "Auto-incremented version: $VERSION"
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Final version: $VERSION"
 

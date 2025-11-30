@@ -14,7 +14,7 @@ on:
 # This workflow creates stable (non-prerelease) releases when:
 # 1. A version tag is pushed (e.g., v1.0.0)
 # 2. Manually triggered via workflow_dispatch
-# 
+#
 # For automatic builds on every push to main, see ci.yml which creates prerelease builds.
 
 env:
