@@ -132,11 +132,11 @@ pub async fn get_pending_folders(
                 time: info.get("time").and_then(|v| v.as_str()).map(String::from),
                 receive_encrypted: info
                     .get("receiveEncrypted")
-                    .and_then(|v| v.as_bool())
+                    .and_then(serde_json::Value::as_bool)
                     .unwrap_or(false),
                 remote_encrypted: info
                     .get("remoteEncrypted")
-                    .and_then(|v| v.as_bool())
+                    .and_then(serde_json::Value::as_bool)
                     .unwrap_or(false),
             });
         }
@@ -275,8 +275,7 @@ pub async fn accept_pending_folder(
     // Check if folder already exists
     let folder_exists = config["folders"]
         .as_array()
-        .map(|folders| folders.iter().any(|f| f["id"].as_str() == Some(&folder_id)))
-        .unwrap_or(false);
+        .is_some_and(|folders| folders.iter().any(|f| f["id"].as_str() == Some(&folder_id)));
 
     if folder_exists {
         // Folder exists, just add the device to it
