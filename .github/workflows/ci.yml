@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'releases/*']
   pull_request:
-    branches: [main, master]
+    branches: [main, master, 'releases/*']
 
 env:
   CARGO_TERM_COLOR: always
@@ -145,7 +145,7 @@ jobs:
   build-release:
     name: Build Release (${{ matrix.settings.os }})
     needs: [frontend-lint, rust-lint]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/releases/'))
     runs-on: ${{ matrix.settings.os }}
     strategy:
       fail-fast: false
