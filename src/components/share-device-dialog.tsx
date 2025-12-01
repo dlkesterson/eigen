@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -122,10 +123,13 @@ export function ShareDeviceDialog({ open, onOpenChange }: ShareDeviceDialogProps
               <div className="flex flex-col items-center">
                 <div className="relative">
                   {qrCodeUrl ? (
-                    <img
+                    <Image
                       src={qrCodeUrl}
                       alt="Device invite QR code"
-                      className="border-border h-48 w-48 rounded-xl border"
+                      width={192}
+                      height={192}
+                      className="border-border rounded-xl border"
+                      unoptimized
                     />
                   ) : (
                     <div className="border-border bg-secondary flex h-48 w-48 items-center justify-center rounded-xl border">

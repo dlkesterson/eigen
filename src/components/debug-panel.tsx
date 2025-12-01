@@ -25,7 +25,7 @@ type LogFilter = 'all' | 'error' | 'warn' | 'info' | 'debug';
 
 export default function DebugPanel() {
   const { debugPanelOpen: isOpen, setDebugPanelOpen, toggleDebugPanel } = useAppStore();
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>(() => logger.exportLogs());
   const [filter, setFilter] = useState<LogFilter>('all');
   const [healthStatus, setHealthStatus] = useState<Map<string, HealthStatus>>(new Map());
   const [circuitState, setCircuitState] = useState(syncthingCircuitBreaker.getState());
@@ -49,8 +49,6 @@ export default function DebugPanel() {
     const unsubscribe = logger.subscribe(() => {
       setLogs(logger.exportLogs());
     });
-    // Initial load - use functional update to avoid synchronous setState warning
-    setLogs(() => logger.exportLogs());
     return () => {
       unsubscribe();
     };

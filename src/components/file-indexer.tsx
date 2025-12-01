@@ -4,7 +4,7 @@
  * FileIndexer - Component for indexing files into IndexedDB with AI embeddings
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
@@ -55,7 +55,8 @@ export function FileIndexer() {
   const [totalEmbeddings, setTotalEmbeddings] = useState(0);
 
   const { data: config } = useConfig();
-  const folders = config?.folders || [];
+  // Memoize folders to prevent dependency array changes on each render
+  const folders = useMemo(() => config?.folders || [], [config?.folders]);
 
   const aiEnabled = useAppStore((state) => state.aiEnabled);
   const {
@@ -80,9 +81,14 @@ export function FileIndexer() {
     }
   }, []);
 
-  // Update stats on mount
+  // Update stats on mount - track if already initialized
+  const statsInitialized = useRef(false);
   useEffect(() => {
-    updateStats();
+    if (!statsInitialized.current) {
+      statsInitialized.current = true;
+      // Schedule update for next tick to avoid synchronous setState in effect
+      Promise.resolve().then(updateStats);
+    }
   }, [updateStats]);
 
   // Index a single folder

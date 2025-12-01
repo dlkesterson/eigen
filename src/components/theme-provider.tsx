@@ -1,27 +1,36 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store';
+
+// Helper to compute resolved theme
+function getResolvedTheme(theme: 'light' | 'dark' | 'system'): 'light' | 'dark' {
+  if (theme === 'system') {
+    // Check if window is available (SSR safety)
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark'; // Default for SSR
+  }
+  return theme;
+}
 
 export function useResolvedTheme(): 'light' | 'dark' {
   const theme = useAppStore((state) => state.theme);
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  // Initialize with computed value to avoid setState in effect
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
+    getResolvedTheme(theme)
+  );
 
-  const updateResolvedTheme = useCallback(() => {
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      setResolvedTheme(systemTheme);
-    } else {
-      setResolvedTheme(theme);
-    }
+  // Update resolved theme when theme setting changes
+  useEffect(() => {
+    queueMicrotask(() => {
+      setResolvedTheme(getResolvedTheme(theme));
+    });
   }, [theme]);
 
+  // Listen for system theme changes only when theme is 'system'
   useEffect(() => {
-    updateResolvedTheme();
-
-    // Listen for system theme changes only when theme is 'system'
     if (theme !== 'system') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -31,11 +40,10 @@ export function useResolvedTheme(): 'light' | 'dark' {
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme, updateResolvedTheme]);
+  }, [theme]);
 
   return resolvedTheme;
 }
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useAppStore((state) => state.theme);
 

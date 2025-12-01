@@ -50,13 +50,15 @@ export function IgnorePatternsDialog({
   const { data: ignoreData, isLoading, refetch } = useFolderIgnores(folderId);
   const setIgnoresMutation = useSetFolderIgnores();
 
-  // Initialize patterns from server data
+  // Sync patterns from server when ignoreData changes
   useEffect(() => {
     if (ignoreData?.ignore) {
-      // Use callback form to avoid synchronous setState warning
       const newPatterns = ignoreData.ignore.filter((p: string) => p.trim() !== '');
-      setPatterns(newPatterns);
-      setHasChanges(false);
+      // Use microtask to avoid synchronous setState in effect
+      queueMicrotask(() => {
+        setPatterns(newPatterns);
+        setHasChanges(false);
+      });
     }
   }, [ignoreData]);
 

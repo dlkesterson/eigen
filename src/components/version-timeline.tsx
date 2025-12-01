@@ -123,6 +123,15 @@ export function VersionTimeline({
 
   const selectedPoint = timelinePoints[selectedIndex];
 
+  // Stop playing when dialog closes
+  useEffect(() => {
+    if (!open) {
+      queueMicrotask(() => {
+        setIsPlaying(false);
+      });
+    }
+  }, [open]);
+
   // Auto-play functionality
   useEffect(() => {
     if (isPlaying && timelinePoints.length > 1) {
@@ -144,13 +153,6 @@ export function VersionTimeline({
       }
     };
   }, [isPlaying, timelinePoints.length]);
-
-  // Stop playing when component unmounts or closes
-  useEffect(() => {
-    if (!open) {
-      setIsPlaying(false);
-    }
-  }, [open]);
 
   const handleRestore = async () => {
     if (!selectedPoint) return;

@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, File, Image, FileCode, FileText, Download } from 'lucide-react';
+import { X, File, Image, FileCode, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 interface QuickLookProps {
   open: boolean;
@@ -56,22 +55,8 @@ function getFileType(fileName: string): 'image' | 'text' | 'code' | 'unknown' {
   return 'unknown';
 }
 
-function getFileIcon(fileType: string) {
-  switch (fileType) {
-    case 'image':
-      return Image;
-    case 'code':
-      return FileCode;
-    case 'text':
-      return FileText;
-    default:
-      return File;
-  }
-}
-
 export function QuickLook({ open, onClose, fileName, filePath, fileSize }: QuickLookProps) {
   const fileType = getFileType(fileName);
-  const FileIcon = getFileIcon(fileType);
 
   // Handle escape key
   useEffect(() => {
@@ -86,6 +71,20 @@ export function QuickLook({ open, onClose, fileName, filePath, fileSize }: Quick
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
   }, [open, onClose]);
+
+  // Render the appropriate icon based on file type
+  const renderFileIcon = (className: string) => {
+    switch (fileType) {
+      case 'image':
+        return <Image className={className} />;
+      case 'code':
+        return <FileCode className={className} />;
+      case 'text':
+        return <FileText className={className} />;
+      default:
+        return <File className={className} />;
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -110,7 +109,7 @@ export function QuickLook({ open, onClose, fileName, filePath, fileSize }: Quick
             <div className="border-border flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="bg-primary/20 flex h-10 w-10 items-center justify-center rounded-lg">
-                  <FileIcon className="text-primary h-5 w-5" />
+                  {renderFileIcon('text-primary h-5 w-5')}
                 </div>
                 <div>
                   <h3 className="text-foreground font-medium">{fileName}</h3>
@@ -138,7 +137,7 @@ export function QuickLook({ open, onClose, fileName, filePath, fileSize }: Quick
                 </div>
               ) : fileType === 'code' || fileType === 'text' ? (
                 <div className="text-muted-foreground flex flex-col items-center gap-4">
-                  <FileIcon className="h-16 w-16" />
+                  {renderFileIcon('h-16 w-16')}
                   <p className="text-sm">{fileType === 'code' ? 'Source Code' : 'Text File'}</p>
                   <p className="text-center text-xs">
                     Text preview requires file system access.

@@ -139,10 +139,12 @@ export function SyncthingClientProvider({
     return null;
   });
 
-  // Update HTTP bridge if settings change
+  // Create HTTP bridge when settings change - use microtask to avoid synchronous setState
   useEffect(() => {
     if (bridgeType === 'http' && remoteSettings && !httpBridge) {
-      setHttpBridge(createHttpBridge(remoteSettings));
+      queueMicrotask(() => {
+        setHttpBridge(createHttpBridge(remoteSettings));
+      });
     }
   }, [bridgeType, remoteSettings, httpBridge]);
 

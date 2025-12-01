@@ -2,12 +2,11 @@
 
 import { useAppStore } from '@/store';
 import { NetworkGraphLive } from '@/components/network-graph-live';
-import { StatsOverview } from '@/components/stats-overview';
 import { FolderList } from '@/components/folder-list';
 import { DeviceList } from '@/components/device-list';
 import { SettingsPage } from '@/components/settings-page';
 import { LogsPage } from '@/components/logs-page';
-import { MotionPage, MotionList, MotionItem } from '@/components/ui/motion';
+import { MotionPage } from '@/components/ui/motion';
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Activity, Network, Folder, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
@@ -17,7 +16,7 @@ import { formatBytes } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 function DashboardView() {
-  const { data: status, isError: statusError } = useSystemStatus();
+  const { data: _status, isError: statusError } = useSystemStatus();
   const { data: connections } = useConnections();
 
   const connectedDevices = Object.values(connections?.connections || {}).filter(

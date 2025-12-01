@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useOpenFolderInExplorer,
   useBrowseFolder,
@@ -149,9 +149,11 @@ export function FileBrowser({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, selectedIndex, sortedEntries, currentPath, folderPath, quickLook]);
 
-  // Reset selection when path changes
+  // Reset selection when path changes - use microtask to avoid synchronous setState
   useEffect(() => {
-    setSelectedIndex(null);
+    queueMicrotask(() => {
+      setSelectedIndex(null);
+    });
   }, [currentPath]);
 
   if (!open) return null;
