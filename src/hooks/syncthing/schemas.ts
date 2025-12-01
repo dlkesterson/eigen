@@ -2,10 +2,6 @@
 
 import { z } from 'zod';
 
-// ---
-// Core Schemas
-// ---
-
 export const SyncthingInfoSchema = z.object({
   installed: z.boolean(),
   version: z.string().nullable().optional(),
@@ -46,10 +42,6 @@ export const ConnectionsSchema = z
     connections: z.record(z.string(), ConnectionInfoSchema).optional(),
   })
   .passthrough();
-
-// ---
-// Versioning & Folder Schemas
-// ---
 
 export const VersioningConfigSchema = z
   .object({
@@ -98,10 +90,6 @@ export const FolderStatusSchema = z
   })
   .passthrough();
 
-// ---
-// Device Schema
-// ---
-
 export const DeviceConfigSchema = z
   .object({
     deviceID: z.string(),
@@ -115,10 +103,6 @@ export const DeviceConfigSchema = z
     maxRecvKbps: z.number().optional(),
   })
   .passthrough();
-
-// ---
-// Global Options Schema
-// ---
 
 export const OptionsSchema = z
   .object({
@@ -180,10 +164,6 @@ export const OptionsSchema = z
   })
   .passthrough();
 
-// ---
-// Config Schema
-// ---
-
 export const ConfigSchema = z
   .object({
     folders: z.array(FolderConfigSchema).optional(),
@@ -192,20 +172,12 @@ export const ConfigSchema = z
   })
   .passthrough();
 
-// ---
-// Ignore Patterns Schema
-// ---
-
 export const IgnorePatternsSchema = z
   .object({
     ignore: z.array(z.string()).optional(),
     expanded: z.array(z.string()).optional(),
   })
   .passthrough();
-
-// ---
-// Log Schemas
-// ---
 
 export const LogEntrySchema = z
   .object({
@@ -220,10 +192,6 @@ export const SystemLogsSchema = z
     messages: z.array(LogEntrySchema).optional(),
   })
   .passthrough();
-
-// ---
-// Event Schema
-// ---
 
 export const SyncthingEventSchema = z
   .object({

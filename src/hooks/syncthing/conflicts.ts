@@ -4,13 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ConflictFile } from './types';
 
-// ---
-// Conflict Resolution
-// ---
-
-/**
- * Scan folder for conflict files
- */
 export function useScanConflicts(folderPath: string) {
   return useQuery({
     queryKey: ['conflicts', folderPath],
@@ -23,9 +16,6 @@ export function useScanConflicts(folderPath: string) {
   });
 }
 
-/**
- * Delete a conflict file (keep original)
- */
 export function useDeleteConflict() {
   const queryClient = useQueryClient();
 
@@ -45,9 +35,6 @@ export function useDeleteConflict() {
   });
 }
 
-/**
- * Resolve conflict by keeping the conflict version
- */
 export function useResolveConflictKeepConflict() {
   const queryClient = useQueryClient();
 

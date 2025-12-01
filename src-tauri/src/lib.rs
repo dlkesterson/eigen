@@ -202,58 +202,54 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::check_syncthing_installation,
-            commands::start_syncthing_sidecar,
-            commands::stop_syncthing_sidecar,
-            commands::get_system_status,
-            commands::get_connections,
-            commands::get_config,
-            commands::update_options,
-            commands::get_folder_status,
-            commands::pause_folder,
-            commands::resume_folder,
-            commands::rescan_folder,
-            commands::get_api_config,
-            commands::get_device_id,
-            commands::add_device,
-            commands::remove_device,
-            commands::add_folder,
-            commands::remove_folder,
-            commands::share_folder,
-            // Advanced folder configuration
-            commands::add_folder_advanced,
-            commands::update_folder_config,
-            commands::get_folder_config,
-            // Ignore patterns
-            commands::get_folder_ignores,
-            commands::set_folder_ignores,
-            // System logs
-            commands::get_system_logs,
-            // Event API
-            commands::get_events,
-            // Advanced device settings
-            commands::add_device_advanced,
-            commands::update_device_config,
-            commands::get_device_config,
-            commands::pause_device,
-            commands::resume_device,
-            // Folder sharing
-            commands::unshare_folder,
-            // System management
-            commands::restart_syncthing,
-            // File browser
-            commands::open_folder_in_explorer,
-            commands::browse_folder,
-            commands::browse_folder_recursive,
-            // Conflict resolution
-            commands::scan_for_conflicts,
-            commands::delete_conflict_file,
-            commands::resolve_conflict_keep_conflict,
-            // File versioning
-            commands::browse_versions,
-            commands::restore_version,
-            // Tray
-            commands::update_tray_status,
+            // System commands
+            commands::system::check_syncthing_installation,
+            commands::system::start_syncthing_sidecar,
+            commands::system::stop_syncthing_sidecar,
+            commands::system::ping_syncthing,
+            commands::system::get_system_status,
+            commands::system::restart_syncthing,
+            commands::system::get_api_config,
+            // Config commands
+            commands::config::get_connections,
+            commands::config::get_config,
+            commands::config::update_options,
+            // Folder commands
+            commands::folders::get_folder_status,
+            commands::folders::pause_folder,
+            commands::folders::resume_folder,
+            commands::folders::rescan_folder,
+            commands::folders::add_folder,
+            commands::folders::add_folder_advanced,
+            commands::folders::remove_folder,
+            commands::folders::update_folder_config,
+            commands::folders::get_folder_config,
+            commands::folders::share_folder,
+            commands::folders::unshare_folder,
+            // Device commands
+            commands::devices::get_device_id,
+            commands::devices::add_device,
+            commands::devices::add_device_advanced,
+            commands::devices::remove_device,
+            commands::devices::update_device_config,
+            commands::devices::get_device_config,
+            commands::devices::pause_device,
+            commands::devices::resume_device,
+            // File commands (browser, ignores, conflicts, versions)
+            commands::files::open_folder_in_explorer,
+            commands::files::browse_folder,
+            commands::files::browse_folder_recursive,
+            commands::files::get_folder_ignores,
+            commands::files::set_folder_ignores,
+            commands::files::scan_for_conflicts,
+            commands::files::delete_conflict_file,
+            commands::files::resolve_conflict_keep_conflict,
+            commands::files::browse_versions,
+            commands::files::restore_version,
+            // Event commands (events, logs, tray)
+            commands::events::get_events,
+            commands::events::get_system_logs,
+            commands::events::update_tray_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

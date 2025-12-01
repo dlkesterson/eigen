@@ -231,17 +231,16 @@ export function registerDefaultRecoveryStrategies() {
         const pingResult = await invoke<{ ping: string }>('ping_syncthing');
 
         if (pingResult?.ping === 'pong') {
-          // Reset circuit breaker if ping succeeds
           syncthingCircuitBreaker.reset();
           return true;
         }
 
-        // If ping fails, try restarting Syncthing
-        logger.info('Attempting to restart Syncthing');
-        await invoke('restart_syncthing');
+        // If ping fails, Syncthing might not be running - try to start it
+        logger.info('Syncthing not responding, attempting to start sidecar');
+        await invoke('start_syncthing_sidecar');
 
-        // Wait for restart
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        // Wait for startup
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         // Check again via Tauri invoke
         const retryPing = await invoke<{ ping: string }>('ping_syncthing');
@@ -252,12 +251,15 @@ export function registerDefaultRecoveryStrategies() {
         }
 
         return false;
-      } catch {
+      } catch (error) {
+        logger.error('Recovery action failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
         return false;
       }
     },
     maxAttempts: 3,
-    cooldownMs: 30000, // Wait 30s between attempts
+    cooldownMs: 30000,
   });
 
   // Circuit breaker recovery
@@ -265,25 +267,36 @@ export function registerDefaultRecoveryStrategies() {
     name: 'circuit-breaker',
     condition: () => {
       const state = syncthingCircuitBreaker.getState();
-      // Try to recover if circuit is open for more than 1 minute
       return state.state === 'open';
     },
     action: async () => {
       try {
-        // Test connection via Tauri invoke before resetting
+        // Test connection via Tauri invoke
         const pingResult = await invoke<{ ping: string }>('ping_syncthing');
 
         if (pingResult?.ping === 'pong') {
           syncthingCircuitBreaker.reset();
           return true;
         }
+
+        // If ping fails, try starting the sidecar
+        logger.info('Circuit breaker recovery: attempting to start sidecar');
+        await invoke('start_syncthing_sidecar');
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        const retryPing = await invoke<{ ping: string }>('ping_syncthing');
+        if (retryPing?.ping === 'pong') {
+          syncthingCircuitBreaker.reset();
+          return true;
+        }
+
         return false;
       } catch {
         return false;
       }
     },
     maxAttempts: 5,
-    cooldownMs: 60000, // Wait 1 minute between attempts
+    cooldownMs: 60000,
   });
 
   // Memory pressure recovery

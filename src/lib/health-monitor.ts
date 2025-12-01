@@ -97,7 +97,6 @@ export class HealthMonitor {
       const duration = Date.now() - startTime;
 
       if (result) {
-        // Success
         const wasUnhealthy = !currentStatus.healthy;
         this.status.set(check.name, {
           ...currentStatus,
@@ -112,7 +111,6 @@ export class HealthMonitor {
           logger.info(`Health check recovered: ${check.name}`, { duration });
         }
       } else {
-        // Failed
         this.handleFailure(check, currentStatus, 'Check returned false');
       }
     } catch (error) {

@@ -1,53 +1,26 @@
-/**
- * Predictive Sync - Analyzes user access patterns to proactively sync folders
- *
- * This module uses the activity log from db.ts to predict when users
- * will access certain folders and triggers preemptive rescans/syncs.
- */
-
 import { getActivityForPath, getMostAccessedFiles, logActivity } from './db';
 import { logger } from './logger';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface AccessPattern {
-  /** Day of week (0=Sunday, 6=Saturday) */
   dayOfWeek: number;
-  /** Hour of day (0-23) */
   hour: number;
-  /** Number of accesses at this time */
   frequency: number;
 }
 
 export interface FolderPrediction {
-  /** Folder path */
   path: string;
-  /** Confidence score (0-1) */
   confidence: number;
-  /** Predicted access time patterns */
   patterns: AccessPattern[];
-  /** Whether we should boost priority now */
   shouldBoostNow: boolean;
-  /** Next predicted access time */
   nextPredictedAccess?: Date;
 }
 
 export interface PredictiveSyncConfig {
-  /** Minimum frequency to consider a pattern significant */
   minFrequencyThreshold: number;
-  /** How many minutes before predicted access to trigger rescan */
   preemptiveMinutes: number;
-  /** Maximum number of folders to track */
   maxFoldersToTrack: number;
-  /** Enable/disable predictive sync */
   enabled: boolean;
 }
-
-// ============================================================================
-// Default Configuration
-// ============================================================================
 
 const DEFAULT_CONFIG: PredictiveSyncConfig = {
   minFrequencyThreshold: 5,
@@ -56,28 +29,15 @@ const DEFAULT_CONFIG: PredictiveSyncConfig = {
   enabled: true,
 };
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Get the time slot key for a given date (day-hour format)
- */
 function getTimeSlotKey(date: Date): string {
   return `${date.getDay()}-${date.getHours()}`;
 }
 
-/**
- * Parse a time slot key back into day and hour
- */
 function parseTimeSlotKey(key: string): { dayOfWeek: number; hour: number } {
   const [day, hour] = key.split('-').map(Number);
   return { dayOfWeek: day, hour };
 }
 
-/**
- * Calculate the next occurrence of a specific day/hour
- */
 function getNextOccurrence(dayOfWeek: number, hour: number): Date {
   const now = new Date();
   const result = new Date(now);
@@ -100,13 +60,6 @@ function getNextOccurrence(dayOfWeek: number, hour: number): Date {
   return result;
 }
 
-// ============================================================================
-// Pattern Analysis
-// ============================================================================
-
-/**
- * Analyze access patterns for a specific folder path
- */
 export async function analyzeAccessPatterns(
   folderPath: string,
   limit = 1000
@@ -208,13 +161,6 @@ function calculateConfidence(patterns: AccessPattern[], totalLogs: number): numb
   return frequencyScore * 0.7 + patternCountScore * 0.3;
 }
 
-// ============================================================================
-// Folder Predictions
-// ============================================================================
-
-/**
- * Get predictions for all frequently accessed folders
- */
 export async function getFolderPredictions(
   config: PredictiveSyncConfig = DEFAULT_CONFIG
 ): Promise<FolderPrediction[]> {
@@ -261,13 +207,6 @@ export async function getFoldersToSync(
   return predictions.filter((p) => p.shouldBoostNow).map((p) => p.path);
 }
 
-// ============================================================================
-// Activity Tracking Integration
-// ============================================================================
-
-/**
- * Track a folder access (call this when user interacts with a folder)
- */
 export async function trackFolderAccess(
   folderPath: string,
   action: 'open' | 'sync' | 'modify' | 'search' = 'open'
@@ -283,10 +222,6 @@ export async function trackFolderAccess(
   }
 }
 
-// ============================================================================
-// Predictive Sync Service
-// ============================================================================
-
 type RescanCallback = (folderId: string) => Promise<void>;
 
 class PredictiveSyncService {
@@ -299,17 +234,11 @@ class PredictiveSyncService {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  /**
-   * Register the rescan callback and folder mapping
-   */
   registerRescanCallback(callback: RescanCallback, folderMapping: Map<string, string>): void {
     this.rescanCallback = callback;
     this.folderPathToId = folderMapping;
   }
 
-  /**
-   * Start the predictive sync monitoring
-   */
   start(intervalMs = 60000): void {
     if (this.intervalId) {
       this.stop();
@@ -325,9 +254,6 @@ class PredictiveSyncService {
     this.checkAndSync();
   }
 
-  /**
-   * Stop the predictive sync monitoring
-   */
   stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
@@ -336,9 +262,6 @@ class PredictiveSyncService {
     }
   }
 
-  /**
-   * Check patterns and trigger syncs if needed
-   */
   private async checkAndSync(): Promise<void> {
     if (!this.config.enabled || !this.rescanCallback) {
       return;
@@ -360,30 +283,19 @@ class PredictiveSyncService {
     }
   }
 
-  /**
-   * Update configuration
-   */
   updateConfig(config: Partial<PredictiveSyncConfig>): void {
     this.config = { ...this.config, ...config };
   }
 
-  /**
-   * Get current configuration
-   */
   getConfig(): PredictiveSyncConfig {
     return { ...this.config };
   }
 
-  /**
-   * Check if service is running
-   */
   isRunning(): boolean {
     return this.intervalId !== null;
   }
 }
 
-// Export singleton instance
 export const predictiveSyncService = new PredictiveSyncService();
 
-// Export class for testing
 export { PredictiveSyncService };

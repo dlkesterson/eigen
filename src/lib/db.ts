@@ -1,12 +1,8 @@
-/**
- * IndexedDB schema and utilities for file metadata and embeddings
- */
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
-// Database schema
 interface EigenDB extends DBSchema {
   files: {
-    key: string; // Full path
+    key: string;
     value: FileMetadata;
     indexes: {
       'by-folder': string;
@@ -15,11 +11,11 @@ interface EigenDB extends DBSchema {
     };
   };
   embeddings: {
-    key: string; // Full path
+    key: string;
     value: FileEmbedding;
   };
   searchHistory: {
-    key: number; // Auto-increment
+    key: number;
     value: SearchHistoryEntry;
     indexes: {
       'by-query': string;
@@ -46,12 +42,12 @@ export interface FileMetadata {
   modified: number;
   isDirectory: boolean;
   extension?: string;
-  indexed: number; // When it was indexed
+  indexed: number;
 }
 
 export interface FileEmbedding {
   path: string;
-  embedding: number[]; // Vector embedding
+  embedding: number[];
   model: string;
   createdAt: number;
 }

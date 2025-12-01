@@ -1,6 +1,5 @@
 'use client';
 
-import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   SyncthingInfoSchema,
@@ -8,33 +7,32 @@ import {
   ConnectionsSchema,
   ConfigSchema,
 } from './schemas';
+import {
+  checkSyncthingInstallation,
+  startSyncthingSidecar,
+  stopSyncthingSidecar,
+  restartSyncthing,
+  getSystemStatus,
+  getConnections,
+  getConfig,
+} from '@/lib/tauri-commands';
 
-// ---
-// Core Query Hooks
-// ---
-
-/**
- * Check if Syncthing is installed on the system
- */
 export function useSyncthingInstallation() {
   return useQuery({
     queryKey: ['syncthingInstallation'],
     queryFn: async () => {
-      const data = await invoke('check_syncthing_installed');
+      const data = await checkSyncthingInstallation();
       return SyncthingInfoSchema.parse(data);
     },
     staleTime: 60000,
   });
 }
 
-/**
- * Get Syncthing system status
- */
 export function useSystemStatus() {
   return useQuery({
     queryKey: ['systemStatus'],
     queryFn: async () => {
-      const data = await invoke('get_system_status');
+      const data = await getSystemStatus();
       return SystemStatusSchema.parse(data);
     },
     refetchInterval: 5000,
@@ -42,14 +40,11 @@ export function useSystemStatus() {
   });
 }
 
-/**
- * Get active connections to other devices
- */
 export function useConnections() {
   return useQuery({
     queryKey: ['connections'],
     queryFn: async () => {
-      const data = await invoke('get_connections');
+      const data = await getConnections();
       return ConnectionsSchema.parse(data);
     },
     refetchInterval: 5000,
@@ -57,36 +52,25 @@ export function useConnections() {
   });
 }
 
-/**
- * Get full Syncthing config
- */
 export function useConfig() {
   return useQuery({
     queryKey: ['config'],
     queryFn: async () => {
-      const data = await invoke('get_config');
+      const data = await getConfig();
       return ConfigSchema.parse(data);
     },
     staleTime: 10000,
   });
 }
 
-// ---
-// Lifecycle Mutations
-// ---
-
-/**
- * Start Syncthing daemon
- */
 export function useStartSyncthing() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      await invoke('start_syncthing');
+      await startSyncthingSidecar();
     },
     onSuccess: () => {
-      // Wait briefly for startup then refetch status
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
         queryClient.invalidateQueries({ queryKey: ['config'] });
@@ -96,15 +80,12 @@ export function useStartSyncthing() {
   });
 }
 
-/**
- * Stop Syncthing daemon
- */
 export function useStopSyncthing() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      await invoke('stop_syncthing');
+      await stopSyncthingSidecar();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
@@ -112,18 +93,14 @@ export function useStopSyncthing() {
   });
 }
 
-/**
- * Restart Syncthing
- */
 export function useRestartSyncthing() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      await invoke('restart_syncthing');
+      await restartSyncthing();
     },
     onSuccess: () => {
-      // Wait for restart and then refetch everything
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
         queryClient.invalidateQueries({ queryKey: ['config'] });
@@ -133,9 +110,6 @@ export function useRestartSyncthing() {
   });
 }
 
-/**
- * Hook to manage Syncthing lifecycle
- */
 export function useSyncthingLifecycle() {
   const startMutation = useStartSyncthing();
   const { data: status, isError, error } = useSystemStatus();

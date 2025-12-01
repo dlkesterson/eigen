@@ -18,10 +18,6 @@ import {
   SyncthingEventSchema,
 } from './schemas';
 
-// ---
-// Inferred Types from Zod Schemas
-// ---
-
 export type SyncthingInfo = z.infer<typeof SyncthingInfoSchema>;
 export type SystemStatus = z.infer<typeof SystemStatusSchema>;
 export type Connections = z.infer<typeof ConnectionsSchema>;
@@ -36,10 +32,6 @@ export type IgnorePatterns = z.infer<typeof IgnorePatternsSchema>;
 export type SystemLogs = z.infer<typeof SystemLogsSchema>;
 export type LogEntry = z.infer<typeof LogEntrySchema>;
 export type SyncthingEvent = z.infer<typeof SyncthingEventSchema>;
-
-// ---
-// Advanced Options Interfaces
-// ---
 
 export interface AdvancedFolderOptions {
   folderId: string;
@@ -63,10 +55,6 @@ export interface AdvancedDeviceOptions {
   maxSendKbps?: number;
   maxRecvKbps?: number;
 }
-
-// ---
-// Conflict & Version Types
-// ---
 
 export interface ConflictFile {
   name: string;

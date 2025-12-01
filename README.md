@@ -152,12 +152,17 @@ eigen/
 │   │   ├── settings-page.tsx     # App settings
 │   │   └── ...
 │   ├── hooks/                    # Custom React hooks
+│   │   ├── syncthing/            # Modular Syncthing API hooks
+│   │   │   ├── core.ts           # Lifecycle hooks (start/stop/status)
+│   │   │   ├── folders.ts        # Folder management hooks
+│   │   │   ├── devices.ts        # Device management hooks
+│   │   │   └── schemas.ts        # Zod validation schemas
 │   │   ├── useAISearch.ts        # AI search functionality
 │   │   ├── useDeviceInvite.ts    # Device invitation & QR codes
 │   │   ├── usePredictiveSync.ts  # Predictive sync patterns
-│   │   ├── useSyncthing.ts       # Core Syncthing API hooks
 │   │   └── useNotifications.ts   # Native notifications
 │   ├── lib/                      # Utility libraries
+│   │   ├── tauri-commands.ts     # ⚠️ TYPED TAURI COMMAND REGISTRY
 │   │   ├── auto-recovery.ts      # Automatic failure recovery
 │   │   ├── db.ts                 # IndexedDB operations
 │   │   ├── errors.ts             # Typed error classes
@@ -170,7 +175,7 @@ eigen/
 ├── src-tauri/                    # Rust backend
 │   ├── src/
 │   │   ├── commands.rs           # Tauri command handlers
-│   │   ├── lib.rs                # Library entry point
+│   │   ├── lib.rs                # Library entry point & command registration
 │   │   └── main.rs               # Application entry
 │   ├── binaries/                 # Bundled Syncthing binary
 │   ├── capabilities/             # Tauri security capabilities
@@ -178,8 +183,26 @@ eigen/
 │   └── tauri.conf.json           # Tauri configuration
 ├── scripts/
 │   └── download-syncthing.js     # Syncthing download script
+├── AGENTS.md                     # AI assistant instructions
+├── .github/
+│   └── copilot-instructions.md   # GitHub Copilot instructions
 └── package.json
 ```
+
+### Tauri Command Registry
+
+The file `src/lib/tauri-commands.ts` serves as the **single source of truth** for all frontend-to-backend communication. This prevents command name mismatches between TypeScript and Rust code.
+
+```typescript
+// ❌ Don't use raw invoke() with string literals
+await invoke('start_syncthing'); // Error-prone!
+
+// ✅ Use typed command functions
+import { startSyncthingSidecar } from '@/lib/tauri-commands';
+await startSyncthingSidecar(); // Type-safe, documented, autocomplete
+```
+
+See [AGENTS.md](AGENTS.md) for detailed guidance on adding new commands.
 
 ## 🏗️ Architecture
 

@@ -15,6 +15,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ScrollText,
+  Bug,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -28,7 +31,15 @@ const iconMap = {
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { sidebarOpen, toggleSidebar, activeTab, setActiveTab } = useAppStore();
+  const {
+    sidebarOpen,
+    toggleSidebar,
+    activeTab,
+    setActiveTab,
+    focusMode,
+    toggleFocusMode,
+    toggleDebugPanel,
+  } = useAppStore();
 
   const navItems = TABS.map((id) => ({
     id,
@@ -96,8 +107,44 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Toggle Button */}
-      <div className="border-border border-t p-3">
+      {/* Bottom Actions */}
+      <div className="border-border space-y-1 border-t p-3">
+        {/* Focus Mode Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'text-muted-foreground hover:bg-accent hover:text-foreground w-full',
+            sidebarOpen ? 'justify-start gap-3' : 'justify-center',
+            focusMode && 'bg-primary/10 text-primary'
+          )}
+          onClick={toggleFocusMode}
+          title={focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
+        >
+          {focusMode ? (
+            <Minimize2 className="h-4 w-4 shrink-0" />
+          ) : (
+            <Maximize2 className="h-4 w-4 shrink-0" />
+          )}
+          {sidebarOpen && <span>{focusMode ? 'Exit Focus' : 'Focus Mode'}</span>}
+        </Button>
+
+        {/* Debug Panel Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'text-muted-foreground hover:bg-accent hover:text-foreground w-full',
+            sidebarOpen ? 'justify-start gap-3' : 'justify-center'
+          )}
+          onClick={toggleDebugPanel}
+          title="Debug Panel (Ctrl+Shift+D)"
+        >
+          <Bug className="h-4 w-4 shrink-0" />
+          {sidebarOpen && <span>Debug Panel</span>}
+        </Button>
+
+        {/* Sidebar Toggle */}
         <Button
           variant="ghost"
           size="sm"

@@ -6,13 +6,6 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { SyncthingEventSchema } from './schemas';
 import type { SyncthingEvent } from './types';
 
-// ---
-// Real-Time Events
-// ---
-
-/**
- * Hook for real-time Syncthing events using long-polling
- */
 export function useSyncthingEvents(options?: {
   onEvent?: (event: SyncthingEvent) => void;
   enabled?: boolean;

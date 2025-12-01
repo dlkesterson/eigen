@@ -1,53 +1,24 @@
-/**
- * useDeviceInvite - Handle device invitation via deep links and QR codes
- *
- * This hook provides:
- * - Deep link URL handling for device invitations
- * - QR code generation for easy device pairing
- * - Invitation link generation
- */
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useDeviceId } from './useSyncthing';
 import { logger } from '@/lib/logger';
 
-// ---
-// Types
-// ---
-
 export interface DeviceInvitation {
-  /** Device ID to add */
   deviceId: string;
-  /** Display name for the device */
   name?: string;
-  /** Whether to set as introducer */
   introducer?: boolean;
-  /** Expiration timestamp (ms) */
   expiresAt?: number;
 }
 
 export interface PendingInvitation extends DeviceInvitation {
-  /** When the invitation was received */
   receivedAt: number;
 }
-
-// ---
-// Constants
-// ---
 
 const INVITE_SCHEME = 'eigen';
 const INVITE_HOST = 'invite';
 const DEFAULT_EXPIRY_HOURS = 24;
 
-// ---
-// Utility Functions
-// ---
-
-/**
- * Generate an invitation URL for the current device
- */
 export function generateInviteUrl(
   deviceId: string,
   deviceName?: string,
@@ -75,9 +46,6 @@ export function generateInviteUrl(
   return `${INVITE_SCHEME}://${INVITE_HOST}?${params.toString()}`;
 }
 
-/**
- * Parse an invitation URL
- */
 export function parseInviteUrl(url: string): DeviceInvitation | null {
   try {
     // Handle both eigen:// and eigen://invite? formats
@@ -116,15 +84,8 @@ export function parseInviteUrl(url: string): DeviceInvitation | null {
   }
 }
 
-/**
- * Generate QR code data URL using a simple SVG-based approach
- * Note: For production, use a proper QR code library like 'qrcode'
- */
 export async function generateQRCodeDataUrl(content: string): Promise<string> {
-  // Check if we have access to a QR library
-  // This is a placeholder - in production, use 'qrcode' npm package
   try {
-    // Try to dynamically import qrcode if available
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const QRCode = await import('qrcode' as any);
     return await QRCode.toDataURL(content, {
@@ -132,11 +93,10 @@ export async function generateQRCodeDataUrl(content: string): Promise<string> {
       margin: 2,
       color: {
         dark: '#FFFFFF',
-        light: '#0F172A', // Slate 900
+        light: '#0F172A',
       },
     });
   } catch {
-    // Fallback: Return a placeholder that indicates QR needs to be generated
     return `data:image/svg+xml,${encodeURIComponent(`
       <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
         <rect width="256" height="256" fill="#0F172A"/>
@@ -150,10 +110,6 @@ export async function generateQRCodeDataUrl(content: string): Promise<string> {
     `)}`;
   }
 }
-
-// ---
-// Hook
-// ---
 
 interface UseDeviceInviteReturn {
   /** Current device ID */

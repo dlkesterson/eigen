@@ -1,15 +1,8 @@
-/**
- * Navigation and routing constants
- */
-
-/** Available application tabs/routes */
 export const TABS = ['dashboard', 'folders', 'devices', 'settings', 'logs'] as const;
 export type TabId = (typeof TABS)[number];
 
-/** Default active tab */
 export const DEFAULT_TAB: TabId = 'dashboard';
 
-/** Tab metadata for navigation components */
 export const TAB_CONFIG = {
   dashboard: {
     label: 'Dashboard',
@@ -33,7 +26,6 @@ export const TAB_CONFIG = {
   },
 } as const satisfies Record<TabId, { label: string; description: string }>;
 
-/** Query keys for React Query - centralized to avoid typos */
 export const QUERY_KEYS = {
   SYNCTHING_INSTALLATION: ['syncthingInstallation'],
   SYSTEM_STATUS: ['systemStatus'],

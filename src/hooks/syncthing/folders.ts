@@ -6,13 +6,6 @@ import { FolderStatusSchema, FolderConfigSchema, IgnorePatternsSchema } from './
 import type { FolderConfig, AdvancedFolderOptions } from './types';
 import type { Config } from './types';
 
-// ---
-// Folder Queries
-// ---
-
-/**
- * Get folder sync status
- */
 export function useFolderStatus(folderId: string) {
   return useQuery({
     queryKey: ['folderStatus', folderId],
@@ -26,9 +19,6 @@ export function useFolderStatus(folderId: string) {
   });
 }
 
-/**
- * Get folder configuration
- */
 export function useFolderConfig(folderId: string) {
   return useQuery({
     queryKey: ['folderConfig', folderId],
@@ -41,9 +31,6 @@ export function useFolderConfig(folderId: string) {
   });
 }
 
-/**
- * Get ignore patterns for a folder
- */
 export function useFolderIgnores(folderId: string) {
   return useQuery({
     queryKey: ['folderIgnores', folderId],
@@ -56,9 +43,6 @@ export function useFolderIgnores(folderId: string) {
   });
 }
 
-/**
- * Browse folder contents
- */
 export function useBrowseFolder(folderId: string, prefix?: string) {
   return useQuery({
     queryKey: ['browseFolder', folderId, prefix],
@@ -74,13 +58,6 @@ export function useBrowseFolder(folderId: string, prefix?: string) {
   });
 }
 
-// ---
-// Folder Mutations
-// ---
-
-/**
- * Pause a folder
- */
 export function usePauseFolder() {
   const queryClient = useQueryClient();
 
@@ -113,9 +90,6 @@ export function usePauseFolder() {
   });
 }
 
-/**
- * Resume a folder
- */
 export function useResumeFolder() {
   const queryClient = useQueryClient();
 
@@ -148,9 +122,6 @@ export function useResumeFolder() {
   });
 }
 
-/**
- * Rescan a folder
- */
 export function useRescanFolder() {
   const queryClient = useQueryClient();
 
@@ -164,9 +135,6 @@ export function useRescanFolder() {
   });
 }
 
-/**
- * Add a folder (basic)
- */
 export function useAddFolder() {
   const queryClient = useQueryClient();
 
@@ -188,9 +156,6 @@ export function useAddFolder() {
   });
 }
 
-/**
- * Add a folder with advanced options
- */
 export function useAddFolderAdvanced() {
   const queryClient = useQueryClient();
 
@@ -214,9 +179,6 @@ export function useAddFolderAdvanced() {
   });
 }
 
-/**
- * Remove a folder
- */
 export function useRemoveFolder() {
   const queryClient = useQueryClient();
 
@@ -230,9 +192,6 @@ export function useRemoveFolder() {
   });
 }
 
-/**
- * Share a folder with a device
- */
 export function useShareFolder() {
   const queryClient = useQueryClient();
 
@@ -246,9 +205,6 @@ export function useShareFolder() {
   });
 }
 
-/**
- * Unshare a folder from a device
- */
 export function useUnshareFolder() {
   const queryClient = useQueryClient();
 
@@ -273,9 +229,6 @@ export function useUnshareFolder() {
   });
 }
 
-/**
- * Update folder configuration
- */
 export function useUpdateFolderConfig() {
   const queryClient = useQueryClient();
 
@@ -296,9 +249,6 @@ export function useUpdateFolderConfig() {
   });
 }
 
-/**
- * Set ignore patterns for a folder
- */
 export function useSetFolderIgnores() {
   const queryClient = useQueryClient();
 
@@ -318,9 +268,6 @@ export function useSetFolderIgnores() {
   });
 }
 
-/**
- * Open folder in system file explorer
- */
 export function useOpenFolderInExplorer() {
   return useMutation({
     mutationFn: async (folderPath: string) => {

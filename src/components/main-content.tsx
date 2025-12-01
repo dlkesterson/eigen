@@ -107,12 +107,12 @@ function DashboardView() {
 
         {/* Folders Preview - Full width */}
         <BentoCard colSpan={2} spotlightColor="rgba(99, 102, 241, 0.1)">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between">
             <h3 className="text-muted-foreground text-sm font-medium">Synced Folders</h3>
             <Folder className="text-muted-foreground h-4 w-4" />
           </div>
-          <div className="flex-1 overflow-auto">
-            <FolderList />
+          <div className="flex-1">
+            <FolderList compact />
           </div>
         </BentoCard>
       </BentoGrid>

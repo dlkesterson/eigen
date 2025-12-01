@@ -4,13 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { useQuery } from '@tanstack/react-query';
 import { SystemLogsSchema } from './schemas';
 
-// ---
-// System Logs
-// ---
-
-/**
- * Get system logs
- */
 export function useSystemLogs(since?: string) {
   return useQuery({
     queryKey: ['systemLogs', since],

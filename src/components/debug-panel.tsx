@@ -19,11 +19,12 @@ import {
 import { logger, LogEntry } from '@/lib/logger';
 import { healthMonitor, HealthStatus } from '@/lib/health-monitor';
 import { syncthingCircuitBreaker } from '@/lib/retry';
+import { useAppStore } from '@/store';
 
 type LogFilter = 'all' | 'error' | 'warn' | 'info' | 'debug';
 
 export default function DebugPanel() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { debugPanelOpen: isOpen, setDebugPanelOpen, toggleDebugPanel } = useAppStore();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<LogFilter>('all');
   const [healthStatus, setHealthStatus] = useState<Map<string, HealthStatus>>(new Map());
@@ -34,12 +35,12 @@ export default function DebugPanel() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
-        setIsOpen((prev) => !prev);
+        toggleDebugPanel();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [toggleDebugPanel]);
 
   // Subscribe to log updates
   useEffect(() => {
@@ -101,19 +102,11 @@ export default function DebugPanel() {
   const healthSummary = healthMonitor.getSummary();
 
   if (!isOpen) {
-    return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="bg-primary hover:bg-primary/90 fixed right-4 bottom-4 z-50 h-12 w-12 rounded-full shadow-lg"
-        title="Open Debug Panel (Ctrl+Shift+D)"
-      >
-        <Bug className="h-5 w-5" />
-      </Button>
-    );
+    return null;
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
       <Card className="border-border bg-card flex h-[80vh] w-full max-w-6xl flex-col">
         <CardHeader className="border-border shrink-0 border-b">
           <div className="flex items-center justify-between">
@@ -149,7 +142,7 @@ export default function DebugPanel() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setDebugPanelOpen(false)}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />

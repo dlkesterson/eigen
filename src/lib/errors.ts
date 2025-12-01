@@ -355,9 +355,6 @@ export class ErrorHandler {
       ...normalized.toJSON(),
       additionalContext: context,
     });
-
-    // TODO: Send to error tracking service (Sentry, etc.)
-    // sentry.captureException(normalized, { contexts: { custom: context } });
   }
 }
 

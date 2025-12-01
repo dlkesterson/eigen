@@ -332,7 +332,57 @@ function FolderCard({
   );
 }
 
-export function FolderList() {
+// Compact folder item for dashboard view
+function CompactFolderItem({
+  folder,
+}: {
+  folder: {
+    id: string;
+    label?: string;
+    path?: string;
+    paused?: boolean;
+  };
+}) {
+  const { data: status } = useFolderStatus(folder.id);
+
+  const isPaused = folder.paused;
+  const isSyncing = status?.state === 'syncing';
+  const needsSync = (status?.needFiles || 0) > 0;
+
+  const getStatusBadge = () => {
+    if (isPaused) return <Badge variant="secondary">Paused</Badge>;
+    if (isSyncing) return <Badge variant="warning">Syncing</Badge>;
+    if (needsSync) return <Badge variant="warning">Needs Sync</Badge>;
+    return <Badge variant="success">Up to Date</Badge>;
+  };
+
+  return (
+    <div
+      className={cn(
+        'hover:bg-secondary/30 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors',
+        isPaused && 'opacity-60'
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="bg-primary/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+          <Folder className="text-primary h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-foreground truncate text-sm font-medium">
+            {folder.label || folder.id}
+          </p>
+          <p className="text-muted-foreground truncate text-xs">
+            {status?.localFiles?.toLocaleString() || 0} files •{' '}
+            {formatBytes(status?.localBytes || 0)}
+          </p>
+        </div>
+      </div>
+      <div className="ml-3 shrink-0">{getStatusBadge()}</div>
+    </div>
+  );
+}
+
+export function FolderList({ compact = false }: { compact?: boolean }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [shareData, setShareData] = useState<{
     id: string;
@@ -358,6 +408,22 @@ export function FolderList() {
   const localDeviceId = systemStatus?.myID;
 
   if (isLoading) {
+    if (compact) {
+      return (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          ))}
+        </div>
+      );
+    }
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map((i) => (
@@ -379,6 +445,14 @@ export function FolderList() {
   }
 
   if (isError || !config?.folders?.length) {
+    if (compact) {
+      return (
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <Folder className="text-muted-foreground mb-2 h-8 w-8" />
+          <p className="text-muted-foreground text-sm">No folders configured</p>
+        </div>
+      );
+    }
     return (
       <>
         <Card className="border-border bg-card/50 backdrop-blur-md">
@@ -397,6 +471,22 @@ export function FolderList() {
         </Card>
         <AddFolderDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
       </>
+    );
+  }
+
+  // Compact view for dashboard
+  if (compact) {
+    return (
+      <div className="space-y-1">
+        {config.folders.slice(0, 5).map((folder) => (
+          <CompactFolderItem key={folder.id} folder={folder} />
+        ))}
+        {config.folders.length > 5 && (
+          <p className="text-muted-foreground px-3 py-2 text-center text-xs">
+            +{config.folders.length - 5} more folders
+          </p>
+        )}
+      </div>
     );
   }
 

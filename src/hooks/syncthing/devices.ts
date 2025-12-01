@@ -5,13 +5,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DeviceConfigSchema } from './schemas';
 import type { DeviceConfig, AdvancedDeviceOptions, Config } from './types';
 
-// ---
-// Device Queries
-// ---
-
-/**
- * Get local device ID
- */
 export function useDeviceId() {
   return useQuery({
     queryKey: ['deviceId'],
@@ -23,9 +16,6 @@ export function useDeviceId() {
   });
 }
 
-/**
- * Get detailed device configuration
- */
 export function useDeviceConfig(deviceId: string) {
   return useQuery({
     queryKey: ['deviceConfig', deviceId],
@@ -38,13 +28,6 @@ export function useDeviceConfig(deviceId: string) {
   });
 }
 
-// ---
-// Device Mutations
-// ---
-
-/**
- * Add a device (basic)
- */
 export function useAddDevice() {
   const queryClient = useQueryClient();
 
@@ -59,9 +42,6 @@ export function useAddDevice() {
   });
 }
 
-/**
- * Add device with advanced options
- */
 export function useAddDeviceAdvanced() {
   const queryClient = useQueryClient();
 
@@ -85,9 +65,6 @@ export function useAddDeviceAdvanced() {
   });
 }
 
-/**
- * Remove a device
- */
 export function useRemoveDevice() {
   const queryClient = useQueryClient();
 
@@ -102,9 +79,6 @@ export function useRemoveDevice() {
   });
 }
 
-/**
- * Pause a device
- */
 export function usePauseDevice() {
   const queryClient = useQueryClient();
 
@@ -138,9 +112,6 @@ export function usePauseDevice() {
   });
 }
 
-/**
- * Resume a device
- */
 export function useResumeDevice() {
   const queryClient = useQueryClient();
 
@@ -174,9 +145,6 @@ export function useResumeDevice() {
   });
 }
 
-/**
- * Update device configuration
- */
 export function useUpdateDeviceConfig() {
   const queryClient = useQueryClient();
 

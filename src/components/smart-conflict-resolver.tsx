@@ -210,15 +210,9 @@ function SmartConflictCard({
 
     setIsAnalyzing(true);
     try {
-      // Note: In a real implementation, we would read the file contents
-      // via a Tauri command. For now, we'll show a placeholder.
-      // The actual implementation would look like:
-      // const originalContent = await invoke('read_file_content', { path: `${folderPath}/${conflict.original}` });
-      // const conflictContent = await invoke('read_file_content', { path: `${folderPath}/${conflict.name}` });
-
-      // Simulated analysis with placeholder content
+      // Diff analysis requires a backend command to read file contents (not yet implemented)
       setDiffSummary({
-        summary: 'Click "Analyze Differences" after enabling file reading in the backend.',
+        summary: 'Diff analysis requires backend file reading support.',
         additions: 0,
         deletions: 0,
         modifications: 0,

@@ -4,13 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { VersionEntry } from './types';
 
-// ---
-// File Versioning
-// ---
-
-/**
- * Browse .stversions folder for old file versions
- */
 export function useBrowseVersions(folderPath: string, prefix?: string) {
   return useQuery({
     queryKey: ['versions', folderPath, prefix],
@@ -26,9 +19,6 @@ export function useBrowseVersions(folderPath: string, prefix?: string) {
   });
 }
 
-/**
- * Restore a versioned file to its original location
- */
 export function useRestoreVersion() {
   const queryClient = useQueryClient();
 

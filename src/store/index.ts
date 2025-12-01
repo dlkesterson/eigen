@@ -4,22 +4,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type TabId, DEFAULT_TAB, type Theme, type AIStatus, DEFAULTS } from '@/constants';
 
-// Re-export types from constants for backward compatibility
 export type { AIStatus } from '@/constants';
 
 interface AppState {
-  // UI State
   sidebarOpen: boolean;
   activeTab: TabId;
   theme: Theme;
   focusMode: boolean;
-
-  // Settings
+  debugPanelOpen: boolean;
   pollingInterval: number;
   nativeNotificationsEnabled: boolean;
   aiEnabled: boolean;
 
-  // Actions
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   setActiveTab: (tab: TabId) => void;
@@ -29,12 +25,13 @@ interface AppState {
   setAiEnabled: (enabled: boolean) => void;
   toggleFocusMode: () => void;
   setFocusMode: (enabled: boolean) => void;
+  toggleDebugPanel: () => void;
+  setDebugPanelOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      // Initial State
       sidebarOpen: DEFAULTS.SIDEBAR_OPEN,
       activeTab: DEFAULT_TAB,
       theme: DEFAULTS.THEME,
@@ -42,8 +39,8 @@ export const useAppStore = create<AppState>()(
       nativeNotificationsEnabled: DEFAULTS.NATIVE_NOTIFICATIONS_ENABLED,
       aiEnabled: DEFAULTS.AI_ENABLED,
       focusMode: DEFAULTS.FOCUS_MODE,
+      debugPanelOpen: false,
 
-      // Actions
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setActiveTab: (tab) => set({ activeTab: tab }),
@@ -53,6 +50,8 @@ export const useAppStore = create<AppState>()(
       setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
       toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
       setFocusMode: (enabled) => set({ focusMode: enabled }),
+      toggleDebugPanel: () => set((state) => ({ debugPanelOpen: !state.debugPanelOpen })),
+      setDebugPanelOpen: (open) => set({ debugPanelOpen: open }),
     }),
     {
       name: 'eigen-app-store',
@@ -61,48 +60,40 @@ export const useAppStore = create<AppState>()(
 );
 
 interface AIState {
-  // AI Model state (shared across components)
   aiStatus: AIStatus;
   aiStatusMessage: string;
   aiProgress: { current: number; total: number } | null;
 
-  // Actions
   setAIStatus: (status: AIStatus) => void;
   setAIStatusMessage: (message: string) => void;
   setAIProgress: (progress: { current: number; total: number } | null) => void;
 }
 
 export const useAIStore = create<AIState>()((set) => ({
-  // Initial State
   aiStatus: 'idle',
   aiStatusMessage: '',
   aiProgress: null,
 
-  // Actions
   setAIStatus: (status) => set({ aiStatus: status }),
   setAIStatusMessage: (message) => set({ aiStatusMessage: message }),
   setAIProgress: (progress) => set({ aiProgress: progress }),
 }));
 
 interface SyncState {
-  // Syncthing state
   isConnected: boolean;
   isSyncthingRunning: boolean;
   lastError: string | null;
 
-  // Actions
   setConnected: (connected: boolean) => void;
   setSyncthingRunning: (running: boolean) => void;
   setLastError: (error: string | null) => void;
 }
 
 export const useSyncStore = create<SyncState>()((set) => ({
-  // Initial State
   isConnected: false,
   isSyncthingRunning: false,
   lastError: null,
 
-  // Actions
   setConnected: (connected) => set({ isConnected: connected }),
   setSyncthingRunning: (running) => set({ isSyncthingRunning: running }),
   setLastError: (error) => set({ lastError: error }),
