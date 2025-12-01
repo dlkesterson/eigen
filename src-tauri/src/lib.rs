@@ -15,13 +15,36 @@ pub struct SyncthingConfig {
 
 impl SyncthingConfig {
     /// Try to read API key from Syncthing's config file
+    /// Supports both Linux and Windows config paths
     fn read_api_key() -> Option<String> {
-        // Try common config locations
-        let home = std::env::var("HOME").ok()?;
-        let paths = [
-            format!("{home}/.local/state/syncthing/config.xml"),
-            format!("{home}/.config/syncthing/config.xml"),
-        ];
+        let mut paths = Vec::new();
+
+        // Linux/macOS config paths
+        if let Ok(home) = std::env::var("HOME") {
+            paths.push(format!("{home}/.local/state/syncthing/config.xml"));
+            paths.push(format!("{home}/.config/syncthing/config.xml"));
+        }
+
+        // Windows config paths
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+                paths.push(format!("{local_app_data}\\Syncthing\\config.xml"));
+            }
+            if let Ok(user_profile) = std::env::var("USERPROFILE") {
+                paths.push(format!(
+                    "{user_profile}\\AppData\\Local\\Syncthing\\config.xml"
+                ));
+            }
+        }
+
+        // Also try APPDATA on Windows (some installations use this)
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(app_data) = std::env::var("APPDATA") {
+                paths.push(format!("{app_data}\\Syncthing\\config.xml"));
+            }
+        }
 
         for path in &paths {
             if let Ok(content) = fs::read_to_string(path) {

@@ -39,18 +39,67 @@ function calculateDelay(
 
 /**
  * Default retry predicate - retry on network errors and 5xx status codes
+ * Handles both Linux and Windows error patterns
  */
 function defaultShouldRetry(error: unknown): boolean {
   if (error instanceof Error) {
-    // Network errors
-    if (error.message.includes('fetch') || error.message.includes('network')) {
+    const message = error.message.toLowerCase();
+
+    // Network errors (cross-platform)
+    if (message.includes('fetch') || message.includes('network')) {
       return true;
     }
-    // Connection errors
-    if (error.message.includes('ECONNREFUSED') || error.message.includes('ETIMEDOUT')) {
+
+    // Connection errors - Linux/Unix patterns
+    if (message.includes('econnrefused') || message.includes('etimedout')) {
       return true;
     }
-    if (error.message.includes('ECONNRESET') || error.message.includes('ENOTFOUND')) {
+    if (message.includes('econnreset') || message.includes('enotfound')) {
+      return true;
+    }
+    if (message.includes('epipe') || message.includes('ehostunreach')) {
+      return true;
+    }
+
+    // Connection errors - Windows patterns (Winsock errors)
+    // WSAECONNREFUSED (10061) - Connection refused
+    if (message.includes('wsaeconnrefused') || message.includes('10061')) {
+      return true;
+    }
+    // WSAETIMEDOUT (10060) - Connection timed out
+    if (message.includes('wsaetimedout') || message.includes('10060')) {
+      return true;
+    }
+    // WSAECONNRESET (10054) - Connection reset by peer
+    if (message.includes('wsaeconnreset') || message.includes('10054')) {
+      return true;
+    }
+    // WSAEHOSTUNREACH (10065) - No route to host
+    if (message.includes('wsaehostunreach') || message.includes('10065')) {
+      return true;
+    }
+    // WSAENETUNREACH (10051) - Network is unreachable
+    if (message.includes('wsaenetunreach') || message.includes('10051')) {
+      return true;
+    }
+    // WSAENOTCONN (10057) - Socket is not connected
+    if (message.includes('wsaenotconn') || message.includes('10057')) {
+      return true;
+    }
+
+    // Generic connection failure patterns
+    if (message.includes('connection refused') || message.includes('connection reset')) {
+      return true;
+    }
+    if (message.includes('timed out') || message.includes('timeout')) {
+      return true;
+    }
+    if (message.includes('host unreachable') || message.includes('network unreachable')) {
+      return true;
+    }
+
+    // Tauri/IPC errors that might be recoverable
+    if (message.includes('ipc') || message.includes('channel closed')) {
       return true;
     }
   }

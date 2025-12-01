@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
-import { useConnections, useConfig } from '@/hooks/useSyncthing';
+import { useConnections, useConfig, useSystemStatus } from '@/hooks/useSyncthing';
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -37,6 +37,7 @@ export function NetworkGraphLive() {
   const { resolvedTheme } = useTheme();
   const { data: connections, isLoading: connectionsLoading } = useConnections();
   const { data: config, isLoading: configLoading } = useConfig();
+  const { data: systemStatus } = useSystemStatus();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +64,8 @@ export function NetworkGraphLive() {
   const graphData = useMemo<GraphData>(() => {
     if (!config?.devices) return { nodes: [], links: [] };
 
-    const myId = (connections as { myID?: string } | undefined)?.myID;
+    // Get myID from systemStatus (not connections)
+    const myId = systemStatus?.myID;
     const conns = connections?.connections || {};
 
     const nodes: GraphNode[] = config.devices.map((d: { deviceID: string; name?: string }) => ({
@@ -73,7 +75,7 @@ export function NetworkGraphLive() {
       group: d.deviceID === myId ? 'me' : 'peer',
       color:
         d.deviceID === myId
-          ? '#6366f1' // Indigo for self
+          ? '#6366f1' // Indigo for self (always "connected" - it's us!)
           : (conns[d.deviceID] as { connected?: boolean })?.connected
             ? '#10b981' // Green for connected
             : '#ef4444', // Red for disconnected
@@ -95,7 +97,7 @@ export function NetworkGraphLive() {
       .filter((link: GraphLink) => link.source); // Only include if we have a source
 
     return { nodes, links };
-  }, [connections, config, resolvedTheme]);
+  }, [connections, config, systemStatus, resolvedTheme]);
 
   // Adjust engine forces and center the graph
   useEffect(() => {

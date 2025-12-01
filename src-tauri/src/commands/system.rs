@@ -20,26 +20,19 @@ pub struct SyncthingInfo {
 pub fn check_syncthing_installation() -> SyncthingInfo {
     use std::process::Command;
 
-    match Command::new("syncthing").arg("--version").output() {
-        Ok(output) => {
+    // Try running syncthing --version
+    let syncthing_output = Command::new("syncthing").arg("--version").output();
+
+    match syncthing_output {
+        Ok(output) if output.status.success() => {
             let version_str = String::from_utf8_lossy(&output.stdout);
             let version = version_str
                 .lines()
                 .next()
                 .map(std::string::ToString::to_string);
 
-            let path = Command::new("which")
-                .arg("syncthing")
-                .output()
-                .ok()
-                .and_then(|o| {
-                    let p = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                    if p.is_empty() {
-                        None
-                    } else {
-                        Some(p)
-                    }
-                });
+            // Find the syncthing path in a platform-specific way
+            let path = find_syncthing_path();
 
             SyncthingInfo {
                 installed: true,
@@ -48,12 +41,58 @@ pub fn check_syncthing_installation() -> SyncthingInfo {
                 bundled: false,
             }
         },
-        Err(_) => SyncthingInfo {
+        _ => SyncthingInfo {
             installed: true, // Bundled sidecar is always available
             version: Some("bundled".to_string()),
             path: Some("bundled sidecar".to_string()),
             bundled: true,
         },
+    }
+}
+
+/// Find the syncthing executable path in a cross-platform way
+fn find_syncthing_path() -> Option<String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, use 'where' command
+        Command::new("where")
+            .arg("syncthing")
+            .output()
+            .ok()
+            .and_then(|o| {
+                if o.status.success() {
+                    let p = String::from_utf8_lossy(&o.stdout)
+                        .lines()
+                        .next()
+                        .map(|s| s.trim().to_string());
+                    p.filter(|s| !s.is_empty())
+                } else {
+                    None
+                }
+            })
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // On Unix-like systems, use 'which' command
+        Command::new("which")
+            .arg("syncthing")
+            .output()
+            .ok()
+            .and_then(|o| {
+                if o.status.success() {
+                    let p = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                    if p.is_empty() {
+                        None
+                    } else {
+                        Some(p)
+                    }
+                } else {
+                    None
+                }
+            })
     }
 }
 
