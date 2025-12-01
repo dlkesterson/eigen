@@ -22,7 +22,15 @@ src/
 
 src-tauri/
 ├── src/
-│   ├── commands.rs         # Tauri command implementations
+│   ├── commands/           # Modular Tauri command implementations
+│   │   ├── mod.rs          # Module exports
+│   │   ├── system.rs       # System lifecycle commands
+│   │   ├── config.rs       # Configuration commands
+│   │   ├── folders.rs      # Folder management commands
+│   │   ├── devices.rs      # Device management commands
+│   │   ├── files.rs        # File operations commands
+│   │   ├── events.rs       # Event polling commands
+│   │   └── pending.rs      # Pending request commands
 │   ├── lib.rs              # App setup and command registration
 │   └── main.rs             # Entry point
 └── binaries/               # Bundled Syncthing binary
@@ -54,6 +62,7 @@ Server state is managed with TanStack Query. Hooks are organized in `src/hooks/s
 - `events.ts` - Real-time event polling
 - `conflicts.ts` - Conflict resolution
 - `versions.ts` - File versioning
+- `pending.ts` - Pending device/folder requests
 - `logs.ts` - System logs
 - `options.ts` - Global options
 

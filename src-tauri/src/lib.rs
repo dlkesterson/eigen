@@ -273,6 +273,14 @@ pub fn run() {
             commands::events::get_events,
             commands::events::get_system_logs,
             commands::events::update_tray_status,
+            // Pending request commands
+            commands::pending::get_pending_devices,
+            commands::pending::get_pending_folders,
+            commands::pending::get_pending_requests,
+            commands::pending::accept_pending_device,
+            commands::pending::dismiss_pending_device,
+            commands::pending::accept_pending_folder,
+            commands::pending::dismiss_pending_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

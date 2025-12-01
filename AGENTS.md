@@ -42,9 +42,10 @@ This file serves as the **single source of truth** for frontend-backend communic
 
 When adding a new Tauri command:
 
-1. **Rust Backend** (`src-tauri/src/commands.rs`):
+1. **Rust Backend** - Add to the appropriate module in `src-tauri/src/commands/`:
 
    ```rust
+   // In src-tauri/src/commands/pending.rs (or appropriate module)
    #[tauri::command]
    pub async fn my_new_command(
        state: State<'_, SyncthingState>,
@@ -54,7 +55,13 @@ When adding a new Tauri command:
    }
    ```
 
-2. **Register in lib.rs** (`src-tauri/src/lib.rs`):
+2. **Export from mod.rs** (`src-tauri/src/commands/mod.rs`):
+
+   ```rust
+   pub use pending::my_new_command;
+   ```
+
+3. **Register in lib.rs** (`src-tauri/src/lib.rs`):
 
    ```rust
    .invoke_handler(tauri::generate_handler![
@@ -63,7 +70,7 @@ When adding a new Tauri command:
    ])
    ```
 
-3. **Add typed wrapper** (`src/lib/tauri-commands.ts`):
+4. **Add typed wrapper** (`src/lib/tauri-commands.ts`):
 
    ```typescript
    /**
@@ -76,7 +83,7 @@ When adding a new Tauri command:
    }
    ```
 
-4. **Use in hooks/components**:
+5. **Use in hooks/components**:
 
    ```typescript
    import { myNewCommand } from '@/lib/tauri-commands';
@@ -98,13 +105,22 @@ src/
 │       ├── core.ts          # Lifecycle hooks (start/stop/status)
 │       ├── folders.ts       # Folder management hooks
 │       ├── devices.ts       # Device management hooks
+│       ├── pending.ts       # Pending device/folder request hooks
 │       └── schemas.ts       # Zod schemas for validation
 ├── components/              # React components
 └── store/                   # Zustand state management
 
 src-tauri/
 ├── src/
-│   ├── commands.rs          # All Tauri command implementations
+│   ├── commands/            # Modular Tauri command implementations
+│   │   ├── mod.rs           # Module exports
+│   │   ├── system.rs        # System lifecycle commands
+│   │   ├── config.rs        # Configuration commands
+│   │   ├── folders.rs       # Folder management commands
+│   │   ├── devices.rs       # Device management commands
+│   │   ├── files.rs         # File operations commands
+│   │   ├── events.rs        # Event polling commands
+│   │   └── pending.rs       # Pending request commands
 │   ├── lib.rs               # Command registration & app setup
 │   └── main.rs              # Entry point
 └── binaries/                # Bundled Syncthing binary

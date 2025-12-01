@@ -39,4 +39,8 @@ export const QUERY_KEYS = {
   IGNORE_PATTERNS: (folderId: string) => ['ignorePatterns', folderId],
   FOLDER_VERSIONS: (folderId: string, path: string) => ['folderVersions', folderId, path],
   CONFLICTS: (folderPath: string) => ['conflicts', folderPath],
+  // Pending requests
+  PENDING_DEVICES: 'pendingDevices',
+  PENDING_FOLDERS: 'pendingFolders',
+  PENDING_REQUESTS: 'pendingRequests',
 } as const;

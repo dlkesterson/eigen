@@ -25,3 +25,6 @@ yarn.lock
 *.min.js
 *.min.css
 coverage/
+
+# Next.js auto-generated files
+next-env.d.ts

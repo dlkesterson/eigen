@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { MainContent } from '@/components/main-content';
 import { MobileNav } from '@/components/mobile-nav';
+import { PendingRequestsBanner } from '@/components/pending-requests-banner';
 import { useAppStore } from '@/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Minimize2, Bug } from 'lucide-react';
@@ -72,6 +73,7 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
               <Header />
+              <PendingRequestsBanner />
             </motion.div>
           )}
         </AnimatePresence>

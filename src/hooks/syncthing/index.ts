@@ -63,3 +63,15 @@ export { useSystemLogs } from './logs';
 
 // Re-export options hooks
 export { useUpdateOptions } from './options';
+
+// Re-export pending request hooks
+export {
+  usePendingDevices,
+  usePendingFolders,
+  usePendingRequests,
+  useAcceptPendingDevice,
+  useDismissPendingDevice,
+  useAcceptPendingFolder,
+  useDismissPendingFolder,
+  usePendingRequestsManager,
+} from './pending';

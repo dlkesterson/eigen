@@ -31,6 +31,7 @@
 ### Device Sharing & Pairing
 
 - 📱 **QR Code Invites** - Generate QR codes for easy device pairing
+- 🔔 **Pending Request Handling** - Accept or dismiss incoming device and folder share requests
 - 🔗 **Deep Links** - `eigen://invite` deep link protocol for one-click device addition
 - 📋 **Shareable Links** - Copy invite links with optional expiration
 
@@ -147,6 +148,9 @@ eigen/
 │   │   ├── folder-list.tsx       # Sync folder management
 │   │   ├── device-list.tsx       # Device management
 │   │   ├── share-device-dialog.tsx  # QR code & link sharing
+│   │   ├── add-device-dialog.tsx    # Add device with QR code display
+│   │   ├── pending-requests-banner.tsx  # Pending request notification banner
+│   │   ├── pending-requests-dialog.tsx  # Accept/dismiss pending requests
 │   │   ├── ignore-patterns-dialog.tsx  # Ignore pattern editor
 │   │   ├── log-viewer.tsx        # System log viewer
 │   │   ├── settings-page.tsx     # App settings
@@ -156,6 +160,7 @@ eigen/
 │   │   │   ├── core.ts           # Lifecycle hooks (start/stop/status)
 │   │   │   ├── folders.ts        # Folder management hooks
 │   │   │   ├── devices.ts        # Device management hooks
+│   │   │   ├── pending.ts        # Pending device/folder request hooks
 │   │   │   └── schemas.ts        # Zod validation schemas
 │   │   ├── useAISearch.ts        # AI search functionality
 │   │   ├── useDeviceInvite.ts    # Device invitation & QR codes
@@ -174,7 +179,15 @@ eigen/
 │       └── ai.worker.ts          # AI embedding generation
 ├── src-tauri/                    # Rust backend
 │   ├── src/
-│   │   ├── commands.rs           # Tauri command handlers
+│   │   ├── commands/             # Modular Tauri command handlers
+│   │   │   ├── mod.rs            # Module exports
+│   │   │   ├── system.rs         # System lifecycle (start/stop/status)
+│   │   │   ├── config.rs         # Configuration management
+│   │   │   ├── folders.rs        # Folder operations
+│   │   │   ├── devices.rs        # Device operations
+│   │   │   ├── files.rs          # File operations
+│   │   │   ├── events.rs         # Event polling
+│   │   │   └── pending.rs        # Pending request handling
 │   │   ├── lib.rs                # Library entry point & command registration
 │   │   └── main.rs               # Application entry
 │   ├── binaries/                 # Bundled Syncthing binary

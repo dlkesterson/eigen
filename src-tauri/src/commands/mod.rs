@@ -7,6 +7,7 @@
 //! - `devices`: Device management operations
 //! - `files`: File browser, conflicts, versions, ignores
 //! - `events`: Events, logs, tray updates
+//! - `pending`: Pending device/folder requests
 
 // Expose submodules publicly so Tauri's generate_handler! macro can access
 // the __cmd__ prefixed items it generates
@@ -15,6 +16,7 @@ pub mod devices;
 pub mod events;
 pub mod files;
 pub mod folders;
+pub mod pending;
 pub mod system;
 
 // Re-export all commands for use in lib.rs invoke_handler
@@ -50,3 +52,10 @@ pub use files::{
 
 // Event commands (events, logs, tray)
 pub use events::{get_events, get_system_logs, update_tray_status};
+
+// Pending request commands
+pub use pending::{
+    accept_pending_device, accept_pending_folder, dismiss_pending_device, dismiss_pending_folder,
+    get_pending_devices, get_pending_folders, get_pending_requests, PendingDevice, PendingFolder,
+    PendingRequests,
+};

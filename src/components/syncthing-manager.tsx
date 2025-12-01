@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useStartSyncthing,
   useSystemStatus,
@@ -12,6 +13,7 @@ import {
 import { useNativeNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { QUERY_KEYS } from '@/constants/routes';
 
 /**
  * Updates the system tray tooltip with current sync status
@@ -45,6 +47,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
   const hasAttemptedStart = useRef(false);
   const installationToastShown = useRef(false);
   const connectedToastShown = useRef(false);
+  const queryClient = useQueryClient();
 
   // Track last notification time per device to prevent spam
   const deviceNotificationTimestamps = useRef<Map<string, number>>(new Map());
@@ -95,22 +98,12 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
         case 'DeviceRejected': {
           // A device tried to connect but isn't in our config
           const deviceName = event.data?.name || event.data?.device?.slice(0, 7) || 'Unknown';
-          toast.warning('New Device Wants to Connect', {
-            description: `Device ${deviceName} is trying to connect.`,
-            duration: 15000,
-            action: {
-              label: 'View Devices',
-              onClick: () => {
-                // Navigate to devices tab
-                window.dispatchEvent(
-                  new CustomEvent('navigate-to-tab', {
-                    detail: 'devices',
-                  })
-                );
-              },
-            },
-          });
-          // Also send native notification (shown when window is hidden)
+
+          // Invalidate pending requests to update the banner
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_DEVICES] });
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_REQUESTS] });
+
+          // Send native notification (shown when window is hidden/minimized)
           notifyDeviceEvent('rejected', deviceName);
           break;
         }
@@ -119,21 +112,12 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
           // A folder was shared to us but isn't in our config
           const folderName = event.data?.folderLabel || event.data?.folder || 'Unknown';
           const fromDevice = event.data?.device?.slice(0, 7) || 'A device';
-          toast.info('Folder Shared With You', {
-            description: `Device ${fromDevice} wants to share folder "${folderName}".`,
-            duration: 15000,
-            action: {
-              label: 'View Folders',
-              onClick: () => {
-                window.dispatchEvent(
-                  new CustomEvent('navigate-to-tab', {
-                    detail: 'folders',
-                  })
-                );
-              },
-            },
-          });
-          // Native notification
+
+          // Invalidate pending requests to update the banner
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_FOLDERS] });
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_REQUESTS] });
+
+          // Send native notification (shown when window is hidden/minimized)
           notifyFolderEvent('shared', folderName, fromDevice);
           break;
         }
@@ -215,7 +199,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
           break;
       }
     },
-    [notifyDeviceEvent, notifyFolderEvent, shouldNotifyDevice, shouldNotifyFolder]
+    [notifyDeviceEvent, notifyFolderEvent, shouldNotifyDevice, shouldNotifyFolder, queryClient]
   );
 
   // Subscribe to Syncthing events when connected

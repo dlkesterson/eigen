@@ -402,3 +402,101 @@ export async function getEvents(params?: {
 export async function updateTrayStatus(status: string, tooltip: string): Promise<void> {
   return invoke('update_tray_status', { status, tooltip });
 }
+
+// =============================================================================
+// Pending Requests Commands
+// =============================================================================
+
+/**
+ * Pending device connection request
+ */
+export interface PendingDevice {
+  deviceId: string;
+  name?: string;
+  address?: string;
+  time?: string;
+}
+
+/**
+ * Pending folder share request
+ */
+export interface PendingFolder {
+  folderId: string;
+  folderLabel?: string;
+  offeredBy: string;
+  offeredByName?: string;
+  time?: string;
+  receiveEncrypted: boolean;
+  remoteEncrypted: boolean;
+}
+
+/**
+ * All pending requests (devices and folders)
+ */
+export interface PendingRequests {
+  devices: PendingDevice[];
+  folders: PendingFolder[];
+}
+
+/**
+ * Get all pending device connection requests
+ */
+export async function getPendingDevices(): Promise<PendingDevice[]> {
+  return invoke<PendingDevice[]>('get_pending_devices');
+}
+
+/**
+ * Get all pending folder share requests
+ */
+export async function getPendingFolders(): Promise<PendingFolder[]> {
+  return invoke<PendingFolder[]>('get_pending_folders');
+}
+
+/**
+ * Get all pending requests (devices and folders) in one call
+ */
+export async function getPendingRequests(): Promise<PendingRequests> {
+  return invoke<PendingRequests>('get_pending_requests');
+}
+
+/**
+ * Accept a pending device connection request
+ * @param deviceId - The device ID to accept
+ * @param name - Optional name for the device
+ */
+export async function acceptPendingDevice(deviceId: string, name?: string): Promise<void> {
+  return invoke('accept_pending_device', { deviceId, name });
+}
+
+/**
+ * Dismiss/reject a pending device connection request
+ * @param deviceId - The device ID to dismiss
+ */
+export async function dismissPendingDevice(deviceId: string): Promise<void> {
+  return invoke('dismiss_pending_device', { deviceId });
+}
+
+/**
+ * Accept a pending folder share request
+ * @param folderId - The folder ID to accept
+ * @param deviceId - The device ID that shared the folder
+ * @param folderPath - Local path where the folder will be synced
+ * @param folderLabel - Optional label for the folder
+ */
+export async function acceptPendingFolder(
+  folderId: string,
+  deviceId: string,
+  folderPath: string,
+  folderLabel?: string
+): Promise<void> {
+  return invoke('accept_pending_folder', { folderId, deviceId, folderPath, folderLabel });
+}
+
+/**
+ * Dismiss/reject a pending folder share request
+ * @param folderId - The folder ID to dismiss
+ * @param deviceId - The device ID that shared the folder
+ */
+export async function dismissPendingFolder(folderId: string, deviceId: string): Promise<void> {
+  return invoke('dismiss_pending_folder', { folderId, deviceId });
+}
