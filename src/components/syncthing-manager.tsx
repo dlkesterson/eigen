@@ -99,22 +99,11 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
           // A device tried to connect but isn't in our config
           const deviceName = event.data?.name || event.data?.device?.slice(0, 7) || 'Unknown';
 
-          // Invalidate pending requests to show the new pending device
+          // Invalidate pending requests to update the banner
           queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_DEVICES] });
           queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_REQUESTS] });
 
-          toast.warning('New Device Wants to Connect', {
-            description: `Device ${deviceName} is trying to connect.`,
-            duration: 15000,
-            action: {
-              label: 'Review',
-              onClick: () => {
-                // Open pending requests dialog via custom event
-                window.dispatchEvent(new CustomEvent('open-pending-requests'));
-              },
-            },
-          });
-          // Also send native notification (shown when window is hidden)
+          // Send native notification (shown when window is hidden/minimized)
           notifyDeviceEvent('rejected', deviceName);
           break;
         }
@@ -124,22 +113,11 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
           const folderName = event.data?.folderLabel || event.data?.folder || 'Unknown';
           const fromDevice = event.data?.device?.slice(0, 7) || 'A device';
 
-          // Invalidate pending requests to show the new pending folder
+          // Invalidate pending requests to update the banner
           queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_FOLDERS] });
           queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_REQUESTS] });
 
-          toast.info('Folder Shared With You', {
-            description: `Device ${fromDevice} wants to share folder "${folderName}".`,
-            duration: 15000,
-            action: {
-              label: 'Review',
-              onClick: () => {
-                // Open pending requests dialog via custom event
-                window.dispatchEvent(new CustomEvent('open-pending-requests'));
-              },
-            },
-          });
-          // Native notification
+          // Send native notification (shown when window is hidden/minimized)
           notifyFolderEvent('shared', folderName, fromDevice);
           break;
         }

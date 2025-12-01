@@ -32,13 +32,14 @@ When suggesting code that calls the Rust backend, always:
 
 ## Key Files
 
-| File                             | Purpose                          |
-| -------------------------------- | -------------------------------- |
-| `src/lib/tauri-commands.ts`      | **Typed Tauri command wrappers** |
-| `src/hooks/syncthing/core.ts`    | Syncthing lifecycle hooks        |
-| `src/hooks/syncthing/schemas.ts` | Zod validation schemas           |
-| `src-tauri/src/commands.rs`      | Rust command implementations     |
-| `src-tauri/src/lib.rs`           | Command registration             |
+| File                             | Purpose                              |
+| -------------------------------- | ------------------------------------ |
+| `src/lib/tauri-commands.ts`      | **Typed Tauri command wrappers**     |
+| `src/hooks/syncthing/core.ts`    | Syncthing lifecycle hooks            |
+| `src/hooks/syncthing/pending.ts` | Pending device/folder request hooks  |
+| `src/hooks/syncthing/schemas.ts` | Zod validation schemas               |
+| `src-tauri/src/commands/`        | Modular Rust command implementations |
+| `src-tauri/src/lib.rs`           | Command registration                 |
 
 ## Preferred Patterns
 
@@ -63,10 +64,11 @@ import { useSystemStatus, useConfig } from '@/hooks/syncthing';
 
 ## Adding New Tauri Commands
 
-1. Add Rust function in `src-tauri/src/commands.rs`
-2. Register in `src-tauri/src/lib.rs` invoke_handler
-3. Add typed wrapper in `src/lib/tauri-commands.ts`
-4. Use the wrapper in hooks/components
+1. Add Rust function in appropriate module under `src-tauri/src/commands/`
+2. Export from `src-tauri/src/commands/mod.rs`
+3. Register in `src-tauri/src/lib.rs` invoke_handler
+4. Add typed wrapper in `src/lib/tauri-commands.ts`
+5. Use the wrapper in hooks/components
 
 ## Don't
 

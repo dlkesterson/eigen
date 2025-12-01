@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/store';
 import { useSystemStatus, usePendingRequestsManager } from '@/hooks/useSyncthing';
@@ -18,13 +18,6 @@ export function Header() {
   const [showPendingDialog, setShowPendingDialog] = useState(false);
 
   const isOnline = !isError && status?.myID;
-
-  // Listen for custom event to open pending requests dialog
-  useEffect(() => {
-    const handleOpenPending = () => setShowPendingDialog(true);
-    window.addEventListener('open-pending-requests', handleOpenPending);
-    return () => window.removeEventListener('open-pending-requests', handleOpenPending);
-  }, []);
 
   const handleSearchResultSelect = (_path: string) => {
     // Navigate to folders tab and potentially open file browser

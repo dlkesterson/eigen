@@ -285,8 +285,9 @@ pub async fn accept_pending_folder(
                 if folder["id"].as_str() == Some(&folder_id) {
                     if let Some(devices) = folder["devices"].as_array_mut() {
                         // Check if device is already in folder
-                        let device_in_folder =
-                            devices.iter().any(|d| d["deviceID"].as_str() == Some(&device_id));
+                        let device_in_folder = devices
+                            .iter()
+                            .any(|d| d["deviceID"].as_str() == Some(&device_id));
                         if !device_in_folder {
                             devices.push(serde_json::json!({
                                 "deviceID": device_id.clone(),

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useDeviceId, useAddDeviceAdvanced } from '@/hooks/useSyncthing';
+import { generateQRCodeDataUrl } from '@/hooks/useDeviceInvite';
 import {
   Copy,
   Check,
@@ -54,7 +55,6 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
   const [deviceName, setDeviceName] = useState('');
   const [copied, setCopied] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-
   // Advanced options
   const [addresses, setAddresses] = useState('dynamic');
   const [compression, setCompression] = useState<CompressionType>('metadata');
@@ -65,6 +65,35 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 
   const { data: localDeviceId, isLoading: deviceIdLoading } = useDeviceId();
   const addDevice = useAddDeviceAdvanced();
+
+  // Generate QR code when device ID is available
+  const [qrCodeUrl, setQRCodeUrl] = useState<string | null>(null);
+  const [qrGenStarted, setQrGenStarted] = useState(false);
+
+  // Derive loading state: we're loading if we started generating but don't have URL yet
+  const isGeneratingQR = qrGenStarted && !qrCodeUrl;
+
+  // Generate QR code once when dialog opens and device ID is available
+  useEffect(() => {
+    if (!open) {
+      // Reset for next open - this is intentional to clear state when dialog closes
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQrGenStarted(false);
+      setQRCodeUrl(null);
+      return;
+    }
+
+    if (open && localDeviceId && !qrGenStarted) {
+      setQrGenStarted(true);
+      let cancelled = false;
+      generateQRCodeDataUrl(localDeviceId).then((url) => {
+        if (!cancelled) setQRCodeUrl(url);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [open, localDeviceId, qrGenStarted]);
 
   const handleCopyId = async () => {
     if (localDeviceId) {
@@ -113,6 +142,7 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
     setAutoAcceptFolders(false);
     setMaxSendKbps(0);
     setMaxRecvKbps(0);
+    setQRCodeUrl(null);
   };
 
   if (!open) return null;
@@ -141,32 +171,59 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
             <p className="text-muted-foreground text-xs">
               Share this ID with other devices you want to connect to.
             </p>
-            <div className="flex gap-2">
-              <div
-                className={cn(
-                  'border-border bg-secondary flex-1 rounded-lg border p-3',
-                  'text-muted-foreground font-mono text-xs break-all'
-                )}
-              >
-                {deviceIdLoading ? (
-                  <span className="text-muted-foreground">Loading...</span>
+
+            {/* QR Code and Device ID side by side */}
+            <div className="flex gap-4">
+              {/* QR Code */}
+              <div className="border-border bg-secondary flex h-32 w-32 shrink-0 items-center justify-center rounded-lg border">
+                {isGeneratingQR || deviceIdLoading ? (
+                  <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+                ) : qrCodeUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={qrCodeUrl}
+                    alt="Device ID QR Code"
+                    className="h-full w-full rounded-lg"
+                  />
                 ) : (
-                  localDeviceId || 'Unable to get Device ID'
+                  <QrCode className="text-muted-foreground h-8 w-8" />
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleCopyId}
-                disabled={!localDeviceId}
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-emerald-400" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+
+              {/* Device ID and Copy Button */}
+              <div className="flex flex-1 flex-col gap-2">
+                <div
+                  className={cn(
+                    'border-border bg-secondary flex-1 rounded-lg border p-3',
+                    'text-muted-foreground font-mono text-xs break-all'
+                  )}
+                >
+                  {deviceIdLoading ? (
+                    <span className="text-muted-foreground">Loading...</span>
+                  ) : (
+                    localDeviceId || 'Unable to get Device ID'
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyId}
+                  disabled={!localDeviceId}
+                  className="w-full"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4 text-emerald-400" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Device ID
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 

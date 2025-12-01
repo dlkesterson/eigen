@@ -21,10 +21,14 @@
     "tauri:check": "cd src-tauri && cargo check --all-targets",
     "download:syncthing": "node scripts/download-syncthing.js",
     "prebuild": "node scripts/download-syncthing.js",
-    "ci": "./scripts/check.sh",
-    "ci:frontend": "./scripts/check.sh --frontend",
-    "ci:backend": "./scripts/check.sh --backend",
-    "ci:all": "./scripts/check.sh --all"
+    "ci": "pnpm ci:frontend && pnpm ci:backend:fmt",
+    "ci:frontend": "pnpm lint && pnpm format:check && pnpm type-check",
+    "ci:backend:fmt": "cd src-tauri && cargo fmt --all -- --check",
+    "ci:backend:clippy": "cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings",
+    "ci:backend": "pnpm ci:backend:fmt && pnpm ci:backend:clippy",
+    "ci:all": "pnpm ci:frontend && pnpm ci:backend && pnpm build && cd src-tauri && cargo check --all-targets",
+    "ci:sh": "./scripts/check.sh",
+    "ci:ps": "powershell -ExecutionPolicy Bypass -File scripts/check.ps1"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",
