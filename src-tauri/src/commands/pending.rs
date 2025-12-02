@@ -108,37 +108,40 @@ pub async fn get_pending_folders(
         .await
         .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
 
-    // The API returns a nested map: folderID -> deviceID -> folder info
-    let json: HashMap<String, HashMap<String, serde_json::Value>> = res
+    // The API returns: { folderID: { offeredBy: { deviceID: { time, label, ... } } } }
+    let json: HashMap<String, serde_json::Value> = res
         .json()
         .await
         .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
 
     let mut folders: Vec<PendingFolder> = Vec::new();
 
-    for (folder_id, devices) in json {
-        for (device_id, info) in devices {
-            folders.push(PendingFolder {
-                folder_id: folder_id.clone(),
-                folder_label: info
-                    .get("offeredBy")
-                    .and_then(|ob| ob.get(&device_id))
-                    .and_then(|d| d.get("label"))
-                    .and_then(|v| v.as_str())
-                    .map(String::from)
-                    .or_else(|| info.get("label").and_then(|v| v.as_str()).map(String::from)),
-                offered_by: device_id,
-                offered_by_name: None, // We'll need to look this up from config if needed
-                time: info.get("time").and_then(|v| v.as_str()).map(String::from),
-                receive_encrypted: info
-                    .get("receiveEncrypted")
-                    .and_then(serde_json::Value::as_bool)
-                    .unwrap_or(false),
-                remote_encrypted: info
-                    .get("remoteEncrypted")
-                    .and_then(serde_json::Value::as_bool)
-                    .unwrap_or(false),
-            });
+    for (folder_id, folder_info) in json {
+        // Get the offeredBy map which contains device_id -> offer info
+        if let Some(offered_by) = folder_info.get("offeredBy").and_then(|v| v.as_object()) {
+            for (device_id, offer_info) in offered_by {
+                folders.push(PendingFolder {
+                    folder_id: folder_id.clone(),
+                    folder_label: offer_info
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .map(String::from),
+                    offered_by: device_id.clone(),
+                    offered_by_name: None, // We'll need to look this up from config if needed
+                    time: offer_info
+                        .get("time")
+                        .and_then(|v| v.as_str())
+                        .map(String::from),
+                    receive_encrypted: offer_info
+                        .get("receiveEncrypted")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false),
+                    remote_encrypted: offer_info
+                        .get("remoteEncrypted")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false),
+                });
+            }
         }
     }
 
