@@ -1,9 +1,11 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { Html, MeshDistortMaterial } from '@react-three/drei';
+import { Html } from '@react-three/drei';
+import { getDevicePreset } from './orb-presets';
+import { createMaterialFromPreset } from './orb-material';
 
 export interface DeviceOrbData {
   id: string;
@@ -87,10 +89,32 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
   const glowRef = useRef<THREE.Mesh>(null);
   const outerGlowRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.LineSegments>(null);
-  const fresnelRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.ShaderMaterial | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Get unique preset for this device based on ID and state
+  const preset = useMemo(
+    () =>
+      getDevicePreset(device.id, {
+        isLocal: device.isLocal,
+        isOnline: device.isOnline,
+        isSyncing: device.isSyncing,
+        isPaused: device.isPaused,
+      }),
+    [device.id, device.isLocal, device.isOnline, device.isSyncing, device.isPaused]
+  );
+
+  // Create shader material from preset (memoized and stored in ref)
+  const shaderMaterial = useMemo(() => {
+    const material = createMaterialFromPreset(preset);
+    materialRef.current = material;
+    return material;
+  }, [preset]);
+
+  // Get glow color from preset for auxiliary meshes
+  const glowColor = useMemo(() => new THREE.Color(preset.uniforms.glowColor), [preset]);
 
   // Handle tooltip delay (1.5 seconds)
   useEffect(() => {
@@ -115,6 +139,19 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
+    const mat = materialRef.current;
+
+    // Update shader time uniform
+    if (mat?.uniforms.time) {
+      mat.uniforms.time.value = time;
+    }
+
+    // Update hover intensity
+    if (mat?.uniforms.hoverIntensity) {
+      const targetHover = isHovered ? 1.0 : 0.0;
+      const currentHover = mat.uniforms.hoverIntensity.value as number;
+      mat.uniforms.hoverIntensity.value = currentHover + (targetHover - currentHover) * 0.1;
+    }
 
     if (device.isSyncing && meshRef.current) {
       meshRef.current.rotation.y += 0.01;
@@ -132,12 +169,6 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
       outerGlowRef.current.scale.setScalar(outerPulseScale);
     }
 
-    // Fresnel rim rotation
-    if (fresnelRef.current) {
-      fresnelRef.current.rotation.y = time * 0.5;
-      fresnelRef.current.rotation.x = Math.sin(time * 0.3) * 0.2;
-    }
-
     if (ringRef.current && device.isSyncing) {
       ringRef.current.rotation.z += 0.03;
     }
@@ -149,33 +180,17 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
     }
   });
 
-  const getOrbColor = (): [number, number, number] => {
-    if (device.isPaused) return [0.5, 0.5, 0.1]; // Yellow/amber for paused
-    if (!device.isOnline) return [0.15, 0.2, 0.35]; // Dim for offline
-    if (device.isSyncing) return [0.2, 0.95, 1.0]; // Cyan for syncing
-    return [0.25, 0.5, 0.95]; // Blue for connected
-  };
-
-  const getGlowColor = (): [number, number, number] => {
-    if (device.isPaused) return [0.4, 0.4, 0.1];
-    if (!device.isOnline) return [0.1, 0.12, 0.2];
-    if (device.isSyncing) return [0.2, 1.0, 1.0];
-    return [0.15, 0.6, 1.0];
-  };
-
-  const orbColor = getOrbColor();
-  const glowColor = getGlowColor();
   const size = device.isLocal ? 1.2 : 0.6;
 
   // Generate ring points for syncing animation
-  const ringPoints = (() => {
+  const ringPoints = useMemo(() => {
     const points: number[] = [];
     for (let i = 0; i <= 32; i++) {
       const angle = (i / 32) * Math.PI * 2;
       points.push(Math.cos(angle) * (size * 1.8), 0, Math.sin(angle) * (size * 1.8));
     }
     return new Float32Array(points);
-  })();
+  }, [size]);
 
   return (
     <group
@@ -184,36 +199,16 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
     >
-      {/* Core distorted orb with organic movement */}
-      <mesh ref={meshRef}>
+      {/* Core orb with custom shader material */}
+      <mesh ref={meshRef} material={shaderMaterial}>
         <icosahedronGeometry args={[size, 4]} />
-        <MeshDistortMaterial
-          color={new THREE.Color(...orbColor)}
-          metalness={0.9}
-          roughness={0.1}
-          emissive={new THREE.Color(...orbColor)}
-          emissiveIntensity={isHovered ? 1.5 : device.isSyncing ? 1.0 : 0.5}
-          distort={device.isSyncing ? 0.3 : isHovered ? 0.15 : 0.05}
-          speed={device.isSyncing ? 4 : 2}
-        />
-      </mesh>
-
-      {/* Fresnel rim glow - creates edge lighting effect */}
-      <mesh ref={fresnelRef}>
-        <icosahedronGeometry args={[size * 1.05, 3]} />
-        <meshBasicMaterial
-          color={new THREE.Color(...glowColor)}
-          transparent
-          opacity={isHovered ? 0.4 : device.isOnline ? 0.2 : 0.05}
-          side={THREE.BackSide}
-        />
       </mesh>
 
       {/* Inner glow layer */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[size * 1.3, 16, 16]} />
         <meshBasicMaterial
-          color={new THREE.Color(...glowColor)}
+          color={glowColor}
           transparent
           opacity={isHovered ? 0.35 : device.isOnline ? 0.15 : 0.05}
           side={THREE.BackSide}
@@ -224,19 +219,19 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
       <mesh ref={outerGlowRef}>
         <sphereGeometry args={[size * 2, 16, 16]} />
         <meshBasicMaterial
-          color={new THREE.Color(...glowColor)}
+          color={glowColor}
           transparent
           opacity={isHovered ? 0.12 : device.isOnline ? 0.06 : 0.02}
           side={THREE.BackSide}
         />
       </mesh>
 
-      {/* Iridescent shell - creates holographic effect */}
+      {/* Iridescent wireframe shell for online devices */}
       {device.isOnline && (
         <mesh>
           <icosahedronGeometry args={[size * 1.15, 2]} />
           <meshBasicMaterial
-            color={new THREE.Color(0.5, 0.8, 1.0)}
+            color={glowColor}
             transparent
             opacity={isHovered ? 0.15 : 0.05}
             wireframe
@@ -250,12 +245,7 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
           <bufferGeometry attach="geometry">
             <bufferAttribute attach="attributes-position" args={[ringPoints, 3]} />
           </bufferGeometry>
-          <lineBasicMaterial
-            color={new THREE.Color(...orbColor)}
-            opacity={0.8}
-            transparent
-            linewidth={3}
-          />
+          <lineBasicMaterial color={glowColor} opacity={0.8} transparent linewidth={3} />
         </lineSegments>
       )}
 
@@ -266,18 +256,12 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
             <bufferGeometry attach="geometry">
               <bufferAttribute attach="attributes-position" args={[ringPoints, 3]} />
             </bufferGeometry>
-            <lineBasicMaterial
-              color={new THREE.Color(...orbColor)}
-              opacity={0.5}
-              transparent
-              linewidth={2}
-            />
+            <lineBasicMaterial color={glowColor} opacity={0.5} transparent linewidth={2} />
           </lineSegments>
         </group>
       )}
 
       {/* Tooltip - only shows after 1.5s hover */}
-      {/* Using fixed size tooltip that doesn't scale with 3D distance */}
       {showTooltip && (
         <Html
           center

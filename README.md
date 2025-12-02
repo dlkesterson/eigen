@@ -4,6 +4,8 @@
 
 ![Eigen Screenshot](docs/screenshot.webp)
 
+📺 **[Watch Demo Video](docs/demo.webm)**
+
 ## ✨ Features
 
 ### Core Syncthing Management
