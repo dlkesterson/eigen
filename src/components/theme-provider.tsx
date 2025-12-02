@@ -17,21 +17,27 @@ function getResolvedTheme(theme: 'light' | 'dark' | 'system'): 'light' | 'dark' 
 
 export function useResolvedTheme(): 'light' | 'dark' {
   const theme = useAppStore((state) => state.theme);
-  // Initialize with computed value to avoid setState in effect
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    getResolvedTheme(theme)
-  );
+  const hasHydrated = useAppStore((state) => state._hasHydrated);
 
-  // Update resolved theme when theme setting changes
+  // Use a stable default until hydrated to avoid state updates during initial render
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Mark as mounted after first render
   useEffect(() => {
-    queueMicrotask(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Update resolved theme when theme setting changes (only after mount and hydration)
+  useEffect(() => {
+    if (isMounted && hasHydrated) {
       setResolvedTheme(getResolvedTheme(theme));
-    });
-  }, [theme]);
+    }
+  }, [theme, isMounted, hasHydrated]);
 
   // Listen for system theme changes only when theme is 'system'
   useEffect(() => {
-    if (theme !== 'system') return;
+    if (!isMounted || theme !== 'system') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
@@ -40,7 +46,7 @@ export function useResolvedTheme(): 'light' | 'dark' {
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, [theme, isMounted]);
 
   return resolvedTheme;
 }

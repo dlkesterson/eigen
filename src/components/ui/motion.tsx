@@ -2,6 +2,7 @@
 
 import { motion, Variants } from 'framer-motion';
 import { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 // Animation variants for cards
 export const cardVariants: Variants = {
@@ -145,7 +146,7 @@ export function MotionPage({ children, className }: MotionPageProps) {
       initial="hidden"
       animate="visible"
       exit="exit"
-      className={className}
+      className={cn('h-full', className)}
     >
       {children}
     </motion.div>

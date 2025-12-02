@@ -1,120 +1,27 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useAppStore } from '@/store';
-import { NetworkGraphLive } from '@/components/network-graph-live';
 import { FolderList } from '@/components/folder-list';
 import { DeviceList } from '@/components/device-list';
 import { SettingsPage } from '@/components/settings-page';
 import { LogsPage } from '@/components/logs-page';
 import { MotionPage } from '@/components/ui/motion';
-import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, Network, Folder, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { useSystemStatus, useConnections } from '@/hooks/useSyncthing';
-import { Counter } from '@/components/ui/counter';
-import { formatBytes } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { AnimatePresence } from 'framer-motion';
+
+// Dynamically import the 3D dashboard to avoid SSR issues with Three.js
+const ConstellationDashboard = dynamic(
+  () =>
+    import('@/components/constellation/constellation-dashboard').then(
+      (mod) => mod.ConstellationDashboard
+    ),
+  { ssr: false }
+);
 
 function DashboardView() {
-  const { data: _status, isError: statusError } = useSystemStatus();
-  const { data: connections } = useConnections();
-
-  const connectedDevices = Object.values(connections?.connections || {}).filter(
-    (c) => c?.connected
-  ).length;
-  const totalDevices = Object.keys(connections?.connections || {}).length;
-  const inBytes = connections?.total?.inBytesTotal || 0;
-  const outBytes = connections?.total?.outBytesTotal || 0;
-
   return (
-    <MotionPage>
-      <BentoGrid className="lg:grid-cols-4">
-        {/* Network Graph - Large tile spanning 2 cols and 2 rows */}
-        <BentoCard colSpan={2} rowSpan={2} spotlightColor="rgba(99, 102, 241, 0.15)">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-muted-foreground text-sm font-medium">Network Topology</h3>
-            <Network className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="relative -mx-6 -mb-6 flex-1 overflow-hidden rounded-b-xl">
-            <NetworkGraphLive />
-          </div>
-        </BentoCard>
-
-        {/* Status Card */}
-        <BentoCard
-          spotlightColor={statusError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)'}
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-muted-foreground text-sm font-medium">Status</h3>
-            <Activity className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="mt-auto flex items-center gap-3">
-            <motion.div
-              className="text-foreground text-3xl font-bold"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              {statusError ? 'Offline' : 'Online'}
-            </motion.div>
-            <Badge variant={statusError ? 'destructive' : 'success'}>
-              {statusError ? 'Disconnected' : 'Connected'}
-            </Badge>
-          </div>
-        </BentoCard>
-
-        {/* Devices Card */}
-        <BentoCard spotlightColor="rgba(139, 92, 246, 0.15)">
-          <div className="flex items-center justify-between">
-            <h3 className="text-muted-foreground text-sm font-medium">Devices</h3>
-            <Network className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="mt-auto flex items-center gap-3">
-            <span className="text-foreground text-3xl font-bold">
-              {connectedDevices}/{totalDevices}
-            </span>
-            {connectedDevices === totalDevices && totalDevices > 0 && (
-              <Badge variant="success">All Connected</Badge>
-            )}
-          </div>
-        </BentoCard>
-
-        {/* Download Stats */}
-        <BentoCard spotlightColor="rgba(16, 185, 129, 0.15)">
-          <div className="flex items-center justify-between">
-            <h3 className="text-muted-foreground text-sm font-medium">Downloaded</h3>
-            <ArrowDownToLine className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="mt-auto">
-            <span className="text-foreground text-3xl font-bold">
-              <Counter value={inBytes} formattingFn={formatBytes} />
-            </span>
-          </div>
-        </BentoCard>
-
-        {/* Upload Stats */}
-        <BentoCard spotlightColor="rgba(59, 130, 246, 0.15)">
-          <div className="flex items-center justify-between">
-            <h3 className="text-muted-foreground text-sm font-medium">Uploaded</h3>
-            <ArrowUpFromLine className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="mt-auto">
-            <span className="text-foreground text-3xl font-bold">
-              <Counter value={outBytes} formattingFn={formatBytes} />
-            </span>
-          </div>
-        </BentoCard>
-
-        {/* Folders Preview - Full width */}
-        <BentoCard colSpan={2} spotlightColor="rgba(99, 102, 241, 0.1)">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-muted-foreground text-sm font-medium">Synced Folders</h3>
-            <Folder className="text-muted-foreground h-4 w-4" />
-          </div>
-          <div className="flex-1">
-            <FolderList compact />
-          </div>
-        </BentoCard>
-      </BentoGrid>
+    <MotionPage className="h-full">
+      <ConstellationDashboard />
     </MotionPage>
   );
 }
@@ -178,9 +85,11 @@ export function MainContent() {
   };
 
   return (
-    <main className="relative z-0 flex-1 overflow-auto p-6">
+    <main className="relative z-0 flex h-full flex-1 flex-col overflow-hidden p-4">
       <AnimatePresence mode="wait">
-        <div key={activeTab}>{renderContent()}</div>
+        <div key={activeTab} className="h-full flex-1">
+          {renderContent()}
+        </div>
       </AnimatePresence>
     </main>
   );
