@@ -2,9 +2,7 @@
 
 > A modern, AI-powered desktop client for Syncthing built with Tauri v2, Next.js 16, and Rust.
 
-![Eigen Screenshot](docs/screenshot.webp)
-
-https://github.com/user-attachments/assets/2ca0b931-8ccc-48b5-8a1f-ae9dae3e9af5
+![Eigen Demo](docs/demo.gif)
 
 ## ✨ Features
 
