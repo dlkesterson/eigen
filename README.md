@@ -4,7 +4,7 @@
 
 ![Eigen Screenshot](docs/screenshot.webp)
 
-📺 **[Watch Demo Video](docs/demo.webm)**
+https://github.com/user-attachments/assets/2ca0b931-8ccc-48b5-8a1f-ae9dae3e9af5
 
 ## ✨ Features
 
