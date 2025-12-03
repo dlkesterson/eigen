@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { getDevicePreset } from './orb-presets';
-import { createMaterialFromPreset } from './orb-material';
+import { createMaterialFromPreset, createParticleShaderMaterial } from './orb-material';
 
 export interface DeviceOrbData {
   id: string;
@@ -89,7 +89,9 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
   const glowRef = useRef<THREE.Mesh>(null);
   const outerGlowRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.LineSegments>(null);
+  const particlesRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const particleMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,6 +118,36 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
   // Get glow color from preset for auxiliary meshes
   const glowColor = useMemo(() => new THREE.Color(preset.uniforms.glowColor), [preset]);
 
+  // Create particle shader material for syncing/online devices
+  const particleMaterial = useMemo(() => {
+    if (!device.isOnline || device.isPaused) return null;
+    const material = createParticleShaderMaterial(glowColor);
+    particleMaterialRef.current = material;
+    return material;
+  }, [device.isOnline, device.isPaused, glowColor]);
+
+  // Generate particle positions inside the orb
+  const particleGeometry = useMemo(() => {
+    const particleCount = device.isSyncing ? 50 : 25;
+    const size = device.isLocal ? 1.2 : 0.6;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      // Random positions inside a sphere
+      const r = Math.random() * size * 0.6;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+
+      positions[i] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i + 2] = r * Math.cos(phi);
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    return geometry;
+  }, [device.isSyncing, device.isLocal]);
+
   // Handle tooltip delay (1.5 seconds)
   useEffect(() => {
     if (isHovered) {
@@ -140,10 +172,16 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     const mat = materialRef.current;
+    const particleMat = particleMaterialRef.current;
 
     // Update shader time uniform
     if (mat?.uniforms.time) {
       mat.uniforms.time.value = time;
+    }
+
+    // Update particle shader time uniform
+    if (particleMat?.uniforms.time) {
+      particleMat.uniforms.time.value = time;
     }
 
     // Update hover intensity
@@ -171,6 +209,12 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
 
     if (ringRef.current && device.isSyncing) {
       ringRef.current.rotation.z += 0.03;
+    }
+
+    // Animate particles rotation
+    if (particlesRef.current) {
+      particlesRef.current.rotation.y += device.isSyncing ? 0.015 : 0.005;
+      particlesRef.current.rotation.x += device.isSyncing ? 0.008 : 0.002;
     }
 
     // Hover scale animation
@@ -237,6 +281,12 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
             wireframe
           />
         </mesh>
+      )}
+
+      {/* Internal particle system for online/syncing devices */}
+      {particleMaterial && (
+        // eslint-disable-next-line react/no-unknown-property
+        <points ref={particlesRef} geometry={particleGeometry} material={particleMaterial} />
       )}
 
       {/* Syncing ring animation */}
