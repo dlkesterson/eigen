@@ -68,32 +68,33 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
 
   // Generate QR code when device ID is available
   const [qrCodeUrl, setQRCodeUrl] = useState<string | null>(null);
-  const [qrGenStarted, setQrGenStarted] = useState(false);
 
-  // Derive loading state: we're loading if we started generating but don't have URL yet
-  const isGeneratingQR = qrGenStarted && !qrCodeUrl;
+  // Derive loading state: we're loading if dialog is open but don't have URL yet
+  const isGeneratingQR = open && localDeviceId && !qrCodeUrl;
 
-  // Generate QR code once when dialog opens and device ID is available
+  // Reset state when dialog closes (separate effect for cleanup)
   useEffect(() => {
     if (!open) {
-      // Reset for next open - this is intentional to clear state when dialog closes
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setQrGenStarted(false);
-      setQRCodeUrl(null);
-      return;
+      // Reset for next open - schedule state reset after current render
+      const timeoutId = setTimeout(() => {
+        setQRCodeUrl(null);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
+  }, [open]);
 
-    if (open && localDeviceId && !qrGenStarted) {
-      setQrGenStarted(true);
-      let cancelled = false;
-      generateQRCodeDataUrl(localDeviceId).then((url) => {
-        if (!cancelled) setQRCodeUrl(url);
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [open, localDeviceId, qrGenStarted]);
+  // Generate QR code when dialog opens and device ID is available
+  useEffect(() => {
+    if (!open || !localDeviceId) return;
+
+    let cancelled = false;
+    generateQRCodeDataUrl(localDeviceId).then((url) => {
+      if (!cancelled) setQRCodeUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, localDeviceId]);
 
   const handleCopyId = async () => {
     if (localDeviceId) {

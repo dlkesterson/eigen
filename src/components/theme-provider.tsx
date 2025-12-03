@@ -1,48 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useAppStore } from '@/store';
 
-// Helper to compute resolved theme
-function getResolvedTheme(theme: 'light' | 'dark' | 'system'): 'light' | 'dark' {
-  if (theme === 'system') {
-    // Check if window is available (SSR safety)
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return 'dark'; // Default for SSR
-  }
-  return theme;
+// Subscribe to system theme changes
+function subscribeToSystemTheme(callback: () => void) {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  mediaQuery.addEventListener('change', callback);
+  return () => mediaQuery.removeEventListener('change', callback);
+}
+
+// Get current system theme preference
+function getSystemThemeSnapshot(): boolean {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+// Server-side default
+function getServerSnapshot(): boolean {
+  return true; // Default to dark for SSR
 }
 
 export function useResolvedTheme(): 'light' | 'dark' {
   const theme = useAppStore((state) => state.theme);
-  // Initialize with computed value to avoid setState in effect
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    getResolvedTheme(theme)
+  const hasHydrated = useAppStore((state) => state._hasHydrated);
+
+  // Use useSyncExternalStore to track system theme preference
+  const systemPrefersDark = useSyncExternalStore(
+    subscribeToSystemTheme,
+    getSystemThemeSnapshot,
+    getServerSnapshot
   );
 
-  // Update resolved theme when theme setting changes
-  useEffect(() => {
-    queueMicrotask(() => {
-      setResolvedTheme(getResolvedTheme(theme));
-    });
-  }, [theme]);
+  // Derive resolved theme directly - no useState/useEffect needed
+  if (!hasHydrated) {
+    return 'dark'; // Stable default during hydration
+  }
 
-  // Listen for system theme changes only when theme is 'system'
-  useEffect(() => {
-    if (theme !== 'system') return;
+  if (theme === 'system') {
+    return systemPrefersDark ? 'dark' : 'light';
+  }
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setResolvedTheme(e.matches ? 'dark' : 'light');
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
-
-  return resolvedTheme;
+  return theme;
 }
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useAppStore((state) => state.theme);

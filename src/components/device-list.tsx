@@ -25,17 +25,21 @@ import {
   Loader2,
   Pause,
   Play,
+  Pencil,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddDeviceDialog } from './add-device-dialog';
+import { EditDeviceDialog } from './edit-device-dialog';
 import { toast } from 'sonner';
+import type { DeviceConfig } from '@/hooks/syncthing/types';
 
 function DeviceCard({
   device,
   connectionInfo,
   isLocalDevice,
+  onEdit,
 }: {
-  device: { deviceID: string; name?: string; paused?: boolean };
+  device: DeviceConfig;
   connectionInfo?: {
     connected?: boolean;
     address?: string;
@@ -43,6 +47,7 @@ function DeviceCard({
     clientVersion?: string;
   };
   isLocalDevice?: boolean;
+  onEdit: () => void;
 }) {
   const removeDevice = useRemoveDevice();
   const pauseDevice = usePauseDevice();
@@ -163,6 +168,16 @@ function DeviceCard({
             ) : (
               <WifiOff className="text-muted-foreground h-4 w-4" />
             )}
+            {/* Edit button - available for all devices */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="text-muted-foreground h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-blue-500/10 hover:text-blue-400"
+              title="Edit device"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
             {!isLocalDevice && (
               <>
                 <Button
@@ -187,6 +202,7 @@ function DeviceCard({
                   onClick={handleRemove}
                   disabled={removeDevice.isPending}
                   className="text-muted-foreground h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                  title="Remove device"
                 >
                   {removeDevice.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -233,6 +249,7 @@ function DeviceCard({
 
 export function DeviceList() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<DeviceConfig | null>(null);
   const {
     data: config,
     isLoading: configLoading,
@@ -296,6 +313,7 @@ export function DeviceList() {
             device={device}
             connectionInfo={connections?.connections?.[device.deviceID]}
             isLocalDevice={device.deviceID === localDeviceId}
+            onEdit={() => setEditingDevice(device)}
           />
         ))}
       </div>
@@ -318,8 +336,16 @@ export function DeviceList() {
         </Button>
       </div>
       {renderContent()}
-      {/* Dialog is always rendered to preserve state */}
+      {/* Dialogs */}
       <AddDeviceDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} />
+      {editingDevice && (
+        <EditDeviceDialog
+          open={!!editingDevice}
+          onClose={() => setEditingDevice(null)}
+          device={editingDevice}
+          isLocalDevice={editingDevice.deviceID === localDeviceId}
+        />
+      )}
     </div>
   );
 }

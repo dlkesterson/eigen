@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 import type { SyncthingClient } from './client';
 import type { BridgeType, HttpConnectionSettings } from './types';
 import { tauriBridge } from './tauri-bridge';
@@ -130,23 +130,15 @@ export function SyncthingClientProvider({
   const [remoteSettings, setRemoteSettings] = useState<HttpConnectionSettings | null>(
     initialHttpSettings || getSavedRemoteSettings()
   );
-  const [httpBridge, setHttpBridge] = useState<HttpBridge | null>(() => {
-    // Initialize HTTP bridge immediately if needed
-    const settings = initialHttpSettings || getSavedRemoteSettings();
-    if (initialBridgeType === 'http' && settings) {
-      return createHttpBridge(settings);
+
+  // Derive HTTP bridge from settings using useMemo
+  // The bridge is recreated when settings change
+  const httpBridge = useMemo<HttpBridge | null>(() => {
+    if (bridgeType === 'http' && remoteSettings) {
+      return createHttpBridge(remoteSettings);
     }
     return null;
-  });
-
-  // Create HTTP bridge when settings change - use microtask to avoid synchronous setState
-  useEffect(() => {
-    if (bridgeType === 'http' && remoteSettings && !httpBridge) {
-      queueMicrotask(() => {
-        setHttpBridge(createHttpBridge(remoteSettings));
-      });
-    }
-  }, [bridgeType, remoteSettings, httpBridge]);
+  }, [bridgeType, remoteSettings]);
 
   // Get the current client
   const client: SyncthingClient = useMemo(() => {
@@ -167,14 +159,8 @@ export function SyncthingClientProvider({
     saveRemoteSettings(settings);
     saveBridgeType('http');
     setRemoteSettings(settings);
-
-    if (httpBridge) {
-      httpBridge.updateSettings(settings);
-    } else {
-      setHttpBridge(createHttpBridge(settings));
-    }
-
     setBridgeType('http');
+    // httpBridge will be automatically recreated by useMemo when settings change
   };
 
   // Connect to local instance

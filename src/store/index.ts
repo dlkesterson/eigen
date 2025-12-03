@@ -15,6 +15,7 @@ interface AppState {
   pollingInterval: number;
   nativeNotificationsEnabled: boolean;
   aiEnabled: boolean;
+  _hasHydrated: boolean;
 
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
@@ -27,6 +28,7 @@ interface AppState {
   setFocusMode: (enabled: boolean) => void;
   toggleDebugPanel: () => void;
   setDebugPanelOpen: (open: boolean) => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -40,6 +42,7 @@ export const useAppStore = create<AppState>()(
       aiEnabled: DEFAULTS.AI_ENABLED,
       focusMode: DEFAULTS.FOCUS_MODE,
       debugPanelOpen: false,
+      _hasHydrated: false,
 
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
@@ -52,9 +55,23 @@ export const useAppStore = create<AppState>()(
       setFocusMode: (enabled) => set({ focusMode: enabled }),
       toggleDebugPanel: () => set((state) => ({ debugPanelOpen: !state.debugPanelOpen })),
       setDebugPanelOpen: (open) => set({ debugPanelOpen: open }),
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
       name: 'eigen-app-store',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+      partialize: (state) => ({
+        sidebarOpen: state.sidebarOpen,
+        activeTab: state.activeTab,
+        theme: state.theme,
+        pollingInterval: state.pollingInterval,
+        nativeNotificationsEnabled: state.nativeNotificationsEnabled,
+        aiEnabled: state.aiEnabled,
+        focusMode: state.focusMode,
+        debugPanelOpen: state.debugPanelOpen,
+      }),
     }
   )
 );

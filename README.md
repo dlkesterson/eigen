@@ -2,9 +2,19 @@
 
 > A modern, AI-powered desktop client for Syncthing built with Tauri v2, Next.js 16, and Rust.
 
-![Eigen Screenshot](docs/screenshot.png)
+![Eigen Demo](docs/demo.gif)
 
 ## ✨ Features
+
+### Constellation Dashboard
+
+- 🌌 **3D Network Visualization** - Interactive WebGL-powered constellation view of your Syncthing network
+- 🔮 **Device Orbs** - Each device rendered as a glowing orb with unique visual presets based on state
+- ⚡ **Connection Wires** - Animated connection lines showing active sync relationships
+- ✨ **Particle Flow** - Real-time particle animations during data transfer between devices
+- 🌟 **Request Beacon** - Pulsing golden beacon alerts you to pending device/folder requests
+- 🎮 **Orbital Camera** - Auto-rotating camera with zoom and pan controls
+- 📊 **HUD Overlays** - Real-time stats panels showing status, devices, and transfer rates
 
 ### Core Syncthing Management
 
@@ -12,7 +22,6 @@
 - 📁 **Folder Management** - Add, configure, pause/resume sync folders
 - 💻 **Device Management** - Add devices, configure sharing, monitor connections
 - 📊 **Real-time Stats** - Live sync status, transfer rates, uptime, and connection info
-- 🌐 **Network Visualization** - Interactive SVG network topology showing device connections
 
 ### AI-Powered Features
 
@@ -31,9 +40,10 @@
 ### Device Sharing & Pairing
 
 - 📱 **QR Code Invites** - Generate QR codes for easy device pairing
-- 🔔 **Pending Request Handling** - Accept or dismiss incoming device and folder share requests
+- 🔔 **Pending Request Handling** - Accept or dismiss incoming device and folder share requests directly from the dashboard
 - 🔗 **Deep Links** - `eigen://invite` deep link protocol for one-click device addition
 - 📋 **Shareable Links** - Copy invite links with optional expiration
+- 📥 **Folder Share Requests** - Browse and select local paths when accepting shared folders
 
 ### Reliability & Monitoring
 
@@ -55,17 +65,19 @@
 
 ### Frontend
 
-| Technology         | Purpose                            |
-| ------------------ | ---------------------------------- |
-| **Next.js 16**     | React framework with static export |
-| **React 19**       | UI library with latest features    |
-| **Tailwind CSS 4** | Utility-first styling              |
-| **TanStack Query** | Server state management & caching  |
-| **Zustand**        | Client state management            |
-| **Framer Motion**  | Smooth animations                  |
-| **Lucide Icons**   | Beautiful iconography              |
-| **Sonner**         | Toast notifications                |
-| **Zod**            | Runtime type validation            |
+| Technology            | Purpose                            |
+| --------------------- | ---------------------------------- |
+| **Next.js 16**        | React framework with static export |
+| **React 19**          | UI library with latest features    |
+| **Tailwind CSS 4**    | Utility-first styling              |
+| **React Three Fiber** | 3D constellation dashboard         |
+| **Three.js**          | WebGL rendering engine             |
+| **TanStack Query**    | Server state management & caching  |
+| **Zustand**           | Client state management            |
+| **Framer Motion**     | Smooth animations                  |
+| **Lucide Icons**      | Beautiful iconography              |
+| **Sonner**            | Toast notifications                |
+| **Zod**               | Runtime type validation            |
 
 ### Backend
 
@@ -330,28 +342,6 @@ Contributions are welcome! Please read our contributing guidelines before submit
 ## Recommended IDE Setup
 
 - [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
-
-## Features
-
-### Dashboard
-
-- Real-time sync status
-- Network topology visualization
-- Upload/download statistics
-- Folder and device overview
-
-### Folders
-
-- View all synced folders
-- Pause/resume sync
-- Force rescan
-- Sync status indicators
-
-### Devices
-
-- Connected device list
-- Connection status
-- Device information
 
 ## License
 

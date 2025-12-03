@@ -82,19 +82,55 @@ export default [
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'warn',
       'react/jsx-no-comment-textnodes': 'warn',
+      // Allow React Three Fiber properties (attach, args, position, etc.)
+      'react/no-unknown-property': [
+        'error',
+        {
+          ignore: [
+            'attach',
+            'args',
+            'position',
+            'rotation',
+            'intensity',
+            'decay',
+            'fog',
+            'transparent',
+            'opacity',
+            'linewidth',
+            'material',
+            'side',
+            'wireframe',
+            'metalness',
+            'roughness',
+            'emissive',
+            'emissiveIntensity',
+            'sizeAttenuation',
+          ],
+        },
+      ],
 
-      // React Hooks rules
+      // React Hooks rules - Core rules
       ...reactHooksPlugin.configs.recommended.rules,
-      // Downgrade React Compiler rules to warnings for now
-      // These are valid issues but need careful refactoring
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // React 19 Compiler rules (from eslint-plugin-react-hooks v7+)
-      // Disable until codebase is refactored for React 19 patterns
+
+      // React Compiler rules (eslint-plugin-react-hooks v7+)
+      // Downgraded to warnings - these are valid issues but need careful refactoring
+      'react-hooks/config': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/component-hook-factories': 'warn',
+      'react-hooks/gating': 'warn',
+      'react-hooks/globals': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/refs': 'warn',
       'react-hooks/set-state-in-effect': 'warn',
       'react-hooks/set-state-in-render': 'warn',
       'react-hooks/static-components': 'warn',
-      'react-hooks/immutability': 'warn',
+      'react-hooks/unsupported-syntax': 'warn',
+      'react-hooks/use-memo': 'warn',
+      'react-hooks/incompatible-library': 'warn',
 
       // Next.js rules
       ...nextPlugin.configs.recommended.rules,
@@ -111,6 +147,17 @@ export default [
       react: {
         version: 'detect',
       },
+    },
+  },
+
+  // React Three Fiber components - relax purity rules for 3D rendering patterns
+  {
+    files: ['**/components/constellation/**/*.ts', '**/components/constellation/**/*.tsx'],
+    rules: {
+      // R3F components often use Math.random() for visual effects (particles, dust, etc.)
+      // and update refs during render for performance optimization
+      'react-hooks/purity': 'off',
+      'react-hooks/refs': 'off',
     },
   },
 

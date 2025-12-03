@@ -47,8 +47,6 @@ let sharedPendingCalls = new Map<
   { resolve: (value: unknown) => void; reject: (error: Error) => void }
 >();
 let callIdCounter = 0;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let workerInitialized = false;
 
 function getOrCreateWorker(): Worker | null {
   if (typeof window === 'undefined') return null;
@@ -140,7 +138,6 @@ function terminateWorker() {
   if (sharedWorker) {
     sharedWorker.terminate();
     sharedWorker = null;
-    workerInitialized = false;
     sharedPendingCalls.clear();
   }
 }
