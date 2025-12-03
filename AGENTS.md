@@ -8,6 +8,7 @@ Eigen is a Tauri v2 desktop application that manages Syncthing. It has:
 
 - **Frontend**: Next.js 16 with React 19, TypeScript, TailwindCSS
 - **Backend**: Rust with Tauri v2
+- **3D Visualization**: React Three Fiber with Three.js for the Constellation Dashboard
 - **AI Features**: Client-side ML with transformers.js and IndexedDB
 
 ## Critical: Tauri Command Registry
@@ -107,7 +108,17 @@ src/
 │       ├── devices.ts       # Device management hooks
 │       ├── pending.ts       # Pending device/folder request hooks
 │       └── schemas.ts       # Zod schemas for validation
-├── components/              # React components
+├── components/
+│   ├── constellation/       # 3D Dashboard components (React Three Fiber)
+│   │   ├── constellation-dashboard.tsx  # Main 3D scene container
+│   │   ├── device-orb.tsx   # 3D device representation
+│   │   ├── connection-wire.tsx  # Animated connection lines
+│   │   ├── particle-flow.tsx    # Data transfer particle effects
+│   │   ├── request-beacon.tsx   # Pending request visual alert
+│   │   ├── hud-panel.tsx    # Overlay stat panels
+│   │   ├── orb-presets.ts   # Device visual style presets
+│   │   └── orb-material.ts  # Custom Three.js materials
+│   └── ui/                  # Reusable UI components
 └── store/                   # Zustand state management
 
 src-tauri/
@@ -157,6 +168,27 @@ The app uses circuit breakers and auto-recovery. See:
 ### Validation
 
 All Syncthing API responses are validated with Zod schemas in `src/hooks/syncthing/schemas.ts`.
+
+### 3D Constellation Dashboard
+
+The dashboard uses React Three Fiber for 3D visualization:
+
+```typescript
+import { Canvas } from '@react-three/fiber';
+import { DeviceOrb } from '@/components/constellation';
+
+// Use R3F components inside <Canvas>
+<Canvas>
+  <DeviceOrb device={deviceData} />
+</Canvas>
+```
+
+Key patterns for constellation components:
+
+- Use `useFrame` hook for animations (runs every frame)
+- Use `useRef` with Three.js types for mesh references
+- Keep heavy calculations in `useMemo` outside render loop
+- Use `@react-three/drei` helpers (Stars, OrbitControls, etc.)
 
 ## Testing Changes
 

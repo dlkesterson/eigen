@@ -40,6 +40,7 @@ When suggesting code that calls the Rust backend, always:
 | `src/hooks/syncthing/schemas.ts` | Zod validation schemas               |
 | `src-tauri/src/commands/`        | Modular Rust command implementations |
 | `src-tauri/src/lib.rs`           | Command registration                 |
+| `src/components/constellation/`  | 3D dashboard components (R3F)        |
 
 ## Preferred Patterns
 
@@ -62,6 +63,31 @@ import { useSystemStatus, useConfig } from '@/hooks/syncthing';
 - `cn()` utility for conditional classes
 - Framer Motion for animations
 
+### 3D Constellation Dashboard
+
+The dashboard uses React Three Fiber. Key components in `src/components/constellation/`:
+
+- `constellation-dashboard.tsx` - Main 3D scene with Canvas
+- `device-orb.tsx` - 3D device representation with presets
+- `connection-wire.tsx` - Animated connection lines
+- `particle-flow.tsx` - Data transfer particle effects
+- `request-beacon.tsx` - Pulsing beacon for pending requests
+
+```typescript
+// Use R3F hooks inside Canvas components
+import { useFrame } from '@react-three/fiber';
+import { useRef } from 'react';
+import * as THREE from 'three';
+
+function MyMesh() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (meshRef.current) meshRef.current.rotation.y += 0.01;
+  });
+  return <mesh ref={meshRef}>...</mesh>;
+}
+```
+
 ## Adding New Tauri Commands
 
 1. Add Rust function in appropriate module under `src-tauri/src/commands/`
@@ -76,3 +102,5 @@ import { useSystemStatus, useConfig } from '@/hooks/syncthing';
 - Skip Zod validation for API responses
 - Create new hooks when existing ones in `src/hooks/syncthing/` suffice
 - Forget to run `pnpm type-check` after changes
+- Use `useFrame` or R3F hooks outside of a `<Canvas>` component
+- Put heavy calculations inside `useFrame` - use `useMemo` instead

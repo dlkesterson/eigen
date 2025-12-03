@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, ChangeEvent } from 'react';
 import { useUpdateDeviceConfig } from '@/hooks/useSyncthing';
 import { BaseDialog, DialogFooter, DialogInput } from '@/components/ui/base-dialog';
 import { Gauge, Network, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -85,8 +85,24 @@ function ToggleSwitch({
   );
 }
 
+// Wrapper component that uses key to reset inner form when device changes
 export function EditDeviceDialog({ open, onClose, device, isLocalDevice }: EditDeviceDialogProps) {
-  // Form state
+  // Use device ID as key to remount form when device changes
+  // This eliminates the need for useEffect to reset state
+  return (
+    <EditDeviceFormContent
+      key={device.deviceID}
+      open={open}
+      onClose={onClose}
+      device={device}
+      isLocalDevice={isLocalDevice}
+    />
+  );
+}
+
+// Inner form component - remounts when key changes, so initial state comes from props
+function EditDeviceFormContent({ open, device, isLocalDevice, onClose }: EditDeviceDialogProps) {
+  // Form state initialized from device props
   const [name, setName] = useState(device.name || '');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [addresses, setAddresses] = useState(device.addresses?.join(', ') || 'dynamic');
@@ -99,19 +115,6 @@ export function EditDeviceDialog({ open, onClose, device, isLocalDevice }: EditD
   const [maxRecvKbps, setMaxRecvKbps] = useState<number>(device.maxRecvKbps || 0);
 
   const updateDevice = useUpdateDeviceConfig();
-
-  // Reset form when device changes or dialog opens
-  useEffect(() => {
-    if (open) {
-      setName(device.name || '');
-      setAddresses(device.addresses?.join(', ') || 'dynamic');
-      setCompression((device.compression as CompressionType) || 'metadata');
-      setIntroducer(device.introducer || false);
-      setAutoAcceptFolders(device.autoAcceptFolders || false);
-      setMaxSendKbps(device.maxSendKbps || 0);
-      setMaxRecvKbps(device.maxRecvKbps || 0);
-    }
-  }, [open, device]);
 
   const handleSave = async () => {
     try {
