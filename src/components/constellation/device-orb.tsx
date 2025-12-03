@@ -270,7 +270,7 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
           occlude={false}
           style={{
             transition: 'opacity 0.3s ease-in-out',
-            opacity: showTooltip ? 1 : 0,
+            opacity: 1,
             transform: 'translate3d(-50%, -100%, 0)',
           }}
         >
