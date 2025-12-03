@@ -45,9 +45,10 @@ pub use devices::{
 
 // File commands (browser, conflicts, versions, ignores)
 pub use files::{
-    browse_folder, browse_folder_recursive, browse_versions, delete_conflict_file,
-    get_folder_ignores, open_folder_in_explorer, resolve_conflict_keep_conflict, restore_version,
-    scan_for_conflicts, set_folder_ignores,
+    browse_folder, browse_folder_recursive, browse_versions, cleanup_versions,
+    cleanup_versions_older_than, delete_conflict_file, get_folder_ignores,
+    get_version_storage_info, open_folder_in_explorer, resolve_conflict_keep_conflict,
+    restore_version, scan_for_conflicts, set_folder_ignores, CleanupResult, VersionStorageInfo,
 };
 
 // Event commands (events, logs, tray)
@@ -56,6 +57,6 @@ pub use events::{get_events, get_system_logs, update_tray_status};
 // Pending request commands
 pub use pending::{
     accept_pending_device, accept_pending_folder, dismiss_pending_device, dismiss_pending_folder,
-    get_pending_devices, get_pending_folders, get_pending_requests, PendingDevice, PendingFolder,
-    PendingRequests,
+    get_pending_devices, get_pending_folders, get_pending_requests, FolderType, PendingDevice,
+    PendingFolder, PendingRequests, VersioningConfig, VersioningType,
 };

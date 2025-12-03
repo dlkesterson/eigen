@@ -9,94 +9,94 @@ import * as THREE from 'three';
 import type { DeviceOrbPreset } from './orb-presets';
 
 export type DeviceOrbUniforms = {
-    time: number;
-    color1: THREE.Color | string | number;
-    color2: THREE.Color | string | number;
-    glowColor: THREE.Color | string | number;
-    wobbleIntensity: number;
-    patternScale: number;
-    fresnelIntensity: number;
-    pulseSpeed: number;
-    pulseStrength: number;
-    glitchIntensity: number;
-    ringIntensity: number;
-    holoIntensity: number;
-    scanSpeed: number;
-    frostIntensity: number;
-    flameIntensity: number;
-    coreIntensity: number;
-    hoverIntensity: number;
+  time: number;
+  color1: THREE.Color | string | number;
+  color2: THREE.Color | string | number;
+  glowColor: THREE.Color | string | number;
+  wobbleIntensity: number;
+  patternScale: number;
+  fresnelIntensity: number;
+  pulseSpeed: number;
+  pulseStrength: number;
+  glitchIntensity: number;
+  ringIntensity: number;
+  holoIntensity: number;
+  scanSpeed: number;
+  frostIntensity: number;
+  flameIntensity: number;
+  coreIntensity: number;
+  hoverIntensity: number;
 };
 
 const asColor = (
-    value: THREE.Color | string | number | undefined,
-    fallback: string
+  value: THREE.Color | string | number | undefined,
+  fallback: string
 ): THREE.Color => {
-    if (value instanceof THREE.Color) return value;
-    if (value !== undefined) return new THREE.Color(value);
-    return new THREE.Color(fallback);
+  if (value instanceof THREE.Color) return value;
+  if (value !== undefined) return new THREE.Color(value);
+  return new THREE.Color(fallback);
 };
 
 export const DEFAULT_DEVICE_ORB_UNIFORMS: Omit<DeviceOrbUniforms, 'time'> = {
-    color1: '#1e3a5f',
-    color2: '#3b82f6',
-    glowColor: '#60a5fa',
-    wobbleIntensity: 0.5,
-    patternScale: 2.0,
-    fresnelIntensity: 1.5,
-    pulseSpeed: 1.0,
-    pulseStrength: 0.15,
-    glitchIntensity: 0,
-    ringIntensity: 0.2,
-    holoIntensity: 0.1,
-    scanSpeed: 0.5,
-    frostIntensity: 0,
-    flameIntensity: 0,
-    coreIntensity: 0.3,
-    hoverIntensity: 0,
+  color1: '#1e3a5f',
+  color2: '#3b82f6',
+  glowColor: '#60a5fa',
+  wobbleIntensity: 0.5,
+  patternScale: 2.0,
+  fresnelIntensity: 1.5,
+  pulseSpeed: 1.0,
+  pulseStrength: 0.15,
+  glitchIntensity: 0,
+  ringIntensity: 0.2,
+  holoIntensity: 0.1,
+  scanSpeed: 0.5,
+  frostIntensity: 0,
+  flameIntensity: 0,
+  coreIntensity: 0.3,
+  hoverIntensity: 0,
 };
 
 export function createDeviceOrbMaterial(
-    initial?: Partial<DeviceOrbUniforms>
+  initial?: Partial<DeviceOrbUniforms>
 ): THREE.ShaderMaterial {
-    const uniforms: Record<string, { value: unknown }> = {
-        time: { value: 0 },
-        color1: { value: asColor(initial?.color1, DEFAULT_DEVICE_ORB_UNIFORMS.color1 as string) },
-        color2: { value: asColor(initial?.color2, DEFAULT_DEVICE_ORB_UNIFORMS.color2 as string) },
-        glowColor: {
-            value: asColor(initial?.glowColor, DEFAULT_DEVICE_ORB_UNIFORMS.glowColor as string),
-        },
-        wobbleIntensity: {
-            value: initial?.wobbleIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.wobbleIntensity,
-        },
-        patternScale: { value: initial?.patternScale ?? DEFAULT_DEVICE_ORB_UNIFORMS.patternScale },
-        fresnelIntensity: {
-            value: initial?.fresnelIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.fresnelIntensity,
-        },
-        pulseSpeed: { value: initial?.pulseSpeed ?? DEFAULT_DEVICE_ORB_UNIFORMS.pulseSpeed },
-        pulseStrength: { value: initial?.pulseStrength ?? DEFAULT_DEVICE_ORB_UNIFORMS.pulseStrength },
-        glitchIntensity: {
-            value: initial?.glitchIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.glitchIntensity,
-        },
-        ringIntensity: { value: initial?.ringIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.ringIntensity },
-        holoIntensity: { value: initial?.holoIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.holoIntensity },
-        scanSpeed: { value: initial?.scanSpeed ?? DEFAULT_DEVICE_ORB_UNIFORMS.scanSpeed },
-        frostIntensity: {
-            value: initial?.frostIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.frostIntensity,
-        },
-        flameIntensity: {
-            value: initial?.flameIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.flameIntensity,
-        },
-        coreIntensity: { value: initial?.coreIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.coreIntensity },
-        hoverIntensity: {
-            value: initial?.hoverIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.hoverIntensity,
-        },
-    };
+  const uniforms: Record<string, { value: unknown }> = {
+    time: { value: 0 },
+    color1: { value: asColor(initial?.color1, DEFAULT_DEVICE_ORB_UNIFORMS.color1 as string) },
+    color2: { value: asColor(initial?.color2, DEFAULT_DEVICE_ORB_UNIFORMS.color2 as string) },
+    glowColor: {
+      value: asColor(initial?.glowColor, DEFAULT_DEVICE_ORB_UNIFORMS.glowColor as string),
+    },
+    wobbleIntensity: {
+      value: initial?.wobbleIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.wobbleIntensity,
+    },
+    patternScale: { value: initial?.patternScale ?? DEFAULT_DEVICE_ORB_UNIFORMS.patternScale },
+    fresnelIntensity: {
+      value: initial?.fresnelIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.fresnelIntensity,
+    },
+    pulseSpeed: { value: initial?.pulseSpeed ?? DEFAULT_DEVICE_ORB_UNIFORMS.pulseSpeed },
+    pulseStrength: { value: initial?.pulseStrength ?? DEFAULT_DEVICE_ORB_UNIFORMS.pulseStrength },
+    glitchIntensity: {
+      value: initial?.glitchIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.glitchIntensity,
+    },
+    ringIntensity: { value: initial?.ringIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.ringIntensity },
+    holoIntensity: { value: initial?.holoIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.holoIntensity },
+    scanSpeed: { value: initial?.scanSpeed ?? DEFAULT_DEVICE_ORB_UNIFORMS.scanSpeed },
+    frostIntensity: {
+      value: initial?.frostIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.frostIntensity,
+    },
+    flameIntensity: {
+      value: initial?.flameIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.flameIntensity,
+    },
+    coreIntensity: { value: initial?.coreIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.coreIntensity },
+    hoverIntensity: {
+      value: initial?.hoverIntensity ?? DEFAULT_DEVICE_ORB_UNIFORMS.hoverIntensity,
+    },
+  };
 
-    return new THREE.ShaderMaterial({
-        uniforms,
-        transparent: true,
-        vertexShader: /* glsl */ `
+  return new THREE.ShaderMaterial({
+    uniforms,
+    transparent: true,
+    vertexShader: /* glsl */ `
       varying vec3 vNormal;
       varying vec3 vPosition;
       varying vec3 vWorldPosition;
@@ -191,7 +191,7 @@ export function createDeviceOrbMaterial(
         gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
       }
     `,
-        fragmentShader: /* glsl */ `
+    fragmentShader: /* glsl */ `
       uniform float time;
       uniform vec3 color1;
       uniform vec3 color2;
@@ -353,44 +353,44 @@ export function createDeviceOrbMaterial(
         gl_FragColor = vec4(finalColor, 0.95);
       }
     `,
-    });
+  });
 }
 
 /** Create a device orb material from a preset */
 export function createMaterialFromPreset(preset: DeviceOrbPreset): THREE.ShaderMaterial {
-    return createDeviceOrbMaterial({
-        color1: preset.uniforms.color1,
-        color2: preset.uniforms.color2,
-        glowColor: preset.uniforms.glowColor,
-        wobbleIntensity: preset.uniforms.wobbleIntensity,
-        patternScale: preset.uniforms.patternScale,
-        fresnelIntensity: preset.uniforms.fresnelIntensity,
-        pulseSpeed: preset.uniforms.pulseSpeed,
-        pulseStrength: preset.uniforms.pulseStrength,
-        glitchIntensity: preset.uniforms.glitchIntensity,
-        ringIntensity: preset.uniforms.ringIntensity,
-        holoIntensity: preset.uniforms.holoIntensity,
-        scanSpeed: preset.uniforms.scanSpeed,
-        frostIntensity: preset.uniforms.frostIntensity,
-        flameIntensity: preset.uniforms.flameIntensity,
-        coreIntensity: preset.uniforms.coreIntensity,
-    });
+  return createDeviceOrbMaterial({
+    color1: preset.uniforms.color1,
+    color2: preset.uniforms.color2,
+    glowColor: preset.uniforms.glowColor,
+    wobbleIntensity: preset.uniforms.wobbleIntensity,
+    patternScale: preset.uniforms.patternScale,
+    fresnelIntensity: preset.uniforms.fresnelIntensity,
+    pulseSpeed: preset.uniforms.pulseSpeed,
+    pulseStrength: preset.uniforms.pulseStrength,
+    glitchIntensity: preset.uniforms.glitchIntensity,
+    ringIntensity: preset.uniforms.ringIntensity,
+    holoIntensity: preset.uniforms.holoIntensity,
+    scanSpeed: preset.uniforms.scanSpeed,
+    frostIntensity: preset.uniforms.frostIntensity,
+    flameIntensity: preset.uniforms.flameIntensity,
+    coreIntensity: preset.uniforms.coreIntensity,
+  });
 }
 
 /** Update material uniforms without recreating the material */
 export function updateMaterialUniforms(
-    material: THREE.ShaderMaterial,
-    updates: Partial<DeviceOrbUniforms>
+  material: THREE.ShaderMaterial,
+  updates: Partial<DeviceOrbUniforms>
 ): void {
-    Object.entries(updates).forEach(([key, value]) => {
-        if (material.uniforms[key]) {
-            if (key === 'color1' || key === 'color2' || key === 'glowColor') {
-                material.uniforms[key].value = asColor(value as string, '#ffffff');
-            } else {
-                material.uniforms[key].value = value;
-            }
-        }
-    });
+  Object.entries(updates).forEach(([key, value]) => {
+    if (material.uniforms[key]) {
+      if (key === 'color1' || key === 'color2' || key === 'glowColor') {
+        material.uniforms[key].value = asColor(value as string, '#ffffff');
+      } else {
+        material.uniforms[key].value = value;
+      }
+    }
+  });
 }
 
 /**
@@ -398,15 +398,15 @@ export function updateMaterialUniforms(
  * Creates floating particles inside syncing devices
  */
 export function createParticleShaderMaterial(color: THREE.Color | string): THREE.ShaderMaterial {
-    const particleColor = color instanceof THREE.Color ? color : new THREE.Color(color);
+  const particleColor = color instanceof THREE.Color ? color : new THREE.Color(color);
 
-    return new THREE.ShaderMaterial({
-        uniforms: {
-            time: { value: 0 },
-            color: { value: particleColor },
-            pointSize: { value: 4.0 },
-        },
-        vertexShader: /* glsl */ `
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0 },
+      color: { value: particleColor },
+      pointSize: { value: 4.0 },
+    },
+    vertexShader: /* glsl */ `
       uniform float time;
       uniform float pointSize;
       
@@ -427,7 +427,7 @@ export function createParticleShaderMaterial(color: THREE.Color | string): THREE
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
-        fragmentShader: /* glsl */ `
+    fragmentShader: /* glsl */ `
       uniform vec3 color;
       varying float vAlpha;
       
@@ -440,10 +440,10 @@ export function createParticleShaderMaterial(color: THREE.Color | string): THREE
         gl_FragColor = vec4(color, alpha);
       }
     `,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-    });
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
 }
 
 /**
@@ -451,19 +451,19 @@ export function createParticleShaderMaterial(color: THREE.Color | string): THREE
  * Creates glowing lines between connected devices
  */
 export function createConnectionShaderMaterial(
-    color: THREE.Color | string,
-    isActive: boolean
+  color: THREE.Color | string,
+  isActive: boolean
 ): THREE.ShaderMaterial {
-    const connectionColor = color instanceof THREE.Color ? color : new THREE.Color(color);
+  const connectionColor = color instanceof THREE.Color ? color : new THREE.Color(color);
 
-    return new THREE.ShaderMaterial({
-        uniforms: {
-            time: { value: 0 },
-            color: { value: connectionColor },
-            opacity: { value: isActive ? 0.6 : 0.2 },
-            flowSpeed: { value: isActive ? 2.0 : 0.5 },
-        },
-        vertexShader: /* glsl */ `
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0 },
+      color: { value: connectionColor },
+      opacity: { value: isActive ? 0.6 : 0.2 },
+      flowSpeed: { value: isActive ? 2.0 : 0.5 },
+    },
+    vertexShader: /* glsl */ `
       varying vec2 vUv;
       
       void main() {
@@ -471,7 +471,7 @@ export function createConnectionShaderMaterial(
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
-        fragmentShader: /* glsl */ `
+    fragmentShader: /* glsl */ `
       uniform float time;
       uniform vec3 color;
       uniform float opacity;
@@ -494,22 +494,22 @@ export function createConnectionShaderMaterial(
         gl_FragColor = vec4(finalColor, alpha);
       }
     `,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-    });
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
 }
 
 /** Update particle shader time uniform */
 export function updateParticleShaderTime(material: THREE.ShaderMaterial, time: number): void {
-    if (material.uniforms.time) {
-        material.uniforms.time.value = time;
-    }
+  if (material.uniforms.time) {
+    material.uniforms.time.value = time;
+  }
 }
 
 /** Update connection shader time uniform */
 export function updateConnectionShaderTime(material: THREE.ShaderMaterial, time: number): void {
-    if (material.uniforms.time) {
-        material.uniforms.time.value = time;
-    }
+  if (material.uniforms.time) {
+    material.uniforms.time.value = time;
+  }
 }

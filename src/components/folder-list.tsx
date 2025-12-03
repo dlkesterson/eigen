@@ -11,6 +11,9 @@ import {
   useOpenFolderInExplorer,
   useUnshareFolder,
   useSystemStatus,
+  useVersionStorageInfo,
+  useCleanupVersions,
+  useCleanupVersionsOlderThan,
 } from '@/hooks/useSyncthing';
 import { CardContent, CardHeader, CardTitle, CardDescription, Card } from '@/components/ui/card';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -32,6 +35,8 @@ import {
   AlertTriangle,
   Users,
   X,
+  History,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddFolderDialog } from '@/components/add-folder-dialog';
@@ -71,6 +76,11 @@ function FolderCard({
   const removeFolder = useRemoveFolder();
   const openInExplorer = useOpenFolderInExplorer();
   const unshareFolder = useUnshareFolder();
+
+  // Version storage tracking
+  const { data: versionStorage } = useVersionStorageInfo(folder.path || '');
+  const cleanupVersions = useCleanupVersions();
+  const cleanupOldVersions = useCleanupVersionsOlderThan();
 
   const isPaused = folder.paused;
   const isSyncing = status?.state === 'syncing';
@@ -231,6 +241,85 @@ function FolderCard({
                       </button>
                     </Badge>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Version Storage */}
+            {versionStorage?.exists && versionStorage.totalBytes > 0 && (
+              <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <History className="h-4 w-4 text-amber-500" />
+                    <span className="text-muted-foreground">Version History</span>
+                    <span className="font-medium text-amber-400">
+                      {versionStorage.totalFormatted}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      ({versionStorage.fileCount} files)
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (!folder.path) return;
+                        if (confirm('Delete versions older than 30 days?')) {
+                          try {
+                            const result = await cleanupOldVersions.mutateAsync({
+                              folderPath: folder.path,
+                              days: 30,
+                            });
+                            toast.success(
+                              `Cleaned up ${result.filesDeleted} old versions (${result.bytesFreedFormatted})`
+                            );
+                          } catch {
+                            toast.error('Failed to clean up old versions');
+                          }
+                        }
+                      }}
+                      disabled={cleanupOldVersions.isPending}
+                      className="h-7 px-2 text-xs text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+                      title="Delete versions older than 30 days"
+                    >
+                      {cleanupOldVersions.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        'Clean 30d+'
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (!folder.path) return;
+                        if (
+                          confirm(
+                            `Delete ALL ${versionStorage.fileCount} versioned files? This cannot be undone.`
+                          )
+                        ) {
+                          try {
+                            const result = await cleanupVersions.mutateAsync(folder.path);
+                            toast.success(
+                              `Deleted ${result.filesDeleted} versions (${result.bytesFreedFormatted})`
+                            );
+                          } catch {
+                            toast.error('Failed to clean up versions');
+                          }
+                        }
+                      }}
+                      disabled={cleanupVersions.isPending}
+                      className="h-7 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      title="Delete all versioned files"
+                    >
+                      {cleanupVersions.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

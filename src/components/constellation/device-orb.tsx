@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import { getDevicePreset } from './orb-presets';
+import { getDevicePreset, generateOrbProfile, type DeviceOrbProfile } from './orb-presets';
 import { createMaterialFromPreset, createParticleShaderMaterial } from './orb-material';
 
 export interface DeviceOrbData {
@@ -27,7 +27,13 @@ interface DeviceOrbProps {
 }
 
 // Tooltip component with glassmorphic styling
-function DeviceTooltip({ device }: { device: DeviceOrbData }) {
+function DeviceTooltip({
+  device,
+  orbProfile,
+}: {
+  device: DeviceOrbData;
+  orbProfile: DeviceOrbProfile;
+}) {
   const getStatusText = () => {
     if (device.isPaused) return 'Paused';
     if (!device.isOnline) return 'Offline';
@@ -40,6 +46,18 @@ function DeviceTooltip({ device }: { device: DeviceOrbData }) {
     if (!device.isOnline) return 'text-gray-400';
     if (device.isSyncing) return 'text-cyan-400';
     return 'text-green-400';
+  };
+
+  // Convert hue to color name for display
+  const getHueColorName = (hue: number) => {
+    if (hue < 30) return 'Red';
+    if (hue < 60) return 'Orange';
+    if (hue < 90) return 'Yellow';
+    if (hue < 150) return 'Green';
+    if (hue < 210) return 'Cyan';
+    if (hue < 270) return 'Blue';
+    if (hue < 330) return 'Purple';
+    return 'Red';
   };
 
   return (
@@ -77,6 +95,19 @@ function DeviceTooltip({ device }: { device: DeviceOrbData }) {
           )}
         </div>
       )}
+      {/* Device visual profile info */}
+      <div className="mt-2 border-t border-cyan-400/20 pt-2">
+        <div className="flex items-center gap-2 font-mono text-[10px] text-gray-500">
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: `hsl(${orbProfile.primaryHue}, 70%, 60%)` }}
+          />
+          <span>{getHueColorName(orbProfile.primaryHue)} signature</span>
+        </div>
+        <div className="mt-1 font-mono text-[10px] text-gray-500">
+          {orbProfile.layerCount} glass layers • {orbProfile.glowIntensity.toFixed(1)}x glow
+        </div>
+      </div>
       <div className="mt-2 truncate font-mono text-[10px] text-gray-500">
         {device.id.slice(0, 16)}...
       </div>
@@ -90,6 +121,9 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
   const outerGlowRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.LineSegments>(null);
   const particlesRef = useRef<THREE.Points>(null);
+  const coreRef = useRef<THREE.Mesh>(null);
+  const glassLayersRef = useRef<THREE.Mesh[]>([]);
+  const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
   const particleMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -108,6 +142,9 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
     [device.id, device.isLocal, device.isOnline, device.isSyncing, device.isPaused]
   );
 
+  // Generate deterministic profile for this device
+  const orbProfile = useMemo(() => generateOrbProfile(device.id), [device.id]);
+
   // Create shader material from preset (memoized and stored in ref)
   const shaderMaterial = useMemo(() => {
     const material = createMaterialFromPreset(preset);
@@ -117,6 +154,12 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
 
   // Get glow color from preset for auxiliary meshes
   const glowColor = useMemo(() => new THREE.Color(preset.uniforms.glowColor), [preset]);
+
+  // Create core color based on device profile
+  const coreColor = useMemo(
+    () => new THREE.Color().setHSL(orbProfile.primaryHue / 360, 0.7, 0.6),
+    [orbProfile.primaryHue]
+  );
 
   // Create particle shader material for syncing/online devices
   const particleMaterial = useMemo(() => {
@@ -191,8 +234,26 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
       mat.uniforms.hoverIntensity.value = currentHover + (targetHover - currentHover) * 0.1;
     }
 
-    if (device.isSyncing && meshRef.current) {
-      meshRef.current.rotation.y += 0.01;
+    // Rotation animation for syncing or based on profile
+    if (meshRef.current) {
+      if (device.isSyncing) {
+        meshRef.current.rotation.y += 0.01;
+      } else {
+        meshRef.current.rotation.y += orbProfile.rotationSpeed * 0.01;
+      }
+    }
+
+    // Floating/bobbing animation based on device profile
+    if (groupRef.current) {
+      const floatOffset = Math.sin(time * orbProfile.pulseSpeed * 0.5) * 0.15;
+      groupRef.current.position.y = device.position[1] + floatOffset;
+    }
+
+    // Pulse scale animation based on profile
+    if (meshRef.current) {
+      const pulseScale = 1 + Math.sin(time * orbProfile.pulseSpeed) * 0.05;
+      const targetScale = isHovered ? 1.3 * pulseScale : pulseScale;
+      meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     }
 
     // Pulsing glow animation
@@ -207,6 +268,23 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
       outerGlowRef.current.scale.setScalar(outerPulseScale);
     }
 
+    // Inner core glow pulsing
+    if (coreRef.current && coreRef.current.material instanceof THREE.MeshPhysicalMaterial) {
+      const coreIntensity =
+        device.isOnline && !device.isPaused
+          ? 0.4 + Math.sin(time * orbProfile.pulseSpeed * 2) * 0.2
+          : 0.1;
+      coreRef.current.material.emissiveIntensity = coreIntensity;
+    }
+
+    // Animate glass layers with staggered rotation
+    glassLayersRef.current.forEach((layer, index) => {
+      if (layer) {
+        layer.rotation.y += orbProfile.rotationSpeed * 0.005 * (index + 1);
+        layer.rotation.x += orbProfile.rotationSpeed * 0.003 * (index + 1);
+      }
+    });
+
     if (ringRef.current && device.isSyncing) {
       ringRef.current.rotation.z += 0.03;
     }
@@ -215,12 +293,6 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
     if (particlesRef.current) {
       particlesRef.current.rotation.y += device.isSyncing ? 0.015 : 0.005;
       particlesRef.current.rotation.x += device.isSyncing ? 0.008 : 0.002;
-    }
-
-    // Hover scale animation
-    if (meshRef.current) {
-      const targetScale = isHovered ? 1.3 : 1;
-      meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     }
   });
 
@@ -236,8 +308,18 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
     return new Float32Array(points);
   }, [size]);
 
+  // Generate glass layer scales based on device profile
+  const glassLayerScales = useMemo(() => {
+    const scales: number[] = [];
+    for (let i = 0; i < orbProfile.layerCount; i++) {
+      scales.push(1 - i * 0.15);
+    }
+    return scales;
+  }, [orbProfile.layerCount]);
+
   return (
     <group
+      ref={groupRef}
       position={device.position}
       onClick={onClick}
       onPointerEnter={() => setIsHovered(true)}
@@ -247,6 +329,62 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
       <mesh ref={meshRef} material={shaderMaterial}>
         <icosahedronGeometry args={[size, 4]} />
       </mesh>
+
+      {/* Glass shell layers - creates depth and refraction effect */}
+      {glassLayerScales.map((scale, index) => (
+        <mesh
+          key={`glass-layer-${index}`}
+          ref={(el) => {
+            if (el) glassLayersRef.current[index] = el;
+          }}
+        >
+          <sphereGeometry args={[size * scale * 1.1, 32, 32]} />
+          <meshPhysicalMaterial
+            color="#ffffff"
+            metalness={0.1}
+            roughness={0.05}
+            transmission={0.95}
+            thickness={0.5}
+            transparent
+            opacity={0.4 - index * 0.1}
+            envMapIntensity={1}
+            clearcoat={1}
+            clearcoatRoughness={0.1}
+          />
+        </mesh>
+      ))}
+
+      {/* Inner emissive core */}
+      <mesh ref={coreRef}>
+        <sphereGeometry args={[size * 0.4, 32, 32]} />
+        <meshPhysicalMaterial
+          color={coreColor}
+          metalness={0.2}
+          roughness={0.3}
+          transmission={0.6}
+          thickness={0.3}
+          emissive={coreColor}
+          emissiveIntensity={device.isOnline && !device.isPaused ? 0.6 : 0.2}
+        />
+      </mesh>
+
+      {/* Inner glow sphere */}
+      <mesh>
+        <sphereGeometry args={[size * 0.2, 16, 16]} />
+        <meshBasicMaterial color={glowColor} transparent opacity={0.8} />
+      </mesh>
+
+      {/* Point light inside orb for bloom/glow effect */}
+      <pointLight
+        color={glowColor}
+        intensity={
+          device.isOnline && !device.isPaused
+            ? orbProfile.glowIntensity * 2.5
+            : orbProfile.glowIntensity * 0.8
+        }
+        distance={8}
+        decay={2}
+      />
 
       {/* Inner glow layer */}
       <mesh ref={glowRef}>
@@ -311,6 +449,18 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
         </group>
       )}
 
+      {/* Third syncing ring for extra emphasis */}
+      {device.isSyncing && (
+        <group rotation={[Math.PI / 2, Math.PI / 4, 0]}>
+          <lineSegments>
+            <bufferGeometry attach="geometry">
+              <bufferAttribute attach="attributes-position" args={[ringPoints, 3]} />
+            </bufferGeometry>
+            <lineBasicMaterial color={glowColor} opacity={0.3} transparent linewidth={1} />
+          </lineSegments>
+        </group>
+      )}
+
       {/* Tooltip - only shows after 1.5s hover */}
       {showTooltip && (
         <Html
@@ -324,7 +474,7 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
             transform: 'translate3d(-50%, -100%, 0)',
           }}
         >
-          <DeviceTooltip device={device} />
+          <DeviceTooltip device={device} orbProfile={orbProfile} />
         </Html>
       )}
     </group>

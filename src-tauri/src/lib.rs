@@ -269,6 +269,9 @@ pub fn run() {
             commands::files::resolve_conflict_keep_conflict,
             commands::files::browse_versions,
             commands::files::restore_version,
+            commands::files::get_version_storage_info,
+            commands::files::cleanup_versions,
+            commands::files::cleanup_versions_older_than,
             // Event commands (events, logs, tray)
             commands::events::get_events,
             commands::events::get_system_logs,

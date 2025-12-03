@@ -440,3 +440,246 @@ pub async fn restore_version(
 
     Ok(())
 }
+
+/// Storage information for versioned files
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionStorageInfo {
+    /// Total size of .stversions folder in bytes
+    pub total_bytes: u64,
+    /// Human-readable size (e.g., "1.5 GB")
+    pub total_formatted: String,
+    /// Number of versioned files
+    pub file_count: u64,
+    /// Whether the .stversions folder exists
+    pub exists: bool,
+}
+
+/// Get the storage used by versioned files for a folder
+/// Calculates the total size of the .stversions directory
+#[tauri::command]
+pub async fn get_version_storage_info(
+    folder_path: String,
+) -> Result<VersionStorageInfo, SyncthingError> {
+    use std::path::Path;
+
+    let versions_path = Path::new(&folder_path).join(".stversions");
+
+    if !versions_path.exists() {
+        return Ok(VersionStorageInfo {
+            total_bytes: 0,
+            total_formatted: "0 B".to_string(),
+            file_count: 0,
+            exists: false,
+        });
+    }
+
+    let (total_bytes, file_count) = calculate_dir_size(&versions_path)?;
+
+    Ok(VersionStorageInfo {
+        total_bytes,
+        total_formatted: format_bytes(total_bytes),
+        file_count,
+        exists: true,
+    })
+}
+
+/// Recursively calculate directory size and file count
+fn calculate_dir_size(path: &std::path::Path) -> Result<(u64, u64), SyncthingError> {
+    let mut total_size: u64 = 0;
+    let mut file_count: u64 = 0;
+
+    if path.is_dir() {
+        for entry in std::fs::read_dir(path)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to read directory: {e}")))?
+        {
+            let entry = entry
+                .map_err(|e| SyncthingError::ProcessError(format!("Failed to read entry: {e}")))?;
+            let entry_path = entry.path();
+
+            if entry_path.is_dir() {
+                let (dir_size, dir_count) = calculate_dir_size(&entry_path)?;
+                total_size += dir_size;
+                file_count += dir_count;
+            } else if entry_path.is_file() {
+                if let Ok(metadata) = entry_path.metadata() {
+                    total_size += metadata.len();
+                    file_count += 1;
+                }
+            }
+        }
+    }
+
+    Ok((total_size, file_count))
+}
+
+/// Format bytes into human-readable string
+fn format_bytes(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+    const TB: u64 = GB * 1024;
+
+    if bytes >= TB {
+        format!("{:.2} TB", bytes as f64 / TB as f64)
+    } else if bytes >= GB {
+        format!("{:.2} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
+/// Result of cleaning up old versions
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupResult {
+    /// Number of files deleted
+    pub files_deleted: u64,
+    /// Total bytes freed
+    pub bytes_freed: u64,
+    /// Human-readable bytes freed
+    pub bytes_freed_formatted: String,
+    /// Whether cleanup was successful
+    pub success: bool,
+    /// Error message if any
+    pub error: Option<String>,
+}
+
+/// Clean up (delete) all versioned files for a folder
+/// This removes the entire .stversions directory
+#[tauri::command]
+pub async fn cleanup_versions(folder_path: String) -> Result<CleanupResult, SyncthingError> {
+    use std::path::Path;
+
+    let versions_path = Path::new(&folder_path).join(".stversions");
+
+    if !versions_path.exists() {
+        return Ok(CleanupResult {
+            files_deleted: 0,
+            bytes_freed: 0,
+            bytes_freed_formatted: "0 B".to_string(),
+            success: true,
+            error: None,
+        });
+    }
+
+    // Get size before deletion
+    let (bytes_to_free, file_count) = calculate_dir_size(&versions_path)?;
+
+    // Delete the directory
+    match std::fs::remove_dir_all(&versions_path) {
+        Ok(()) => Ok(CleanupResult {
+            files_deleted: file_count,
+            bytes_freed: bytes_to_free,
+            bytes_freed_formatted: format_bytes(bytes_to_free),
+            success: true,
+            error: None,
+        }),
+        Err(e) => Ok(CleanupResult {
+            files_deleted: 0,
+            bytes_freed: 0,
+            bytes_freed_formatted: "0 B".to_string(),
+            success: false,
+            error: Some(format!("Failed to delete versions: {e}")),
+        }),
+    }
+}
+
+/// Clean up versions older than a specified number of days
+#[tauri::command]
+pub async fn cleanup_versions_older_than(
+    folder_path: String,
+    days: u32,
+) -> Result<CleanupResult, SyncthingError> {
+    use std::path::Path;
+    use std::time::{Duration, SystemTime};
+
+    let versions_path = Path::new(&folder_path).join(".stversions");
+
+    if !versions_path.exists() {
+        return Ok(CleanupResult {
+            files_deleted: 0,
+            bytes_freed: 0,
+            bytes_freed_formatted: "0 B".to_string(),
+            success: true,
+            error: None,
+        });
+    }
+
+    let cutoff = SystemTime::now() - Duration::from_secs(u64::from(days) * 86400);
+    let (files_deleted, bytes_freed) = delete_old_files_recursive(&versions_path, cutoff)?;
+
+    // Try to clean up empty directories
+    cleanup_empty_dirs(&versions_path);
+
+    Ok(CleanupResult {
+        files_deleted,
+        bytes_freed,
+        bytes_freed_formatted: format_bytes(bytes_freed),
+        success: true,
+        error: None,
+    })
+}
+
+/// Recursively delete files older than cutoff time
+fn delete_old_files_recursive(
+    path: &std::path::Path,
+    cutoff: std::time::SystemTime,
+) -> Result<(u64, u64), SyncthingError> {
+    let mut deleted_count: u64 = 0;
+    let mut freed_bytes: u64 = 0;
+
+    if path.is_dir() {
+        for entry in std::fs::read_dir(path)
+            .map_err(|e| SyncthingError::ProcessError(format!("Failed to read directory: {e}")))?
+        {
+            let entry = entry
+                .map_err(|e| SyncthingError::ProcessError(format!("Failed to read entry: {e}")))?;
+            let entry_path = entry.path();
+
+            if entry_path.is_dir() {
+                let (count, bytes) = delete_old_files_recursive(&entry_path, cutoff)?;
+                deleted_count += count;
+                freed_bytes += bytes;
+            } else if entry_path.is_file() {
+                if let Ok(metadata) = entry_path.metadata() {
+                    if let Ok(modified) = metadata.modified() {
+                        if modified < cutoff {
+                            let size = metadata.len();
+                            if std::fs::remove_file(&entry_path).is_ok() {
+                                deleted_count += 1;
+                                freed_bytes += size;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok((deleted_count, freed_bytes))
+}
+
+/// Clean up empty directories after file deletion
+fn cleanup_empty_dirs(path: &std::path::Path) {
+    if !path.is_dir() {
+        return;
+    }
+
+    // First, recursively clean subdirectories
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            if entry_path.is_dir() {
+                cleanup_empty_dirs(&entry_path);
+            }
+        }
+    }
+
+    // Then try to remove this directory if empty (will fail if not empty, which is fine)
+    let _ = std::fs::remove_dir(path);
+}

@@ -8,6 +8,130 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
 
+// =============================================================================
+// Folder Type and Versioning Types
+// =============================================================================
+
+/// Folder sync type - controls sync direction
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum FolderType {
+    /// Full two-way sync (default)
+    #[default]
+    #[serde(rename = "sendreceive")]
+    SendReceive,
+    /// Only send local changes, ignore remote changes
+    #[serde(rename = "sendonly")]
+    SendOnly,
+    /// Only receive remote changes, local changes are overrides
+    #[serde(rename = "receiveonly")]
+    ReceiveOnly,
+}
+
+impl FolderType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FolderType::SendReceive => "sendreceive",
+            FolderType::SendOnly => "sendonly",
+            FolderType::ReceiveOnly => "receiveonly",
+        }
+    }
+}
+
+/// File versioning type
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum VersioningType {
+    /// No versioning - old files are deleted
+    #[default]
+    None,
+    /// Moves deleted/replaced files to .stversions folder
+    #[serde(rename = "trashcan")]
+    TrashCan,
+    /// Keeps N previous versions in .stversions
+    Simple,
+    /// Time-based retention (keeps more recent versions, fewer old ones)
+    Staggered,
+    /// Calls an external script to handle versioning
+    External,
+}
+
+impl VersioningType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VersioningType::None => "",
+            VersioningType::TrashCan => "trashcan",
+            VersioningType::Simple => "simple",
+            VersioningType::Staggered => "staggered",
+            VersioningType::External => "external",
+        }
+    }
+}
+
+/// Versioning configuration for a folder
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct VersioningConfig {
+    /// The type of versioning to use
+    #[serde(rename = "type")]
+    pub versioning_type: VersioningType,
+    /// Type-specific parameters
+    #[serde(default)]
+    pub params: HashMap<String, String>,
+}
+
+impl VersioningConfig {
+    /// Convert to Syncthing API format
+    pub fn to_syncthing_json(&self) -> serde_json::Value {
+        let type_str = self.versioning_type.as_str();
+        if type_str.is_empty() {
+            // No versioning
+            return serde_json::json!({
+                "type": "",
+                "params": {},
+                "cleanupIntervalS": 3600,
+                "fsPath": "",
+                "fsType": "basic"
+            });
+        }
+
+        // Apply default params based on versioning type
+        let mut params = self.params.clone();
+        match self.versioning_type {
+            VersioningType::TrashCan => {
+                params
+                    .entry("cleanoutDays".to_string())
+                    .or_insert("0".to_string());
+            },
+            VersioningType::Simple => {
+                params.entry("keep".to_string()).or_insert("5".to_string());
+            },
+            VersioningType::Staggered => {
+                params
+                    .entry("cleanInterval".to_string())
+                    .or_insert("3600".to_string());
+                params
+                    .entry("maxAge".to_string())
+                    .or_insert("31536000".to_string()); // 1 year
+            },
+            VersioningType::External => {
+                params
+                    .entry("command".to_string())
+                    .or_insert_with(String::new);
+            },
+            VersioningType::None => {},
+        }
+
+        serde_json::json!({
+            "type": type_str,
+            "params": params,
+            "cleanupIntervalS": 3600,
+            "fsPath": "",
+            "fsType": "basic"
+        })
+    }
+}
+
 /// Information about a pending device connection request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -256,6 +380,8 @@ pub async fn accept_pending_folder(
     device_id: String,
     folder_path: String,
     folder_label: Option<String>,
+    folder_type: Option<FolderType>,
+    versioning: Option<VersioningConfig>,
 ) -> Result<(), SyncthingError> {
     let client = reqwest::Client::new();
     let config_url = format!(
@@ -304,11 +430,14 @@ pub async fn accept_pending_folder(
     } else {
         // Create new folder with this device
         let label = folder_label.unwrap_or_else(|| folder_id.clone());
+        let sync_type = folder_type.unwrap_or_default();
+        let versioning_config = versioning.unwrap_or_default();
+
         let new_folder = serde_json::json!({
             "id": folder_id.clone(),
             "label": label,
             "path": folder_path,
-            "type": "sendreceive",
+            "type": sync_type.as_str(),
             "devices": [
                 {
                     "deviceID": device_id.clone(),
@@ -320,6 +449,7 @@ pub async fn accept_pending_folder(
             "fsWatcherDelayS": 10,
             "ignorePerms": false,
             "autoNormalize": true,
+            "versioning": versioning_config.to_syncthing_json(),
         });
 
         if let Some(folders) = config["folders"].as_array_mut() {
