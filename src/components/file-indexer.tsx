@@ -25,7 +25,7 @@ import {
   getFileCount,
   clearFilesForFolder,
   getFilesWithoutEmbeddings,
-  getAllEmbeddings,
+  getEmbeddingCount,
   clearAllData,
   type FileMetadata,
 } from '@/lib/db';
@@ -74,8 +74,9 @@ export function FileIndexer() {
     try {
       const count = await getFileCount();
       setTotalFiles(count);
-      const embeddings = await getAllEmbeddings();
-      setTotalEmbeddings(embeddings.length);
+      // Use efficient count instead of loading all embeddings
+      const embeddingCount = await getEmbeddingCount();
+      setTotalEmbeddings(embeddingCount);
     } catch (e) {
       logger.warn('Error updating stats', { error: String(e) });
     }

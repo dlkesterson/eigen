@@ -22,22 +22,37 @@ import { FolderList } from '@/components/folder-list';
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle, XCircle, Link, Folder } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-// Cosmic dust particles for atmosphere
+// Pre-computed dust particle data (computed once at module load)
+const DUST_PARTICLES = Array.from({ length: 50 }).map((_, i) => ({
+  id: i,
+  position: [Math.random() * 60 - 30, Math.random() * 40 - 20, Math.random() * 60 - 30] as [
+    number,
+    number,
+    number,
+  ],
+  size: Math.random() * 0.05 + 0.01,
+  opacity: Math.random() * 0.3 + 0.05,
+}));
+
+// Shared geometry and material for dust particles (created once)
+const dustGeometry = new THREE.SphereGeometry(0.03, 6, 6);
+const dustMaterial = new THREE.MeshBasicMaterial({
+  color: new THREE.Color(0.2, 0.4, 0.6),
+  transparent: true,
+  opacity: 0.15,
+});
+
+// Cosmic dust particles for atmosphere - optimized with instancing concept
 function CosmicDust() {
   return (
     <group>
-      {Array.from({ length: 100 }).map((_, i) => (
+      {DUST_PARTICLES.map((particle) => (
         <mesh
-          key={`dust-${i}`}
-          position={[Math.random() * 60 - 30, Math.random() * 40 - 20, Math.random() * 60 - 30]}
-        >
-          <sphereGeometry args={[Math.random() * 0.05 + 0.01, 8, 8]} />
-          <meshBasicMaterial
-            color={new THREE.Color(0.2, 0.4, 0.6)}
-            transparent
-            opacity={Math.random() * 0.3 + 0.05}
-          />
-        </mesh>
+          key={`dust-${particle.id}`}
+          position={particle.position}
+          geometry={dustGeometry}
+          material={dustMaterial}
+        />
       ))}
     </group>
   );
