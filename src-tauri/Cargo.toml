@@ -50,5 +50,5 @@ open = "5"
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-dialog = "2.4.2"
 tauri-plugin-shell = "2.3.3"
-image = "0.25"
+image = { version = "0.25", default-features = false, features = ["png"] }
 

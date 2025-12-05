@@ -10,18 +10,16 @@ import { MotionPage } from '@/components/ui/motion';
 import { AnimatePresence } from 'framer-motion';
 
 // Dynamically import the 3D dashboard to avoid SSR issues with Three.js
-const ConstellationDashboard = dynamic(
-  () =>
-    import('@/components/constellation/constellation-dashboard').then(
-      (mod) => mod.ConstellationDashboard
-    ),
+const OmniboxDashboard = dynamic(
+  () => import('@/components/omnibox/omnibox-dashboard').then((mod) => mod.OmniboxDashboard),
   { ssr: false }
 );
 
+// Use Omnibox dashboard as default, fallback to constellation
 function DashboardView() {
   return (
     <MotionPage className="h-full">
-      <ConstellationDashboard />
+      <OmniboxDashboard />
     </MotionPage>
   );
 }

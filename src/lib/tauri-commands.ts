@@ -22,14 +22,14 @@ import { invoke } from '@tauri-apps/api/core';
 // =============================================================================
 
 export interface SyncthingInfo {
-    installed: boolean;
-    version: string | null;
-    path: string | null;
-    bundled: boolean;
+  installed: boolean;
+  version: string | null;
+  path: string | null;
+  bundled: boolean;
 }
 
 export interface PingResponse {
-    ping: string;
+  ping: string;
 }
 
 // =============================================================================
@@ -41,7 +41,7 @@ export interface PingResponse {
  * @returns Installation status and version information
  */
 export async function checkSyncthingInstallation(): Promise<SyncthingInfo> {
-    return invoke<SyncthingInfo>('check_syncthing_installation');
+  return invoke<SyncthingInfo>('check_syncthing_installation');
 }
 
 /**
@@ -49,7 +49,7 @@ export async function checkSyncthingInstallation(): Promise<SyncthingInfo> {
  * @returns Success message
  */
 export async function startSyncthingSidecar(): Promise<string> {
-    return invoke<string>('start_syncthing_sidecar');
+  return invoke<string>('start_syncthing_sidecar');
 }
 
 /**
@@ -57,7 +57,7 @@ export async function startSyncthingSidecar(): Promise<string> {
  * @returns Success message
  */
 export async function stopSyncthingSidecar(): Promise<string> {
-    return invoke<string>('stop_syncthing_sidecar');
+  return invoke<string>('stop_syncthing_sidecar');
 }
 
 /**
@@ -65,14 +65,14 @@ export async function stopSyncthingSidecar(): Promise<string> {
  * @returns Ping response with { ping: 'pong' } if successful
  */
 export async function pingSyncthing(): Promise<PingResponse> {
-    return invoke<PingResponse>('ping_syncthing');
+  return invoke<PingResponse>('ping_syncthing');
 }
 
 /**
  * Restart the Syncthing daemon
  */
 export async function restartSyncthing(): Promise<void> {
-    return invoke<void>('restart_syncthing');
+  return invoke<void>('restart_syncthing');
 }
 
 // =============================================================================
@@ -83,35 +83,35 @@ export async function restartSyncthing(): Promise<void> {
  * Get Syncthing system status
  */
 export async function getSystemStatus(): Promise<unknown> {
-    return invoke('get_system_status');
+  return invoke('get_system_status');
 }
 
 /**
  * Get active connections to other devices
  */
 export async function getConnections(): Promise<unknown> {
-    return invoke('get_connections');
+  return invoke('get_connections');
 }
 
 /**
  * Get full Syncthing configuration
  */
 export async function getConfig(): Promise<unknown> {
-    return invoke('get_config');
+  return invoke('get_config');
 }
 
 /**
  * Update global Syncthing options
  */
 export async function updateOptions(options: Record<string, unknown>): Promise<void> {
-    return invoke('update_options', { options });
+  return invoke('update_options', { options });
 }
 
 /**
  * Get the current API configuration (for debugging)
  */
 export async function getApiConfig(): Promise<[string, number]> {
-    return invoke('get_api_config');
+  return invoke('get_api_config');
 }
 
 // =============================================================================
@@ -122,66 +122,66 @@ export async function getApiConfig(): Promise<[string, number]> {
  * Get this device's ID
  */
 export async function getDeviceId(): Promise<string> {
-    return invoke('get_device_id');
+  return invoke('get_device_id');
 }
 
 /**
  * Add a new device to Syncthing
  */
 export async function addDevice(deviceId: string, name: string): Promise<void> {
-    return invoke('add_device', { deviceId, name });
+  return invoke('add_device', { deviceId, name });
 }
 
 /**
  * Add device with advanced options
  */
 export async function addDeviceAdvanced(params: {
-    deviceId: string;
-    name: string;
-    addresses?: string[];
-    compression?: string;
-    introducer?: boolean;
-    autoAcceptFolders?: boolean;
+  deviceId: string;
+  name: string;
+  addresses?: string[];
+  compression?: string;
+  introducer?: boolean;
+  autoAcceptFolders?: boolean;
 }): Promise<void> {
-    return invoke('add_device_advanced', params);
+  return invoke('add_device_advanced', params);
 }
 
 /**
  * Remove a device from Syncthing
  */
 export async function removeDevice(deviceId: string): Promise<void> {
-    return invoke('remove_device', { deviceId });
+  return invoke('remove_device', { deviceId });
 }
 
 /**
  * Pause a device
  */
 export async function pauseDevice(deviceId: string): Promise<void> {
-    return invoke('pause_device', { deviceId });
+  return invoke('pause_device', { deviceId });
 }
 
 /**
  * Resume a device
  */
 export async function resumeDevice(deviceId: string): Promise<void> {
-    return invoke('resume_device', { deviceId });
+  return invoke('resume_device', { deviceId });
 }
 
 /**
  * Get device configuration
  */
 export async function getDeviceConfig(deviceId: string): Promise<unknown> {
-    return invoke('get_device_config', { deviceId });
+  return invoke('get_device_config', { deviceId });
 }
 
 /**
  * Update device configuration
  */
 export async function updateDeviceConfig(
-    deviceId: string,
-    updates: Record<string, unknown>
+  deviceId: string,
+  updates: Record<string, unknown>
 ): Promise<void> {
-    return invoke('update_device_config', { deviceId, updates });
+  return invoke('update_device_config', { deviceId, updates });
 }
 
 // =============================================================================
@@ -192,107 +192,107 @@ export async function updateDeviceConfig(
  * Get folder status
  */
 export async function getFolderStatus(folderId: string): Promise<unknown> {
-    return invoke('get_folder_status', { folderId });
+  return invoke('get_folder_status', { folderId });
 }
 
 /**
  * Pause a folder
  */
 export async function pauseFolder(folderId: string): Promise<void> {
-    return invoke('pause_folder', { folderId });
+  return invoke('pause_folder', { folderId });
 }
 
 /**
  * Resume a folder
  */
 export async function resumeFolder(folderId: string): Promise<void> {
-    return invoke('resume_folder', { folderId });
+  return invoke('resume_folder', { folderId });
 }
 
 /**
  * Force rescan of a folder
  */
 export async function rescanFolder(folderId: string): Promise<void> {
-    return invoke('rescan_folder', { folderId });
+  return invoke('rescan_folder', { folderId });
 }
 
 /**
  * Add a new folder to Syncthing
  */
 export async function addFolder(
-    folderId: string,
-    folderLabel: string,
-    folderPath: string
+  folderId: string,
+  folderLabel: string,
+  folderPath: string
 ): Promise<void> {
-    return invoke('add_folder', { folderId, folderLabel, folderPath });
+  return invoke('add_folder', { folderId, folderLabel, folderPath });
 }
 
 /**
  * Add a folder with advanced configuration options
  */
 export async function addFolderAdvanced(params: {
-    folderId: string;
-    label: string;
-    path: string;
-    folderType?: string;
-    rescanInterval?: number;
-    fsWatcherEnabled?: boolean;
-    ignorePerms?: boolean;
-    autoNormalize?: boolean;
+  folderId: string;
+  label: string;
+  path: string;
+  folderType?: string;
+  rescanInterval?: number;
+  fsWatcherEnabled?: boolean;
+  ignorePerms?: boolean;
+  autoNormalize?: boolean;
 }): Promise<void> {
-    return invoke('add_folder_advanced', params);
+  return invoke('add_folder_advanced', params);
 }
 
 /**
  * Remove a folder from Syncthing
  */
 export async function removeFolder(folderId: string): Promise<void> {
-    return invoke('remove_folder', { folderId });
+  return invoke('remove_folder', { folderId });
 }
 
 /**
  * Get folder configuration
  */
 export async function getFolderConfig(folderId: string): Promise<unknown> {
-    return invoke('get_folder_config', { folderId });
+  return invoke('get_folder_config', { folderId });
 }
 
 /**
  * Update folder configuration
  */
 export async function updateFolderConfig(
-    folderId: string,
-    updates: Record<string, unknown>
+  folderId: string,
+  updates: Record<string, unknown>
 ): Promise<void> {
-    return invoke('update_folder_config', { folderId, updates });
+  return invoke('update_folder_config', { folderId, updates });
 }
 
 /**
  * Share a folder with a specific device
  */
 export async function shareFolder(folderId: string, deviceId: string): Promise<void> {
-    return invoke('share_folder', { folderId, deviceId });
+  return invoke('share_folder', { folderId, deviceId });
 }
 
 /**
  * Unshare a folder from a specific device
  */
 export async function unshareFolder(folderId: string, deviceId: string): Promise<void> {
-    return invoke('unshare_folder', { folderId, deviceId });
+  return invoke('unshare_folder', { folderId, deviceId });
 }
 
 /**
  * Get ignore patterns for a folder
  */
 export async function getFolderIgnores(folderId: string): Promise<unknown> {
-    return invoke('get_folder_ignores', { folderId });
+  return invoke('get_folder_ignores', { folderId });
 }
 
 /**
  * Set ignore patterns for a folder
  */
 export async function setFolderIgnores(folderId: string, ignorePatterns: string[]): Promise<void> {
-    return invoke('set_folder_ignores', { folderId, ignorePatterns });
+  return invoke('set_folder_ignores', { folderId, ignorePatterns });
 }
 
 // =============================================================================
@@ -303,21 +303,21 @@ export async function setFolderIgnores(folderId: string, ignorePatterns: string[
  * Open folder in system file explorer
  */
 export async function openFolderInExplorer(path: string): Promise<void> {
-    return invoke('open_folder_in_explorer', { path });
+  return invoke('open_folder_in_explorer', { path });
 }
 
 /**
  * Browse folder contents
  */
 export async function browseFolder(folderId: string, prefix?: string): Promise<unknown> {
-    return invoke('browse_folder', { folderId, prefix });
+  return invoke('browse_folder', { folderId, prefix });
 }
 
 /**
  * Browse folder contents recursively
  */
 export async function browseFolderRecursive(folderId: string): Promise<unknown> {
-    return invoke('browse_folder_recursive', { folderId });
+  return invoke('browse_folder_recursive', { folderId });
 }
 
 // =============================================================================
@@ -328,24 +328,24 @@ export async function browseFolderRecursive(folderId: string): Promise<unknown> 
  * Scan for conflict files
  */
 export async function scanForConflicts(folderId: string): Promise<unknown> {
-    return invoke('scan_for_conflicts', { folderId });
+  return invoke('scan_for_conflicts', { folderId });
 }
 
 /**
  * Delete a conflict file
  */
 export async function deleteConflictFile(path: string): Promise<void> {
-    return invoke('delete_conflict_file', { path });
+  return invoke('delete_conflict_file', { path });
 }
 
 /**
  * Resolve conflict by keeping the conflict version
  */
 export async function resolveConflictKeepConflict(
-    conflictPath: string,
-    originalPath: string
+  conflictPath: string,
+  originalPath: string
 ): Promise<void> {
-    return invoke('resolve_conflict_keep_conflict', { conflictPath, originalPath });
+  return invoke('resolve_conflict_keep_conflict', { conflictPath, originalPath });
 }
 
 // =============================================================================
@@ -356,32 +356,32 @@ export async function resolveConflictKeepConflict(
  * Browse file versions
  */
 export async function browseVersions(folderId: string, path: string): Promise<unknown> {
-    return invoke('browse_versions', { folderId, path });
+  return invoke('browse_versions', { folderId, path });
 }
 
 /**
  * Restore a file version
  */
 export async function restoreVersion(
-    folderId: string,
-    path: string,
-    versionTime: string
+  folderId: string,
+  path: string,
+  versionTime: string
 ): Promise<void> {
-    return invoke('restore_version', { folderId, path, versionTime });
+  return invoke('restore_version', { folderId, path, versionTime });
 }
 
 /**
  * Storage information for versioned files
  */
 export interface VersionStorageInfo {
-    /** Total size of .stversions folder in bytes */
-    totalBytes: number;
-    /** Human-readable size (e.g., "1.5 GB") */
-    totalFormatted: string;
-    /** Number of versioned files */
-    fileCount: number;
-    /** Whether the .stversions folder exists */
-    exists: boolean;
+  /** Total size of .stversions folder in bytes */
+  totalBytes: number;
+  /** Human-readable size (e.g., "1.5 GB") */
+  totalFormatted: string;
+  /** Number of versioned files */
+  fileCount: number;
+  /** Whether the .stversions folder exists */
+  exists: boolean;
 }
 
 /**
@@ -391,23 +391,23 @@ export interface VersionStorageInfo {
  * @returns Storage information including total size and file count
  */
 export async function getVersionStorageInfo(folderPath: string): Promise<VersionStorageInfo> {
-    return invoke<VersionStorageInfo>('get_version_storage_info', { folderPath });
+  return invoke<VersionStorageInfo>('get_version_storage_info', { folderPath });
 }
 
 /**
  * Result of cleaning up old versions
  */
 export interface CleanupResult {
-    /** Number of files deleted */
-    filesDeleted: number;
-    /** Total bytes freed */
-    bytesFreed: number;
-    /** Human-readable bytes freed */
-    bytesFreedFormatted: string;
-    /** Whether cleanup was successful */
-    success: boolean;
-    /** Error message if any */
-    error?: string;
+  /** Number of files deleted */
+  filesDeleted: number;
+  /** Total bytes freed */
+  bytesFreed: number;
+  /** Human-readable bytes freed */
+  bytesFreedFormatted: string;
+  /** Whether cleanup was successful */
+  success: boolean;
+  /** Error message if any */
+  error?: string;
 }
 
 /**
@@ -417,7 +417,7 @@ export interface CleanupResult {
  * @returns Cleanup result with stats on files deleted and space freed
  */
 export async function cleanupVersions(folderPath: string): Promise<CleanupResult> {
-    return invoke<CleanupResult>('cleanup_versions', { folderPath });
+  return invoke<CleanupResult>('cleanup_versions', { folderPath });
 }
 
 /**
@@ -428,10 +428,10 @@ export async function cleanupVersions(folderPath: string): Promise<CleanupResult
  * @returns Cleanup result with stats on files deleted and space freed
  */
 export async function cleanupVersionsOlderThan(
-    folderPath: string,
-    days: number
+  folderPath: string,
+  days: number
 ): Promise<CleanupResult> {
-    return invoke<CleanupResult>('cleanup_versions_older_than', { folderPath, days });
+  return invoke<CleanupResult>('cleanup_versions_older_than', { folderPath, days });
 }
 
 // =============================================================================
@@ -442,18 +442,18 @@ export async function cleanupVersionsOlderThan(
  * Get Syncthing logs
  */
 export async function getSystemLogs(since?: string): Promise<unknown> {
-    return invoke('get_system_logs', { since });
+  return invoke('get_system_logs', { since });
 }
 
 /**
  * Get events from Syncthing (for real-time updates)
  */
 export async function getEvents(params?: {
-    since?: number;
-    limit?: number;
-    timeout?: number;
+  since?: number;
+  limit?: number;
+  timeout?: number;
 }): Promise<unknown> {
-    return invoke('get_events', params ?? {});
+  return invoke('get_events', params ?? {});
 }
 
 // =============================================================================
@@ -464,7 +464,7 @@ export async function getEvents(params?: {
  * Update the system tray status
  */
 export async function updateTrayStatus(status: string, tooltip: string): Promise<void> {
-    return invoke('update_tray_status', { status, tooltip });
+  return invoke('update_tray_status', { status, tooltip });
 }
 
 // =============================================================================
@@ -475,31 +475,31 @@ export async function updateTrayStatus(status: string, tooltip: string): Promise
  * Pending device connection request
  */
 export interface PendingDevice {
-    deviceId: string;
-    name?: string;
-    address?: string;
-    time?: string;
+  deviceId: string;
+  name?: string;
+  address?: string;
+  time?: string;
 }
 
 /**
  * Pending folder share request
  */
 export interface PendingFolder {
-    folderId: string;
-    folderLabel?: string;
-    offeredBy: string;
-    offeredByName?: string;
-    time?: string;
-    receiveEncrypted: boolean;
-    remoteEncrypted: boolean;
+  folderId: string;
+  folderLabel?: string;
+  offeredBy: string;
+  offeredByName?: string;
+  time?: string;
+  receiveEncrypted: boolean;
+  remoteEncrypted: boolean;
 }
 
 /**
  * All pending requests (devices and folders)
  */
 export interface PendingRequests {
-    devices: PendingDevice[];
-    folders: PendingFolder[];
+  devices: PendingDevice[];
+  folders: PendingFolder[];
 }
 
 // =============================================================================
@@ -528,49 +528,49 @@ export type VersioningType = 'none' | 'trashcan' | 'simple' | 'staggered' | 'ext
  * Versioning configuration for a folder
  */
 export interface VersioningConfig {
-    /** The type of versioning to use */
-    versioningType: VersioningType;
-    /** Type-specific parameters */
-    params?: Record<string, string>;
+  /** The type of versioning to use */
+  versioningType: VersioningType;
+  /** Type-specific parameters */
+  params?: Record<string, string>;
 }
 
 /**
  * Options for accepting a pending folder share request
  */
 export interface AcceptPendingFolderOptions {
-    /** The folder ID to accept */
-    folderId: string;
-    /** The device ID that shared the folder */
-    deviceId: string;
-    /** Local path where the folder will be synced */
-    folderPath: string;
-    /** Optional label for the folder */
-    folderLabel?: string;
-    /** Sync mode (send/receive direction) - defaults to 'sendreceive' */
-    folderType?: FolderType;
-    /** File versioning configuration - defaults to none */
-    versioning?: VersioningConfig;
+  /** The folder ID to accept */
+  folderId: string;
+  /** The device ID that shared the folder */
+  deviceId: string;
+  /** Local path where the folder will be synced */
+  folderPath: string;
+  /** Optional label for the folder */
+  folderLabel?: string;
+  /** Sync mode (send/receive direction) - defaults to 'sendreceive' */
+  folderType?: FolderType;
+  /** File versioning configuration - defaults to none */
+  versioning?: VersioningConfig;
 }
 
 /**
  * Get all pending device connection requests
  */
 export async function getPendingDevices(): Promise<PendingDevice[]> {
-    return invoke<PendingDevice[]>('get_pending_devices');
+  return invoke<PendingDevice[]>('get_pending_devices');
 }
 
 /**
  * Get all pending folder share requests
  */
 export async function getPendingFolders(): Promise<PendingFolder[]> {
-    return invoke<PendingFolder[]>('get_pending_folders');
+  return invoke<PendingFolder[]>('get_pending_folders');
 }
 
 /**
  * Get all pending requests (devices and folders) in one call
  */
 export async function getPendingRequests(): Promise<PendingRequests> {
-    return invoke<PendingRequests>('get_pending_requests');
+  return invoke<PendingRequests>('get_pending_requests');
 }
 
 /**
@@ -579,7 +579,7 @@ export async function getPendingRequests(): Promise<PendingRequests> {
  * @param name - Optional name for the device
  */
 export async function acceptPendingDevice(deviceId: string, name?: string): Promise<void> {
-    return invoke('accept_pending_device', { deviceId, name });
+  return invoke('accept_pending_device', { deviceId, name });
 }
 
 /**
@@ -587,7 +587,7 @@ export async function acceptPendingDevice(deviceId: string, name?: string): Prom
  * @param deviceId - The device ID to dismiss
  */
 export async function dismissPendingDevice(deviceId: string): Promise<void> {
-    return invoke('dismiss_pending_device', { deviceId });
+  return invoke('dismiss_pending_device', { deviceId });
 }
 
 /**
@@ -595,14 +595,14 @@ export async function dismissPendingDevice(deviceId: string): Promise<void> {
  * @param options - Options including folder path, type, and versioning settings
  */
 export async function acceptPendingFolder(options: AcceptPendingFolderOptions): Promise<void> {
-    return invoke('accept_pending_folder', {
-        folderId: options.folderId,
-        deviceId: options.deviceId,
-        folderPath: options.folderPath,
-        folderLabel: options.folderLabel,
-        folderType: options.folderType,
-        versioning: options.versioning,
-    });
+  return invoke('accept_pending_folder', {
+    folderId: options.folderId,
+    deviceId: options.deviceId,
+    folderPath: options.folderPath,
+    folderLabel: options.folderLabel,
+    folderType: options.folderType,
+    versioning: options.versioning,
+  });
 }
 
 /**
@@ -611,5 +611,5 @@ export async function acceptPendingFolder(options: AcceptPendingFolderOptions): 
  * @param deviceId - The device ID that shared the folder
  */
 export async function dismissPendingFolder(folderId: string, deviceId: string): Promise<void> {
-    return invoke('dismiss_pending_folder', { folderId, deviceId });
+  return invoke('dismiss_pending_folder', { folderId, deviceId });
 }

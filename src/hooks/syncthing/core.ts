@@ -123,3 +123,32 @@ export function useSyncthingLifecycle() {
     connectionError: isError ? error : null,
   };
 }
+
+/**
+ * Hook to fetch recent Syncthing events
+ * @param limit Maximum number of events to fetch
+ */
+export function useRecentEvents(limit: number = 50) {
+  return useQuery({
+    queryKey: ['recentEvents', limit],
+    queryFn: async () => {
+      // Try to get events from the Syncthing API
+      // This uses the disk events endpoint which returns recent activity
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const data = await invoke('get_recent_events', { limit });
+        return data as Array<{
+          id: number;
+          type: string;
+          time: string;
+          data?: Record<string, unknown>;
+        }>;
+      } catch {
+        // Return empty array if events endpoint not available
+        return [];
+      }
+    },
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+}
