@@ -1,11 +1,12 @@
 /**
  * HelpMonolith — Help/Documentation Artifact
  *
- * A mysterious dark monolith representing the help system.
+ * A mysterious monolith representing the help system.
  * Features:
  * - MeshDistortMaterial slab
  * - Camera-facing stats overlay always visible
  * - Touch-friendly help category indicators
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -14,6 +15,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { MeshDistortMaterial, Html } from '@react-three/drei';
 import { StatsPanel, StatsCard, Billboard } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -49,6 +51,7 @@ const HELP_CATEGORIES: HelpCategory[] = [
 
 function HelpIndicatorRing({ categories }: { categories: HelpCategory[] }) {
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
   const radius = isMobile ? 0.9 : 1.1;
 
@@ -84,7 +87,7 @@ function HelpIndicatorRing({ categories }: { categories: HelpCategory[] }) {
                 <div
                   className="flex flex-col items-center gap-1 rounded-lg px-2 py-1"
                   style={{
-                    background: 'rgba(0, 0, 0, 0.75)',
+                    background: isDark ? 'rgba(0, 0, 0, 0.75)' : 'rgba(255, 255, 255, 0.85)',
                     backdropFilter: 'blur(8px)',
                     border: `1px solid ${category.color}40`,
                   }}
@@ -113,6 +116,7 @@ function HelpIndicatorRing({ categories }: { categories: HelpCategory[] }) {
 export function HelpMonolith({ visible = true }: HelpMonolithProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
 
   useFrame(({ clock }) => {
@@ -132,8 +136,8 @@ export function HelpMonolith({ visible = true }: HelpMonolithProps) {
       <mesh ref={meshRef}>
         <boxGeometry args={[0.5, 1.5, 0.15]} />
         <MeshDistortMaterial
-          color="#010101"
-          roughness={0.08}
+          color={isDark ? '#010101' : '#e8e8e8'}
+          roughness={isDark ? 0.08 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}
@@ -152,7 +156,12 @@ export function HelpMonolith({ visible = true }: HelpMonolithProps) {
         occlude={false}
         zIndexRange={[100, 0]}
       >
-        <div className="text-4xl opacity-60 select-none">?</div>
+        <div
+          className="text-4xl select-none"
+          style={{ opacity: isDark ? 0.6 : 0.4, color: isDark ? '#ffffff' : '#374151' }}
+        >
+          ?
+        </div>
       </Html>
 
       {/* Help category indicators in static ring */}

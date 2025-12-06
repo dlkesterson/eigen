@@ -17,6 +17,7 @@ import { Suspense, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVisualizationStore } from '@/store/omnibox';
 import { usePendingDevices, usePendingFolders } from '@/hooks/syncthing/pending';
+import { useResolvedTheme } from '@/components/theme-provider';
 import { ARTIFACTS, hasArtifact, type ArtifactType } from './visualizations/registry';
 import { LiminalShell } from './visualizations/_shell/LiminalShell';
 import { LoaderOverlay } from './visualizations/_shell';
@@ -56,9 +57,28 @@ interface TitleOverlayProps {
   title: string;
   description?: string;
   isPending?: boolean;
+  isDark?: boolean;
 }
 
-function TitleOverlay({ title, description, isPending }: TitleOverlayProps) {
+function TitleOverlay({ title, description, isPending, isDark = true }: TitleOverlayProps) {
+  // Map artifact titles to user-friendly page names
+  const getPageName = (artifactTitle: string): string => {
+    const pageNames: Record<string, string> = {
+      'Nexus Prism': 'Dashboard',
+      'Obsidian Core': 'Storage',
+      Conduit: 'Sync Activity',
+      Fracture: 'Conflicts',
+      'Archive Lattice': 'Folders',
+      Heart: 'System Health',
+      Spire: 'Timeline',
+      Monolith: 'Help',
+      'Request Beacon': 'Pending Requests',
+    };
+    return pageNames[artifactTitle] || artifactTitle;
+  };
+
+  const pageName = getPageName(title);
+
   return (
     <motion.div
       className="pointer-events-none absolute bottom-6 left-6 z-10"
@@ -69,13 +89,21 @@ function TitleOverlay({ title, description, isPending }: TitleOverlayProps) {
     >
       <h2
         className={`text-3xl font-light tracking-widest uppercase ${
-          isPending ? 'glow-text-gold text-amber-200' : 'glow-text text-white/90'
+          isPending
+            ? 'glow-text-gold text-amber-200'
+            : isDark
+              ? 'glow-text text-white/90'
+              : 'text-slate-700'
         }`}
       >
-        {title}
+        {pageName}
       </h2>
       {description && (
-        <p className="mt-1 text-sm font-light tracking-wide text-white/50">{description}</p>
+        <p
+          className={`mt-1 text-sm font-light tracking-wide ${isDark ? 'text-white/50' : 'text-slate-500'}`}
+        >
+          {description}
+        </p>
       )}
     </motion.div>
   );
@@ -85,7 +113,12 @@ function TitleOverlay({ title, description, isPending }: TitleOverlayProps) {
 // Pending Alert Badge
 // =============================================================================
 
-function PendingAlertBadge({ count }: { count: number }) {
+interface PendingAlertBadgeProps {
+  count: number;
+  isDark?: boolean;
+}
+
+function PendingAlertBadge({ count, isDark = true }: PendingAlertBadgeProps) {
   if (count === 0) return null;
 
   return (
@@ -95,9 +128,13 @@ function PendingAlertBadge({ count }: { count: number }) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="animate-beacon-pulse glow-text-gold flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/60 px-4 py-2 backdrop-blur-xl">
+      <div
+        className={`animate-beacon-pulse glow-text-gold flex items-center gap-2 rounded-full border border-amber-400/40 px-4 py-2 backdrop-blur-xl ${
+          isDark ? 'bg-black/60' : 'bg-white/60'
+        }`}
+      >
         <span className="text-lg">🔔</span>
-        <span className="font-mono text-sm text-amber-200">
+        <span className={`font-mono text-sm ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>
           {count} pending request{count > 1 ? 's' : ''}
         </span>
       </div>
@@ -111,6 +148,8 @@ function PendingAlertBadge({ count }: { count: number }) {
 
 export function ArtifactRouter() {
   const { type, currentArtifact, setTransitioning, isTransitioning } = useVisualizationStore();
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
 
   // Get pending requests for alert badge
   const { data: pendingDevices } = usePendingDevices();
@@ -154,11 +193,11 @@ export function ArtifactRouter() {
 
   return (
     <div className="bg-cosmic relative h-full w-full overflow-hidden">
-      {/* Liminal fog overlay */}
-      <div className="liminal-fog pointer-events-none absolute inset-0 z-10" />
+      {/* Liminal fog overlay - hide in light mode */}
+      {isDark && <div className="liminal-fog pointer-events-none absolute inset-0 z-10" />}
 
       {/* Pending alert badge */}
-      <PendingAlertBadge count={pendingCount} />
+      <PendingAlertBadge count={pendingCount} isDark={isDark} />
 
       {/* Main artifact with cinematic transition */}
       <AnimatePresence mode="wait">
@@ -171,7 +210,7 @@ export function ArtifactRouter() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <Suspense fallback={<ArtifactLoader />}>
-            <LiminalShell title={artifact.title}>
+            <LiminalShell title={artifact.title} isDark={isDark}>
               <ArtifactContent type={artifactType} />
             </LiminalShell>
           </Suspense>
@@ -184,6 +223,7 @@ export function ArtifactRouter() {
           title={artifact.title}
           description={artifact.description}
           isPending={isPendingArtifact}
+          isDark={isDark}
         />
       </AnimatePresence>
     </div>

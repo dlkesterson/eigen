@@ -6,6 +6,7 @@
  * - MeshDistortMaterial with higher distortion for "fractured" look
  * - Warning glow when conflicts exist
  * - Camera-facing stats overlay always visible
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -16,6 +17,7 @@ import { Icosahedron, MeshDistortMaterial } from '@react-three/drei';
 import { useConfig, useScanConflicts } from '@/hooks/syncthing';
 import type { FolderConfig, ConflictFile } from '@/hooks/syncthing';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -33,6 +35,7 @@ interface FractureProps {
 export function Fracture({ visible = true }: FractureProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
 
   const { data: config } = useConfig();
@@ -84,8 +87,10 @@ export function Fracture({ visible = true }: FractureProps) {
       {/* Main Fractured Core */}
       <Icosahedron ref={meshRef} args={[coreSize, 2]}>
         <MeshDistortMaterial
-          color={metrics.hasConflicts ? '#0a0202' : '#010101'}
-          roughness={0.15}
+          color={
+            metrics.hasConflicts ? (isDark ? '#0a0202' : '#e8d8d8') : isDark ? '#010101' : '#e8e8e8'
+          }
+          roughness={isDark ? 0.15 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

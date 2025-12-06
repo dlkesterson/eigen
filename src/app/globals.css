@@ -426,9 +426,14 @@
    COSMIC ARTIFACT CHAMBER STYLES
    ============================================================================= */
 
-/* Cosmic background — deep void with subtle radial gradient */
+/* Cosmic background — deep void with subtle radial gradient (dark theme) */
 .bg-cosmic {
   background: radial-gradient(circle at 50% 30%, #0f0f2e 0%, #050510 50%, #000000 100%);
+}
+
+/* Light theme cosmic background — ethereal light gradient */
+.light .bg-cosmic {
+  background: radial-gradient(circle at 50% 30%, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
 }
 
 /* Glowing text effect — cyan accent */
@@ -437,6 +442,14 @@
     0 0 20px rgba(34, 211, 238, 0.8),
     0 0 40px rgba(34, 211, 238, 0.4);
   filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.5));
+}
+
+/* Light theme glow text — darker cyan for visibility */
+.light .glow-text {
+  text-shadow:
+    0 0 20px rgba(8, 145, 178, 0.6),
+    0 0 40px rgba(8, 145, 178, 0.3);
+  filter: drop-shadow(0 0 10px rgba(8, 145, 178, 0.4));
 }
 
 /* Gold glow for warnings/pending */

@@ -5,6 +5,7 @@ import { Search, Sparkles, Command } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useOmniboxUIStore } from '@/store/omnibox';
+import { useResolvedTheme } from '@/components/theme-provider';
 
 interface CosmicSearchBarProps {
   onSearch?: (query: string) => void;
@@ -26,6 +27,8 @@ export function CosmicSearchBar({
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { isOpen: omniboxOpen, setOpen: openOmnibox } = useOmniboxUIStore();
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
 
   // Check for easter egg
   useEffect(() => {
@@ -74,27 +77,47 @@ export function CosmicSearchBar({
           onClick={handleTriggerClick}
           className={cn(
             'flex w-full items-center gap-3 rounded-full border px-6 py-3 backdrop-blur-xl transition-all duration-300',
-            'border-cyan-400/20 bg-black/30 hover:border-cyan-400/50 hover:bg-black/50'
+            isDark
+              ? 'border-cyan-400/20 bg-black/30 hover:border-cyan-400/50 hover:bg-black/50'
+              : 'border-blue-400/30 bg-white/70 hover:border-blue-400/50 hover:bg-white/80'
           )}
           style={{
-            boxShadow:
-              '0 0 15px rgba(34, 211, 238, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
+            boxShadow: isDark
+              ? '0 0 15px rgba(34, 211, 238, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05)'
+              : '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.5)',
           }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <Search className="h-4 w-4 text-cyan-400/60" />
-          <span className="flex-1 text-left font-mono text-sm text-gray-400">
-            Search the cosmos...
+          <Search className={cn('h-4 w-4', isDark ? 'text-cyan-400/60' : 'text-blue-500/60')} />
+          <span
+            className={cn(
+              'flex-1 text-left font-mono text-sm',
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            )}
+          >
+            Type a command or ask a question...
           </span>
-          <div className="flex items-center gap-1 text-xs text-gray-500">
+          <div
+            className={cn(
+              'flex items-center gap-1 text-xs',
+              isDark ? 'text-gray-500' : 'text-gray-400'
+            )}
+          >
             <Command className="h-3 w-3" />
             <span>K</span>
           </div>
         </motion.button>
 
         {/* Subtle glow */}
-        <div className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/0 via-cyan-400/10 to-cyan-500/0 blur-xl" />
+        <div
+          className={cn(
+            'pointer-events-none absolute -inset-1 rounded-full blur-xl',
+            isDark
+              ? 'bg-gradient-to-r from-cyan-500/0 via-cyan-400/10 to-cyan-500/0'
+              : 'bg-gradient-to-r from-blue-500/0 via-blue-400/5 to-blue-500/0'
+          )}
+        />
       </div>
     );
   }
@@ -106,15 +129,25 @@ export function CosmicSearchBar({
         <motion.div
           className={cn(
             'flex items-center gap-3 rounded-full border px-6 py-3 backdrop-blur-xl transition-all duration-300',
-            focused ? 'border-cyan-400/50 bg-black/50' : 'border-cyan-400/20 bg-black/30',
+            focused
+              ? isDark
+                ? 'border-cyan-400/50 bg-black/50'
+                : 'border-blue-400/50 bg-white/80'
+              : isDark
+                ? 'border-cyan-400/20 bg-black/30'
+                : 'border-blue-400/30 bg-white/70',
             showEasterEgg && 'border-amber-400/50'
           )}
           style={{
             boxShadow: focused
               ? showEasterEgg
                 ? '0 0 40px rgba(251, 191, 36, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1)'
-                : '0 0 40px rgba(34, 211, 238, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1)'
-              : '0 0 15px rgba(34, 211, 238, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
+                : isDark
+                  ? '0 0 40px rgba(34, 211, 238, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1)'
+                  : '0 4px 30px rgba(59, 130, 246, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.5)'
+              : isDark
+                ? '0 0 15px rgba(34, 211, 238, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05)'
+                : '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.5)',
           }}
           animate={{
             scale: focused ? 1.02 : 1,
@@ -128,7 +161,7 @@ export function CosmicSearchBar({
             {showEasterEgg ? (
               <Sparkles className="h-4 w-4 text-amber-400" />
             ) : (
-              <Search className="h-4 w-4 text-cyan-400/60" />
+              <Search className={cn('h-4 w-4', isDark ? 'text-cyan-400/60' : 'text-blue-500/60')} />
             )}
           </motion.div>
 
@@ -137,13 +170,14 @@ export function CosmicSearchBar({
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="Search the cosmos... ⌘K for commands"
+            placeholder="Type a command or ask a question..."
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             onKeyDown={handleKeyDown}
             className={cn(
-              'w-full bg-transparent font-mono text-sm outline-none placeholder:text-gray-500',
-              showEasterEgg ? 'text-amber-200' : 'text-white'
+              'w-full bg-transparent font-mono text-sm outline-none',
+              isDark ? 'placeholder:text-gray-500' : 'placeholder:text-gray-400',
+              showEasterEgg ? 'text-amber-200' : isDark ? 'text-white' : 'text-gray-900'
             )}
           />
 
@@ -151,7 +185,10 @@ export function CosmicSearchBar({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-1 text-xs text-gray-500"
+              className={cn(
+                'flex items-center gap-1 text-xs',
+                isDark ? 'text-gray-500' : 'text-gray-400'
+              )}
             >
               <Command className="h-3 w-3" />
               <span>Enter</span>
@@ -167,7 +204,9 @@ export function CosmicSearchBar({
                 'pointer-events-none absolute -inset-1 rounded-full blur-xl',
                 showEasterEgg
                   ? 'bg-gradient-to-r from-amber-500/0 via-amber-400/30 to-amber-500/0'
-                  : 'bg-gradient-to-r from-cyan-500/0 via-cyan-400/20 to-cyan-500/0'
+                  : isDark
+                    ? 'bg-gradient-to-r from-cyan-500/0 via-cyan-400/20 to-cyan-500/0'
+                    : 'bg-gradient-to-r from-blue-500/0 via-blue-400/10 to-blue-500/0'
               )}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -189,12 +228,20 @@ export function CosmicSearchBar({
             transition={{ duration: 0.3 }}
           >
             <div
-              className="glow-text-gold rounded-lg border border-amber-400/30 bg-black/80 px-6 py-3 backdrop-blur-xl"
+              className={cn(
+                'glow-text-gold rounded-lg border border-amber-400/30 px-6 py-3 backdrop-blur-xl',
+                isDark ? 'bg-black/80' : 'bg-white/80'
+              )}
               style={{
                 boxShadow: '0 0 30px rgba(251, 191, 36, 0.3)',
               }}
             >
-              <p className="font-mono text-xs tracking-widest text-amber-200 uppercase">
+              <p
+                className={cn(
+                  'font-mono text-xs tracking-widest uppercase',
+                  isDark ? 'text-amber-200' : 'text-amber-600'
+                )}
+              >
                 ✧ THE FUTURE IS ALREADY SYNCED ✧
               </p>
             </div>

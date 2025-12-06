@@ -7,6 +7,7 @@
  * - Pulsing animation when requests exist
  * - Touch-accessible request indicators
  * - Click request → enter Layer 3 glass panel (per UX guide)
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -17,6 +18,7 @@ import { MeshDistortMaterial } from '@react-three/drei';
 import { usePendingDevices, usePendingFolders } from '@/hooks/syncthing/pending';
 import { useVisualizationStore } from '@/store/omnibox';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -101,6 +103,7 @@ function PulseRing({ hasRequests }: { hasRequests: boolean }) {
 export function RequestBeacon({ visible = true }: RequestBeaconProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
   const { enterRoom } = useVisualizationStore();
 
@@ -187,7 +190,13 @@ export function RequestBeacon({ visible = true }: RequestBeaconProps) {
     isActive: true,
   }));
 
-  const beaconColor = metrics.hasRequests ? '#1a0f00' : '#0a0a0a';
+  const beaconColor = metrics.hasRequests
+    ? isDark
+      ? '#1a0f00'
+      : '#e8ddd0'
+    : isDark
+      ? '#0a0a0a'
+      : '#e8e8e8';
   const glowColor = metrics.hasRequests ? '#f59e0b' : '#64748b';
 
   return (
@@ -197,7 +206,7 @@ export function RequestBeacon({ visible = true }: RequestBeaconProps) {
         <octahedronGeometry args={[coreSize, 2]} />
         <MeshDistortMaterial
           color={beaconColor}
-          roughness={0.1}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={0.5}

@@ -1,9 +1,9 @@
 /**
  * Liminal Shell
  *
- * Cinematic dark void environment inspired by distorted metallic spheres.
+ * Cinematic void environment inspired by distorted metallic spheres.
  * Features:
- * - Pure black background with subtle fog
+ * - Theme-aware background (dark void or light ethereal)
  * - Floating ambient icosahedrons in the background
  * - High-performance post-processing (Bloom, DepthOfField, Noise, Vignette)
  * - Mouse-responsive main artifact
@@ -12,11 +12,22 @@
 
 'use client';
 
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useRef, useState, createContext, useContext } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Html, Icosahedron, MeshDistortMaterial, Environment, Float } from '@react-three/drei';
 import { EffectComposer, DepthOfField, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
+
+// =============================================================================
+// Theme Context for R3F
+// =============================================================================
+
+const ThemeContext = createContext<{ isDark: boolean }>({ isDark: true });
+
+/** Hook to access theme inside Canvas components */
+export function useShellTheme() {
+  return useContext(ThemeContext);
+}
 
 // =============================================================================
 // Types
@@ -27,6 +38,8 @@ export interface LiminalShellProps {
   title: string;
   /** Enable post-processing effects */
   enableEffects?: boolean;
+  /** Whether to use dark theme (default: true) */
+  isDark?: boolean;
 }
 
 // =============================================================================
@@ -38,14 +51,15 @@ function DistortedMaterialProvider({
 }: {
   children: (material: THREE.Material) => React.ReactNode;
 }) {
+  const { isDark } = useShellTheme();
   const [material, setMaterial] = useState<THREE.Material | null>(null);
 
   return (
     <>
       <MeshDistortMaterial
         ref={setMaterial}
-        color="#010101"
-        roughness={0.1}
+        color={isDark ? '#010101' : '#e8e8e8'}
+        roughness={isDark ? 0.1 : 0.3}
         metalness={1}
         clearcoat={1}
         clearcoatRoughness={1}
@@ -140,12 +154,19 @@ function ArtifactContainer({ children }: { children: React.ReactNode }) {
 // =============================================================================
 
 function PostProcessing() {
+  const { isDark } = useShellTheme();
+
   return (
-    <EffectComposer multisampling={0} enableNormalPass={false}>
+    <EffectComposer multisampling={0}>
       <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} height={480} />
-      <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} intensity={2} />
-      <Noise opacity={0.025} />
-      <Vignette eskil={false} offset={0.1} darkness={1.1} />
+      <Bloom
+        luminanceThreshold={isDark ? 0 : 0.6}
+        luminanceSmoothing={0.9}
+        height={300}
+        intensity={isDark ? 2 : 0.8}
+      />
+      <Noise opacity={isDark ? 0.025 : 0.015} />
+      <Vignette eskil={false} offset={0.1} darkness={isDark ? 1.1 : 0.3} />
     </EffectComposer>
   );
 }
@@ -160,17 +181,25 @@ interface SceneContentProps {
 }
 
 function SceneContent({ children, enableEffects }: SceneContentProps) {
+  const { isDark } = useShellTheme();
+
+  // Theme-aware colors
+  const backgroundColor = isDark ? '#050505' : '#f5f5f7';
+  const fogColor = isDark ? '#161616' : '#e5e5e7';
+  const ambientIntensity = isDark ? 0.02 : 0.6;
+  const environmentPreset = isDark ? 'night' : 'city';
+
   return (
     <>
-      {/* Pure black void */}
-      <color attach="background" args={['#050505']} />
-      <fog attach="fog" args={['#161616', 8, 30]} />
+      {/* Theme-aware background */}
+      <color attach="background" args={[backgroundColor]} />
+      <fog attach="fog" args={[fogColor, 8, 30]} />
 
-      {/* Minimal ambient lighting */}
-      <ambientLight intensity={0.02} />
+      {/* Theme-aware ambient lighting */}
+      <ambientLight intensity={ambientIntensity} />
 
       {/* Environment for reflections on distort material */}
-      <Environment preset="night" />
+      <Environment preset={environmentPreset} />
 
       {/* Distorted background spheres */}
       <DistortedMaterialProvider>
@@ -192,21 +221,28 @@ function SceneContent({ children, enableEffects }: SceneContentProps) {
 // Main Exported Component
 // =============================================================================
 
-export function LiminalShell({ children, title: _title, enableEffects = true }: LiminalShellProps) {
+export function LiminalShell({
+  children,
+  title: _title,
+  enableEffects = true,
+  isDark = true,
+}: LiminalShellProps) {
   return (
-    <Canvas
-      camera={{ position: [0, 0, 3], fov: 50 }}
-      gl={{
-        powerPreference: 'high-performance',
-        alpha: false,
-        antialias: false,
-        stencil: false,
-        depth: false,
-      }}
-      dpr={[1, 1.5]}
-    >
-      <SceneContent enableEffects={enableEffects}>{children}</SceneContent>
-    </Canvas>
+    <ThemeContext.Provider value={{ isDark }}>
+      <Canvas
+        camera={{ position: [0, 0, 3], fov: 50 }}
+        gl={{
+          powerPreference: 'high-performance',
+          alpha: false,
+          antialias: false,
+          stencil: false,
+          depth: false,
+        }}
+        dpr={[1, 1.5]}
+      >
+        <SceneContent enableEffects={enableEffects}>{children}</SceneContent>
+      </Canvas>
+    </ThemeContext.Provider>
   );
 }
 

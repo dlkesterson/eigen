@@ -3,11 +3,13 @@
  *
  * Touch-accessible, camera-facing overlay components that display
  * data persistently in front of the camera.
+ * Theme-aware styling (dark/light mode).
  */
 
 'use client';
 
 import { Html } from '@react-three/drei';
+import { useShellTheme } from '../../_shell/LiminalShell';
 
 // =============================================================================
 // Camera-Facing Billboard
@@ -86,6 +88,7 @@ export function TouchIndicator({
   radius,
   onClick,
 }: IndicatorProps) {
+  const { isDark } = useShellTheme();
   const x = Math.cos(angle) * radius;
   const z = Math.sin(angle) * radius;
 
@@ -118,12 +121,18 @@ export function TouchIndicator({
           style={{ opacity: isActive ? 1 : 0.5 }}
         >
           <span
-            className="rounded-full bg-black/80 px-2 py-1 text-[11px] font-medium backdrop-blur-md"
+            className={`rounded-full px-2 py-1 text-[11px] font-medium backdrop-blur-md ${
+              isDark ? 'bg-black/80' : 'bg-white/90'
+            }`}
             style={{ color }}
           >
             {label}
           </span>
-          {sublabel && <span className="mt-0.5 text-[9px] text-white/60">{sublabel}</span>}
+          {sublabel && (
+            <span className={`mt-0.5 text-[9px] ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
+              {sublabel}
+            </span>
+          )}
         </div>
       </Html>
     </group>
@@ -143,26 +152,44 @@ export interface StatsCardProps {
 }
 
 export function StatsCard({ title, value, subtitle, color = '#ffffff', details }: StatsCardProps) {
+  const { isDark } = useShellTheme();
+
   return (
-    <div className="flex min-w-[180px] flex-col items-center gap-2 rounded-xl border border-white/10 bg-black/80 px-5 py-4 shadow-2xl backdrop-blur-xl">
+    <div
+      className={`flex min-w-[180px] flex-col items-center gap-2 rounded-xl border px-5 py-4 shadow-2xl backdrop-blur-xl ${
+        isDark ? 'border-white/10 bg-black/80' : 'border-slate-200/50 bg-white/85'
+      }`}
+    >
       {/* Main value */}
       <div className="text-4xl font-light tabular-nums" style={{ color }}>
         {value}
       </div>
 
       {/* Title */}
-      <div className="text-sm font-medium tracking-wider text-white/70 uppercase">{title}</div>
+      <div
+        className={`text-sm font-medium tracking-wider uppercase ${isDark ? 'text-white/70' : 'text-slate-600'}`}
+      >
+        {title}
+      </div>
 
       {/* Subtitle */}
-      {subtitle && <div className="text-xs text-white/50">{subtitle}</div>}
+      {subtitle && (
+        <div className={`text-xs ${isDark ? 'text-white/50' : 'text-slate-500'}`}>{subtitle}</div>
+      )}
 
       {/* Details row */}
       {details && details.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-white/10 pt-2">
+        <div
+          className={`mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t pt-2 ${
+            isDark ? 'border-white/10' : 'border-slate-200'
+          }`}
+        >
           {details.map((detail, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs">
-              <span className="text-white/50">{detail.label}:</span>
-              <span style={{ color: detail.color || '#ffffff' }}>{detail.value}</span>
+              <span className={isDark ? 'text-white/50' : 'text-slate-500'}>{detail.label}:</span>
+              <span style={{ color: detail.color || (isDark ? '#ffffff' : '#1e293b') }}>
+                {detail.value}
+              </span>
             </div>
           ))}
         </div>

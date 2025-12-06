@@ -23,6 +23,7 @@ export interface DeviceOrbData {
 
 interface DeviceOrbProps {
   device: DeviceOrbData;
+  isDark?: boolean;
   onClick?: () => void;
 }
 
@@ -30,9 +31,11 @@ interface DeviceOrbProps {
 function DeviceTooltip({
   device,
   orbProfile,
+  isDark = true,
 }: {
   device: DeviceOrbData;
   orbProfile: DeviceOrbProfile;
+  isDark?: boolean;
 }) {
   const getStatusText = () => {
     if (device.isPaused) return 'Paused';
@@ -42,10 +45,10 @@ function DeviceTooltip({
   };
 
   const getStatusColor = () => {
-    if (device.isPaused) return 'text-amber-400';
-    if (!device.isOnline) return 'text-gray-400';
-    if (device.isSyncing) return 'text-cyan-400';
-    return 'text-green-400';
+    if (device.isPaused) return isDark ? 'text-amber-400' : 'text-amber-600';
+    if (!device.isOnline) return isDark ? 'text-gray-400' : 'text-gray-500';
+    if (device.isSyncing) return isDark ? 'text-cyan-400' : 'text-cyan-600';
+    return isDark ? 'text-green-400' : 'text-green-600';
   };
 
   // Convert hue to color name for display
@@ -62,22 +65,38 @@ function DeviceTooltip({
 
   return (
     <div
-      className="pointer-events-none rounded-lg border border-cyan-400/30 bg-black/70 px-4 py-3 whitespace-nowrap backdrop-blur-xl select-none"
+      className={`pointer-events-none rounded-lg border px-4 py-3 whitespace-nowrap backdrop-blur-xl select-none ${
+        isDark ? 'border-cyan-400/30 bg-black/70' : 'border-blue-400/40 bg-white/80'
+      }`}
       style={{
-        boxShadow: '0 0 20px rgba(34, 211, 238, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
+        boxShadow: isDark
+          ? '0 0 20px rgba(34, 211, 238, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1)'
+          : '0 4px 20px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.5)',
         minWidth: '180px',
       }}
     >
-      <div className="mb-1 font-mono text-sm font-semibold text-white">{device.name}</div>
+      <div
+        className={`mb-1 font-mono text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+      >
+        {device.name}
+      </div>
       <div className={`mb-2 font-mono text-xs ${getStatusColor()}`}>{getStatusText()}</div>
-      {device.isLocal && <div className="font-mono text-xs text-blue-300/70">📍 This Device</div>}
+      {device.isLocal && (
+        <div className={`font-mono text-xs ${isDark ? 'text-blue-300/70' : 'text-blue-600/70'}`}>
+          📍 This Device
+        </div>
+      )}
       {device.isSyncing && device.syncProgress !== undefined && (
         <div className="mt-2">
-          <div className="mb-1 flex justify-between font-mono text-xs text-gray-400">
+          <div
+            className={`mb-1 flex justify-between font-mono text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          >
             <span>Progress</span>
             <span>{device.syncProgress}%</span>
           </div>
-          <div className="h-1 overflow-hidden rounded-full bg-gray-700">
+          <div
+            className={`h-1 overflow-hidden rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
+          >
             <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
               style={{ width: `${device.syncProgress}%` }}
@@ -86,7 +105,9 @@ function DeviceTooltip({
         </div>
       )}
       {device.isOnline && (device.uploadSpeed || device.downloadSpeed) && (
-        <div className="mt-2 flex gap-3 font-mono text-xs text-gray-400">
+        <div
+          className={`mt-2 flex gap-3 font-mono text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+        >
           {device.downloadSpeed !== undefined && (
             <span>↓ {(device.downloadSpeed / 1024).toFixed(1)} KB/s</span>
           )}
@@ -96,26 +117,30 @@ function DeviceTooltip({
         </div>
       )}
       {/* Device visual profile info */}
-      <div className="mt-2 border-t border-cyan-400/20 pt-2">
-        <div className="flex items-center gap-2 font-mono text-[10px] text-gray-500">
+      <div className={`mt-2 border-t pt-2 ${isDark ? 'border-cyan-400/20' : 'border-blue-400/30'}`}>
+        <div
+          className={`flex items-center gap-2 font-mono text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+        >
           <div
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: `hsl(${orbProfile.primaryHue}, 70%, 60%)` }}
           />
           <span>{getHueColorName(orbProfile.primaryHue)} signature</span>
         </div>
-        <div className="mt-1 font-mono text-[10px] text-gray-500">
+        <div className={`mt-1 font-mono text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           {orbProfile.layerCount} glass layers • {orbProfile.glowIntensity.toFixed(1)}x glow
         </div>
       </div>
-      <div className="mt-2 truncate font-mono text-[10px] text-gray-500">
+      <div
+        className={`mt-2 truncate font-mono text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+      >
         {device.id.slice(0, 16)}...
       </div>
     </div>
   );
 }
 
-export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
+export function DeviceOrb({ device, isDark = true, onClick }: DeviceOrbProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Mesh>(null);
   const outerGlowRef = useRef<THREE.Mesh>(null);
@@ -457,7 +482,7 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
             transform: 'translate3d(-50%, -100%, 0)',
           }}
         >
-          <DeviceTooltip device={device} orbProfile={orbProfile} />
+          <DeviceTooltip device={device} orbProfile={orbProfile} isDark={isDark} />
         </Html>
       )}
     </group>

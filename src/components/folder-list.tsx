@@ -37,6 +37,8 @@ import {
   X,
   History,
   Loader2,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddFolderDialog } from '@/components/add-folder-dialog';
@@ -44,6 +46,9 @@ import { ShareFolderDialog } from '@/components/share-folder-dialog';
 import { IgnorePatternsDialog } from '@/components/ignore-patterns-dialog';
 import { FileBrowser } from '@/components/file-browser';
 import { ConflictResolver } from '@/components/conflict-resolver';
+import { SmartConflictResolver } from '@/components/smart-conflict-resolver';
+import { useTrackFolderAccess, usePredictiveSync } from '@/hooks/usePredictiveSync';
+import { useAppStore } from '@/store';
 import { toast } from 'sonner';
 
 function FolderCard({
@@ -54,6 +59,7 @@ function FolderCard({
   onIgnorePatterns,
   onBrowse,
   onConflicts,
+  isPredictedToSync,
 }: {
   folder: {
     id: string;
@@ -68,6 +74,7 @@ function FolderCard({
   onIgnorePatterns: (id: string, label?: string) => void;
   onBrowse: (id: string, path: string, label?: string) => void;
   onConflicts: (id: string, path: string, label?: string) => void;
+  isPredictedToSync?: boolean;
 }) {
   const { data: status, isLoading } = useFolderStatus(folder.id);
   const pauseFolder = usePauseFolder();
@@ -76,6 +83,9 @@ function FolderCard({
   const removeFolder = useRemoveFolder();
   const openInExplorer = useOpenFolderInExplorer();
   const unshareFolder = useUnshareFolder();
+
+  // Track folder access for predictive sync
+  useTrackFolderAccess(folder.path);
 
   // Version storage tracking
   const { data: versionStorage } = useVersionStorageInfo(folder.path || '');
@@ -115,6 +125,14 @@ function FolderCard({
     if (isPaused) return <Badge variant="secondary">Paused</Badge>;
     if (isSyncing) return <Badge variant="warning">Syncing</Badge>;
     if (needsSync) return <Badge variant="warning">Needs Sync</Badge>;
+    if (isPredictedToSync) {
+      return (
+        <Badge variant="outline" className="border-cyan-500/50 text-cyan-500">
+          <Zap className="mr-1 h-3 w-3" />
+          Predicted
+        </Badge>
+      );
+    }
     return <Badge variant="success">Up to Date</Badge>;
   };
 
@@ -490,9 +508,12 @@ export function FolderList({ compact = false }: { compact?: boolean }) {
     id: string;
     path: string;
     label?: string;
+    useSmartResolver?: boolean;
   } | null>(null);
   const { data: config, isLoading, isError } = useConfig();
   const { data: systemStatus } = useSystemStatus();
+  const aiEnabled = useAppStore((state) => state.aiEnabled);
+  const { foldersToSyncNow } = usePredictiveSync();
 
   const localDeviceId = systemStatus?.myID;
 
@@ -591,7 +612,10 @@ export function FolderList({ compact = false }: { compact?: boolean }) {
             onShare={(id, label) => setShareData({ id, label })}
             onIgnorePatterns={(id, label) => setIgnoreData({ id, label })}
             onBrowse={(id, path, label) => setBrowseData({ id, path, label })}
-            onConflicts={(id, path, label) => setConflictData({ id, path, label })}
+            onConflicts={(id, path, label) =>
+              setConflictData({ id, path, label, useSmartResolver: aiEnabled })
+            }
+            isPredictedToSync={folder.path ? foldersToSyncNow.includes(folder.path) : false}
           />
         ))}
         {/* Add Folder Card */}
@@ -627,13 +651,23 @@ export function FolderList({ compact = false }: { compact?: boolean }) {
         folderPath={browseData?.path || ''}
         folderLabel={browseData?.label}
       />
-      <ConflictResolver
-        open={!!conflictData}
-        onOpenChange={(open) => !open && setConflictData(null)}
-        folderId={conflictData?.id || ''}
-        folderPath={conflictData?.path || ''}
-        folderLabel={conflictData?.label}
-      />
+      {conflictData?.useSmartResolver ? (
+        <SmartConflictResolver
+          open={!!conflictData}
+          onOpenChange={(open) => !open && setConflictData(null)}
+          folderId={conflictData?.id || ''}
+          folderPath={conflictData?.path || ''}
+          folderLabel={conflictData?.label}
+        />
+      ) : (
+        <ConflictResolver
+          open={!!conflictData}
+          onOpenChange={(open) => !open && setConflictData(null)}
+          folderId={conflictData?.id || ''}
+          folderPath={conflictData?.path || ''}
+          folderLabel={conflictData?.label}
+        />
+      )}
     </>
   );
 }

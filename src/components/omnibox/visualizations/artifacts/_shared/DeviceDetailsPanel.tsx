@@ -5,6 +5,7 @@
  * glass card with device details + edit form
  *
  * This component provides the glass panel content for device details.
+ * Theme-aware styling (dark/light mode).
  */
 
 'use client';
@@ -31,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatBytes } from '@/lib/utils';
+import { useResolvedTheme } from '@/components/theme-provider';
 import { useConfig, useConnections, usePauseDevice, useResumeDevice } from '@/hooks/syncthing';
 
 // =============================================================================
@@ -52,11 +54,13 @@ function StatCard({
   label,
   value,
   color = 'cyan',
+  isDark = true,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
   color?: 'cyan' | 'green' | 'amber' | 'purple' | 'red';
+  isDark?: boolean;
 }) {
   const colorClasses = {
     cyan: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20',
@@ -70,9 +74,20 @@ function StatCard({
     <div className={cn('rounded-lg border p-4', colorClasses[color])}>
       <div className="mb-2 flex items-center gap-2">
         <Icon className="h-4 w-4" />
-        <span className="text-xs tracking-wider text-gray-400 uppercase">{label}</span>
+        <span
+          className={cn(
+            'text-xs tracking-wider uppercase',
+            isDark ? 'text-gray-400' : 'text-slate-500'
+          )}
+        >
+          {label}
+        </span>
       </div>
-      <div className="font-mono text-lg font-semibold">{value}</div>
+      <div
+        className={cn('font-mono text-lg font-semibold', isDark ? 'text-current' : 'text-current')}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -92,6 +107,9 @@ function DeviceIcon({ isOnline, isPaused }: { isOnline: boolean; isPaused: boole
 // =============================================================================
 
 export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsPanelProps) {
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const { data: config, isLoading: configLoading } = useConfig();
   const { data: connections, isLoading: connectionsLoading } = useConnections();
   const pauseDevice = usePauseDevice();
@@ -165,7 +183,14 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
 
   if (!device) {
     return (
-      <div className="flex items-center justify-center py-12 text-gray-400">Device not found</div>
+      <div
+        className={cn(
+          'flex items-center justify-center py-12',
+          isDark ? 'text-gray-400' : 'text-slate-500'
+        )}
+      >
+        Device not found
+      </div>
     );
   }
 
@@ -186,7 +211,9 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
           <DeviceIcon isOnline={isOnline} isPaused={isPaused} />
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-semibold text-white">{device.name || 'Unnamed Device'}</h3>
+          <h3 className={cn('text-xl font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+            {device.name || 'Unnamed Device'}
+          </h3>
           <div className="mt-1 flex items-center gap-2">
             <Badge
               variant="outline"
@@ -201,7 +228,9 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
               {isPaused ? 'Paused' : isOnline ? 'Connected' : 'Offline'}
             </Badge>
             {stats.clientVersion !== 'Unknown' && (
-              <span className="text-xs text-gray-500">v{stats.clientVersion}</span>
+              <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-slate-400')}>
+                v{stats.clientVersion}
+              </span>
             )}
           </div>
         </div>
@@ -212,13 +241,30 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-lg border border-white/10 bg-white/5 p-4"
+        className={cn(
+          'rounded-lg border p-4',
+          isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'
+        )}
       >
         <div className="mb-2 flex items-center gap-2">
           <Shield className="h-4 w-4 text-cyan-400" />
-          <span className="text-xs tracking-wider text-gray-400 uppercase">Device ID</span>
+          <span
+            className={cn(
+              'text-xs tracking-wider uppercase',
+              isDark ? 'text-gray-400' : 'text-slate-500'
+            )}
+          >
+            Device ID
+          </span>
         </div>
-        <code className="block font-mono text-xs break-all text-gray-300">{deviceId}</code>
+        <code
+          className={cn(
+            'block font-mono text-xs break-all',
+            isDark ? 'text-gray-300' : 'text-slate-600'
+          )}
+        >
+          {deviceId}
+        </code>
       </motion.div>
 
       {/* Stats Grid */}
@@ -233,24 +279,28 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
           label="Downloaded"
           value={formatBytes(stats.inBytes)}
           color="green"
+          isDark={isDark}
         />
         <StatCard
           icon={ArrowUpFromLine}
           label="Uploaded"
           value={formatBytes(stats.outBytes)}
           color="cyan"
+          isDark={isDark}
         />
         <StatCard
           icon={Clock}
           label="Download Rate"
           value={`${formatBytes(stats.inRate)}/s`}
           color="green"
+          isDark={isDark}
         />
         <StatCard
           icon={Clock}
           label="Upload Rate"
           value={`${formatBytes(stats.outRate)}/s`}
           color="cyan"
+          isDark={isDark}
         />
       </motion.div>
 
@@ -260,13 +310,25 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-lg border border-white/10 bg-white/5 p-4"
+          className={cn(
+            'rounded-lg border p-4',
+            isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'
+          )}
         >
           <div className="mb-2 flex items-center gap-2">
             <Link2 className="h-4 w-4 text-purple-400" />
-            <span className="text-xs tracking-wider text-gray-400 uppercase">Connection</span>
+            <span
+              className={cn(
+                'text-xs tracking-wider uppercase',
+                isDark ? 'text-gray-400' : 'text-slate-500'
+              )}
+            >
+              Connection
+            </span>
           </div>
-          <code className="font-mono text-sm text-gray-300">{stats.address}</code>
+          <code className={cn('font-mono text-sm', isDark ? 'text-gray-300' : 'text-slate-600')}>
+            {stats.address}
+          </code>
         </motion.div>
       )}
 
@@ -275,10 +337,15 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="rounded-lg border border-white/10 bg-white/5 p-4"
+        className={cn(
+          'rounded-lg border p-4',
+          isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'
+        )}
       >
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium text-white">Shared Folders</span>
+          <span className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
+            Shared Folders
+          </span>
           <Badge variant="outline" className="border-purple-400/50 text-purple-400">
             {sharedFolders.length}
           </Badge>
@@ -288,9 +355,14 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
             {sharedFolders.slice(0, 5).map((folder) => (
               <div
                 key={folder.id}
-                className="flex items-center justify-between rounded-md bg-white/5 px-3 py-2"
+                className={cn(
+                  'flex items-center justify-between rounded-md px-3 py-2',
+                  isDark ? 'bg-white/5' : 'bg-slate-100'
+                )}
               >
-                <span className="text-sm text-gray-300">{folder.label || folder.id}</span>
+                <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                  {folder.label || folder.id}
+                </span>
                 <Badge
                   variant="outline"
                   className={cn(
@@ -305,13 +377,15 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
               </div>
             ))}
             {sharedFolders.length > 5 && (
-              <p className="text-center text-xs text-gray-500">
+              <p className={cn('text-center text-xs', isDark ? 'text-gray-500' : 'text-slate-400')}>
                 +{sharedFolders.length - 5} more folders
               </p>
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No shared folders</p>
+          <p className={cn('text-sm', isDark ? 'text-gray-500' : 'text-slate-400')}>
+            No shared folders
+          </p>
         )}
       </motion.div>
 
@@ -324,7 +398,10 @@ export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsP
       >
         <Button
           variant="outline"
-          className="flex-1 border-white/20 hover:bg-white/10"
+          className={cn(
+            'flex-1',
+            isDark ? 'border-white/20 hover:bg-white/10' : 'border-slate-300 hover:bg-slate-100'
+          )}
           onClick={handleTogglePause}
           disabled={pauseDevice.isPending || resumeDevice.isPending}
         >

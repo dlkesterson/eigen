@@ -6,6 +6,7 @@
  * - MeshDistortMaterial for organic look
  * - Particle flow inside the conduit
  * - Camera-facing stats overlay always visible
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -15,6 +16,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { MeshDistortMaterial } from '@react-three/drei';
 import { useConnections } from '@/hooks/syncthing';
 import { StatsPanel, StatsCard } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
+import { formatBytes } from '@/lib/utils';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -95,24 +98,13 @@ function FlowParticles({ count, speed, radius, height, direction, color }: FlowP
 }
 
 // =============================================================================
-// Helpers
-// =============================================================================
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-// =============================================================================
 // Main Conduit Component
 // =============================================================================
 
 export function Conduit({ visible = true }: ConduitProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
 
   const { data: connections } = useConnections();
@@ -152,8 +144,8 @@ export function Conduit({ visible = true }: ConduitProps) {
       <mesh ref={meshRef}>
         <cylinderGeometry args={[conduitRadius, conduitRadius * 0.8, conduitHeight, 32, 8]} />
         <MeshDistortMaterial
-          color="#010101"
-          roughness={0.1}
+          color={isDark ? '#010101' : '#e8e8e8'}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

@@ -15,11 +15,11 @@
 
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useVisualizationStore } from '@/store/omnibox';
+import { useResolvedTheme } from '@/components/theme-provider';
 
 // =============================================================================
 // Types
@@ -69,6 +69,9 @@ export function GlassOverlay({
   onBack,
   className,
 }: GlassOverlayProps) {
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
+
   // Handle ESC key to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -88,7 +91,10 @@ export function GlassOverlay({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-[9997] bg-black/60 backdrop-blur-sm"
+            className={cn(
+              'fixed inset-0 z-[9997] backdrop-blur-sm',
+              isDark ? 'bg-black/60' : 'bg-black/40'
+            )}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -106,37 +112,65 @@ export function GlassOverlay({
           >
             <div
               className={cn(
-                'glass-card flex flex-col overflow-hidden',
+                'flex flex-col overflow-hidden rounded-2xl border backdrop-blur-xl',
+                isDark ? 'border-white/10 bg-gray-900/90' : 'border-gray-200/60 bg-white/90',
                 SIZE_CLASSES[size],
                 className
               )}
               style={{
-                boxShadow:
-                  '0 0 60px rgba(34, 211, 238, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
+                boxShadow: isDark
+                  ? '0 0 60px rgba(34, 211, 238, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.1)'
+                  : '0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.5)',
               }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <div
+                className={cn(
+                  'flex items-center justify-between border-b px-6 py-4',
+                  isDark ? 'border-white/10' : 'border-gray-200/60'
+                )}
+              >
                 <div className="flex items-center gap-3">
                   {showBack && onBack && (
                     <button
                       onClick={onBack}
-                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                      className={cn(
+                        'rounded-lg p-1.5 transition-colors',
+                        isDark
+                          ? 'text-gray-400 hover:bg-white/10 hover:text-white'
+                          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                      )}
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                   )}
                   <div>
-                    <h2 className="font-mono text-lg font-semibold tracking-wide text-white">
+                    <h2
+                      className={cn(
+                        'font-mono text-lg font-semibold tracking-wide',
+                        isDark ? 'text-white' : 'text-gray-900'
+                      )}
+                    >
                       {title}
                     </h2>
-                    {subtitle && <p className="mt-0.5 text-sm text-gray-400">{subtitle}</p>}
+                    {subtitle && (
+                      <p
+                        className={cn('mt-0.5 text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}
+                      >
+                        {subtitle}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <button
                   onClick={onClose}
-                  className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                  className={cn(
+                    'rounded-lg p-2 transition-colors',
+                    isDark
+                      ? 'text-gray-400 hover:bg-white/10 hover:text-white'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                  )}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -146,8 +180,22 @@ export function GlassOverlay({
               <div className="flex-1 overflow-y-auto p-6">{children}</div>
 
               {/* Footer hint */}
-              <div className="flex items-center justify-center border-t border-white/10 py-2 text-xs text-gray-500">
-                Press <kbd className="mx-1 rounded bg-white/10 px-1.5 py-0.5">Esc</kbd> to close
+              <div
+                className={cn(
+                  'flex items-center justify-center border-t py-2 text-xs',
+                  isDark ? 'border-white/10 text-gray-500' : 'border-gray-200/60 text-gray-400'
+                )}
+              >
+                Press{' '}
+                <kbd
+                  className={cn(
+                    'mx-1 rounded px-1.5 py-0.5',
+                    isDark ? 'bg-white/10' : 'bg-gray-100'
+                  )}
+                >
+                  Esc
+                </kbd>{' '}
+                to close
               </div>
             </div>
           </motion.div>

@@ -15,6 +15,7 @@ import { Laptop, Folder, CheckCircle, XCircle, AlertTriangle, Clock, Shield } fr
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useResolvedTheme } from '@/components/theme-provider';
 import {
   useAcceptPendingDevice,
   useDismissPendingDevice,
@@ -108,8 +109,8 @@ export function PendingRequestPanel({
             )}
           />
         </div>
-        <h3 className="text-xl font-semibold text-white">New {typeLabel} Request</h3>
-        <p className="mt-2 text-gray-400">
+        <h3 className="text-foreground text-xl font-semibold">New {typeLabel} Request</h3>
+        <p className="text-muted-foreground mt-2">
           {requestType === 'device'
             ? 'A device wants to connect and sync data with you'
             : 'A device wants to share a folder with you'}
@@ -121,7 +122,7 @@ export function PendingRequestPanel({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-lg border border-white/10 bg-white/5 p-4"
+        className="border-border bg-muted/50 rounded-lg border p-4"
       >
         <div className="mb-3 flex items-center gap-2">
           <AlertTriangle
@@ -130,17 +131,17 @@ export function PendingRequestPanel({
               requestType === 'device' ? 'text-amber-400' : 'text-orange-400'
             )}
           />
-          <span className="text-sm font-medium text-white">Request Details</span>
+          <span className="text-foreground text-sm font-medium">Request Details</span>
         </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Name</span>
-            <span className="font-mono text-sm text-white">{requestName || 'Unknown'}</span>
+            <span className="text-muted-foreground text-sm">Name</span>
+            <span className="text-foreground font-mono text-sm">{requestName || 'Unknown'}</span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Type</span>
+            <span className="text-muted-foreground text-sm">Type</span>
             <Badge
               variant="outline"
               className={cn(
@@ -154,8 +155,8 @@ export function PendingRequestPanel({
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">ID</span>
-            <code className="max-w-[200px] truncate font-mono text-xs text-gray-500">
+            <span className="text-muted-foreground text-sm">ID</span>
+            <code className="text-muted-foreground/80 max-w-[200px] truncate font-mono text-xs">
               {requestId.slice(0, 24)}...
             </code>
           </div>
@@ -173,7 +174,7 @@ export function PendingRequestPanel({
           <Shield className="mt-0.5 h-5 w-5 text-amber-400" />
           <div>
             <p className="text-sm font-medium text-amber-300">Security Notice</p>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="text-muted-foreground mt-1 text-xs">
               Only accept requests from {requestType === 'device' ? 'devices' : 'folders'} you
               recognize. If you don't recognize this request, it's safe to ignore it.
             </p>
@@ -190,7 +191,7 @@ export function PendingRequestPanel({
       >
         <Button
           variant="outline"
-          className="flex-1 border-gray-500/30 text-gray-300 hover:bg-gray-500/10"
+          className="border-muted-foreground/30 text-muted-foreground hover:bg-muted flex-1"
           onClick={handleReject}
           disabled={isPending}
         >

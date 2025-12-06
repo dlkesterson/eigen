@@ -5,6 +5,7 @@
  * Features:
  * - MeshDistortMaterial with vertical taper
  * - Camera-facing stats overlay always visible
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -14,6 +15,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { MeshDistortMaterial } from '@react-three/drei';
 import { useSystemStatus } from '@/hooks/syncthing';
 import { StatsPanel, StatsCard } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -31,6 +33,7 @@ interface SpireProps {
 export function Spire({ visible = true }: SpireProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
 
   const { data: status } = useSystemStatus();
@@ -64,8 +67,8 @@ export function Spire({ visible = true }: SpireProps) {
       <mesh ref={meshRef}>
         <cylinderGeometry args={[0.12, 0.4, spireHeight, 6, 8]} />
         <MeshDistortMaterial
-          color="#010101"
-          roughness={0.1}
+          color={isDark ? '#010101' : '#e8e8e8'}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

@@ -12,13 +12,14 @@ import {
   useAcceptPendingDevice,
   useDismissPendingDevice,
 } from '@/hooks/syncthing';
-import { formatBytes } from '@/lib/utils';
+import { formatBytes, cn } from '@/lib/utils';
 import { DeviceOrb, type DeviceOrbData } from './device-orb';
 import { ConnectionWire } from './connection-wire';
 import { ParticleFlow } from './particle-flow';
 import { RequestBeacon } from './request-beacon';
 import { HudPanel } from './hud-panel';
 import { FolderList } from '@/components/folder-list';
+import { useResolvedTheme } from '@/components/theme-provider';
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle, XCircle, Link, Folder } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -63,35 +64,54 @@ function ConstellationScene({
   devices,
   connections,
   pendingCount,
+  isDark,
 }: {
   devices: DeviceOrbData[];
   connections: { from: string; to: string; isSyncing: boolean }[];
   pendingCount: number;
+  isDark: boolean;
 }) {
   const localDevice = devices.find((d) => d.isLocal);
   const remoteDevices = devices.filter((d) => !d.isLocal);
 
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.25} color="#1a3a52" />
-      <pointLight position={[25, 25, 25]} intensity={1.2} color="#5ba3d0" decay={2} />
-      <pointLight position={[-25, -15, 15]} intensity={0.6} color="#8b5cf6" decay={2} />
-      <pointLight position={[0, -20, 0]} intensity={0.4} color="#f97316" decay={2} />
+      {/* Lighting - adapted for theme */}
+      <ambientLight intensity={isDark ? 0.25 : 0.6} color={isDark ? '#1a3a52' : '#ffffff'} />
+      <pointLight
+        position={[25, 25, 25]}
+        intensity={isDark ? 1.2 : 1.5}
+        color={isDark ? '#5ba3d0' : '#60a5fa'}
+        decay={2}
+      />
+      <pointLight
+        position={[-25, -15, 15]}
+        intensity={isDark ? 0.6 : 0.8}
+        color={isDark ? '#8b5cf6' : '#a78bfa'}
+        decay={2}
+      />
+      <pointLight
+        position={[0, -20, 0]}
+        intensity={isDark ? 0.4 : 0.5}
+        color={isDark ? '#f97316' : '#fb923c'}
+        decay={2}
+      />
 
-      {/* Stars background */}
-      <Stars radius={150} depth={75} count={1500} factor={5} saturation={0.3} fade speed={0.05} />
+      {/* Stars background - only in dark mode */}
+      {isDark && (
+        <Stars radius={150} depth={75} count={1500} factor={5} saturation={0.3} fade speed={0.05} />
+      )}
 
-      {/* Atmospheric fog */}
-      <fog attach="fog" args={['#050810', 15, 100]} />
+      {/* Atmospheric fog - adapted for theme */}
+      <fog attach="fog" args={[isDark ? '#050810' : '#e2e8f0', 15, 100]} />
 
-      {/* Cosmic dust particles */}
-      <CosmicDust />
+      {/* Cosmic dust particles - only in dark mode */}
+      {isDark && <CosmicDust />}
 
       {/* Device constellation */}
       <group>
         {/* Local device (center) */}
-        {localDevice && <DeviceOrb device={localDevice} />}
+        {localDevice && <DeviceOrb device={localDevice} isDark={isDark} />}
 
         {/* Remote devices with connections */}
         {remoteDevices.map((device) => {
@@ -100,7 +120,7 @@ function ConstellationScene({
 
           return (
             <group key={device.id}>
-              <DeviceOrb device={device} />
+              <DeviceOrb device={device} isDark={isDark} />
 
               {/* Connection wire from center */}
               {localDevice && (
@@ -142,37 +162,58 @@ function RequestNotification({
   deviceName,
   onAccept,
   onDismiss,
+  isDark = true,
 }: {
   deviceId: string;
   deviceName?: string;
   onAccept: () => void;
   onDismiss: () => void;
+  isDark?: boolean;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="pointer-events-auto w-80 rounded-2xl border border-amber-500/30 bg-black/50 p-6 shadow-2xl backdrop-blur-xl"
+      className={cn(
+        'pointer-events-auto w-80 rounded-2xl border p-6 shadow-2xl backdrop-blur-xl',
+        isDark ? 'border-amber-500/30 bg-black/50' : 'border-amber-500/40 bg-white/80'
+      )}
       style={{
-        boxShadow: '0 0 30px rgba(251, 146, 60, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
+        boxShadow: isDark
+          ? '0 0 30px rgba(251, 146, 60, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1)'
+          : '0 0 30px rgba(251, 146, 60, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
       }}
     >
-      <h3 className="mb-2 text-lg font-semibold text-white">New Connection Request</h3>
-      <p className="mb-4 text-sm text-amber-300/80">
+      <h3 className={cn('mb-2 text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+        New Connection Request
+      </h3>
+      <p className={cn('mb-4 text-sm', isDark ? 'text-amber-300/80' : 'text-amber-600')}>
         {deviceName || `Device ${deviceId.slice(0, 8)}...`}
       </p>
-      <p className="mb-6 text-xs text-gray-400">wants to connect and sync data</p>
+      <p className={cn('mb-6 text-xs', isDark ? 'text-gray-400' : 'text-slate-500')}>
+        wants to connect and sync data
+      </p>
       <div className="flex gap-3">
         <button
           onClick={onAccept}
-          className="flex-1 rounded-lg border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-medium text-cyan-300 transition-all hover:bg-cyan-500/30"
+          className={cn(
+            'flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            isDark
+              ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
+              : 'border-cyan-500/50 bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20'
+          )}
         >
           Accept
         </button>
         <button
           onClick={onDismiss}
-          className="flex-1 rounded-lg border border-gray-500/30 bg-gray-600/20 px-4 py-2 text-sm font-medium text-gray-300 transition-all hover:bg-gray-600/30"
+          className={cn(
+            'flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            isDark
+              ? 'border-gray-500/30 bg-gray-600/20 text-gray-300 hover:bg-gray-600/30'
+              : 'border-gray-400/50 bg-gray-200/50 text-gray-600 hover:bg-gray-200/70'
+          )}
         >
           Ignore
         </button>
@@ -188,6 +229,8 @@ export function ConstellationDashboard() {
   const { data: pendingRequests } = usePendingRequests();
   const acceptDevice = useAcceptPendingDevice();
   const dismissDevice = useDismissPendingDevice();
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
 
   const [showRequest, setShowRequest] = useState(true);
 
@@ -281,7 +324,9 @@ export function ConstellationDashboard() {
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl bg-black">
+    <div
+      className={`relative h-full w-full overflow-hidden rounded-xl ${isDark ? 'bg-black' : 'bg-slate-100'}`}
+    >
       {/* 3D Canvas */}
       <Canvas
         style={{
@@ -300,6 +345,7 @@ export function ConstellationDashboard() {
             devices={devices}
             connections={connectionData}
             pendingCount={pendingCount}
+            isDark={isDark}
           />
         </Suspense>
       </Canvas>
@@ -339,15 +385,20 @@ export function ConstellationDashboard() {
         {/* Bottom-left - Synced folders panel */}
         <div className="pointer-events-auto absolute bottom-6 left-6 w-96">
           <div
-            className="rounded-xl border border-blue-400/30 bg-black/50 p-5 backdrop-blur-xl"
+            className={`rounded-xl border p-5 backdrop-blur-xl ${
+              isDark ? 'border-blue-400/30 bg-black/50' : 'border-blue-400/40 bg-white/70'
+            }`}
             style={{
-              boxShadow:
-                '0 0 25px rgba(96, 165, 250, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.05)',
+              boxShadow: isDark
+                ? '0 0 25px rgba(96, 165, 250, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.05)'
+                : '0 0 25px rgba(96, 165, 250, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
             }}
           >
             <div className="mb-4 flex items-center gap-2">
-              <Folder className="h-5 w-5 text-cyan-400" />
-              <h3 className="font-semibold text-white">Synced Folders</h3>
+              <Folder className={`h-5 w-5 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />
+              <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                Synced Folders
+              </h3>
             </div>
             <div className="max-h-48 overflow-y-auto">
               <FolderList compact />
@@ -364,6 +415,7 @@ export function ConstellationDashboard() {
                 deviceName={firstPendingDevice.name}
                 onAccept={handleAcceptDevice}
                 onDismiss={handleDismissDevice}
+                isDark={isDark}
               />
             </div>
           )}

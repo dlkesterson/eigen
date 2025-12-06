@@ -3,6 +3,7 @@
  *
  * An interactive 3D help interface showing available commands,
  * keyboard shortcuts, and quick tips for using Eigen.
+ * Theme-aware styling (dark/light mode).
  */
 
 'use client';
@@ -12,6 +13,8 @@ import { useFrame } from '@react-three/fiber';
 import { Html, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { COMMANDS } from '@/constants/omnibox';
+import { cn } from '@/lib/utils';
+import { useShellTheme } from './_shell/LiminalShell';
 import type { CommandCategory } from '@/types/omnibox';
 
 // =============================================================================
@@ -42,6 +45,7 @@ interface HelpPanelProps {
   children: React.ReactNode;
   delay?: number;
   visible?: boolean;
+  isDark?: boolean;
 }
 
 function HelpPanel({
@@ -52,6 +56,7 @@ function HelpPanel({
   children,
   delay = 0,
   visible = true,
+  isDark = true,
 }: HelpPanelProps) {
   const groupRef = useRef<THREE.Group>(null);
 
@@ -71,7 +76,10 @@ function HelpPanel({
     <group ref={groupRef} position={position}>
       <Html center style={{ pointerEvents: 'auto' }}>
         <div
-          className="w-64 overflow-hidden rounded-xl border bg-black/90 backdrop-blur-md transition-transform hover:scale-105"
+          className={cn(
+            'w-64 overflow-hidden rounded-xl border backdrop-blur-md transition-transform hover:scale-105',
+            isDark ? 'bg-black/90' : 'bg-white/90'
+          )}
           style={{ borderColor: `${color}40` }}
         >
           <div
@@ -79,7 +87,9 @@ function HelpPanel({
             style={{ borderColor: `${color}30`, background: `${color}15` }}
           >
             <span className="text-lg">{icon}</span>
-            <h3 className="text-sm font-semibold text-white">{title}</h3>
+            <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+              {title}
+            </h3>
           </div>
           <div className="max-h-48 overflow-y-auto px-4 py-3">{children}</div>
         </div>
@@ -163,7 +173,7 @@ function CentralHelpOrb() {
 // Keyboard Shortcut Display
 // =============================================================================
 
-function KeyboardShortcuts() {
+function KeyboardShortcuts({ isDark = true }: { isDark?: boolean }) {
   const shortcuts = [
     { keys: 'Ctrl+K', description: 'Open Omnibox' },
     { keys: '↑↓', description: 'Navigate suggestions' },
@@ -176,10 +186,17 @@ function KeyboardShortcuts() {
     <div className="space-y-1.5">
       {shortcuts.map((shortcut) => (
         <div key={shortcut.keys} className="flex items-center justify-between gap-2">
-          <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-cyan-300">
+          <kbd
+            className={cn(
+              'rounded px-1.5 py-0.5 font-mono text-[10px] text-cyan-300',
+              isDark ? 'bg-white/10' : 'bg-slate-200'
+            )}
+          >
             {shortcut.keys}
           </kbd>
-          <span className="text-[11px] text-gray-400">{shortcut.description}</span>
+          <span className={cn('text-[11px]', isDark ? 'text-gray-400' : 'text-slate-500')}>
+            {shortcut.description}
+          </span>
         </div>
       ))}
     </div>
@@ -193,9 +210,10 @@ function KeyboardShortcuts() {
 interface CommandListProps {
   commands: CommandGroup['commands'];
   color: string;
+  isDark?: boolean;
 }
 
-function CommandList({ commands, color }: CommandListProps) {
+function CommandList({ commands, color, isDark = true }: CommandListProps) {
   return (
     <div className="space-y-2">
       {commands.slice(0, 4).map((cmd) => (
@@ -208,7 +226,14 @@ function CommandList({ commands, color }: CommandListProps) {
               {cmd.aliases[0]}
             </code>
           </div>
-          <p className="mt-0.5 line-clamp-1 text-[10px] text-gray-500">{cmd.description}</p>
+          <p
+            className={cn(
+              'mt-0.5 line-clamp-1 text-[10px]',
+              isDark ? 'text-gray-500' : 'text-slate-500'
+            )}
+          >
+            {cmd.description}
+          </p>
         </div>
       ))}
     </div>
@@ -219,7 +244,7 @@ function CommandList({ commands, color }: CommandListProps) {
 // Quick Tips
 // =============================================================================
 
-function QuickTips() {
+function QuickTips({ isDark = true }: { isDark?: boolean }) {
   const tips = [
     'Type naturally - "show my devices"',
     'Use quotes for file names',
@@ -232,7 +257,9 @@ function QuickTips() {
       {tips.map((tip, i) => (
         <div key={i} className="flex items-start gap-2">
           <span className="text-amber-400">💡</span>
-          <span className="text-[11px] text-gray-300">{tip}</span>
+          <span className={cn('text-[11px]', isDark ? 'text-gray-300' : 'text-slate-600')}>
+            {tip}
+          </span>
         </div>
       ))}
     </div>
@@ -248,6 +275,8 @@ interface HelpCenterVisualizationProps {
 }
 
 export function HelpCenterVisualization({ visible = true }: HelpCenterVisualizationProps) {
+  const { isDark } = useShellTheme();
+
   // Group commands by category
   const commandGroups = useMemo<CommandGroup[]>(() => {
     const categoryConfig: Record<CommandCategory, { label: string; icon: string; color: string }> =
@@ -316,8 +345,9 @@ export function HelpCenterVisualization({ visible = true }: HelpCenterVisualizat
           color={group.color}
           delay={index * 0.3}
           visible={visible}
+          isDark={isDark}
         >
-          <CommandList commands={group.commands} color={group.color} />
+          <CommandList commands={group.commands} color={group.color} isDark={isDark} />
         </HelpPanel>
       ))}
 
@@ -329,8 +359,9 @@ export function HelpCenterVisualization({ visible = true }: HelpCenterVisualizat
         color="#06b6d4"
         delay={0.9}
         visible={visible}
+        isDark={isDark}
       >
-        <KeyboardShortcuts />
+        <KeyboardShortcuts isDark={isDark} />
       </HelpPanel>
 
       {/* Quick tips panel */}
@@ -341,8 +372,9 @@ export function HelpCenterVisualization({ visible = true }: HelpCenterVisualizat
         color="#f59e0b"
         delay={1.2}
         visible={visible}
+        isDark={isDark}
       >
-        <QuickTips />
+        <QuickTips isDark={isDark} />
       </HelpPanel>
 
       {/* Grid floor */}

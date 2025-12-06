@@ -26,6 +26,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import { formatBytes, formatRate, cn } from '@/lib/utils';
+import { useShellTheme } from './LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -63,6 +65,7 @@ export function InfoBeacon({
   pointerEvents = false,
 }: InfoBeaconProps) {
   const { camera: _camera, size } = useThree();
+  const { isDark } = useShellTheme();
   const groupRef = useRef<THREE.Group>(null);
   const tempVector = useMemo(() => new THREE.Vector3(), []);
   const offsetVector = useMemo(() => new THREE.Vector3(...offset), [offset]);
@@ -98,7 +101,13 @@ export function InfoBeacon({
         occlude={false}
       >
         <div
-          className={`rounded-xl border border-white/20 bg-black/90 px-4 py-3 text-sm text-white shadow-2xl backdrop-blur-md ${className} `}
+          className={cn(
+            'rounded-xl border px-4 py-3 text-sm shadow-2xl backdrop-blur-md',
+            isDark
+              ? 'border-white/20 bg-black/90 text-white'
+              : 'border-gray-300/50 bg-white/90 text-gray-900',
+            className
+          )}
           style={{ maxWidth }}
         >
           {children}
@@ -125,12 +134,6 @@ const STATUS_COLORS = {
   syncing: 'text-cyan-400',
   paused: 'text-amber-400',
 } as const;
-
-function formatRate(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B/s`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB/s`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB/s`;
-}
 
 export function DeviceInfoBeacon({
   name,
@@ -164,13 +167,6 @@ export interface FolderInfoBeaconProps extends Omit<InfoBeaconProps, 'children'>
   completion?: number;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
 export function FolderInfoBeacon({
   name,
   path,
@@ -178,21 +174,38 @@ export function FolderInfoBeacon({
   completion,
   ...props
 }: FolderInfoBeaconProps) {
+  const { isDark } = useShellTheme();
+
   return (
     <InfoBeacon {...props}>
       <div className="space-y-1">
         <div className="font-bold">{name}</div>
-        {path && <div className="truncate text-xs text-gray-400">{path}</div>}
-        {size !== undefined && <div className="text-xs text-purple-400">{formatBytes(size)}</div>}
+        {path && (
+          <div className={cn('truncate text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            {path}
+          </div>
+        )}
+        {size !== undefined && (
+          <div className={cn('text-xs', isDark ? 'text-purple-400' : 'text-purple-600')}>
+            {formatBytes(size)}
+          </div>
+        )}
         {completion !== undefined && (
           <div className="flex items-center gap-2 pt-1">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+            <div
+              className={cn(
+                'h-1.5 flex-1 overflow-hidden rounded-full',
+                isDark ? 'bg-white/10' : 'bg-gray-200'
+              )}
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-green-400"
                 style={{ width: `${completion}%` }}
               />
             </div>
-            <span className="text-xs text-gray-400">{completion.toFixed(0)}%</span>
+            <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              {completion.toFixed(0)}%
+            </span>
           </div>
         )}
       </div>

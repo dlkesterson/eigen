@@ -5,6 +5,7 @@
  * glass panel with folder stats + file tree
  *
  * This component provides the glass panel content for folder details.
+ * Theme-aware styling (dark/light mode).
  */
 
 'use client';
@@ -32,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatBytes } from '@/lib/utils';
+import { useResolvedTheme } from '@/components/theme-provider';
 import {
   useConfig,
   useFolderStatus,
@@ -62,28 +64,32 @@ function StatRow({
   label,
   value,
   color = 'gray',
+  isDark = true,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | React.ReactNode;
   color?: 'cyan' | 'green' | 'amber' | 'purple' | 'red' | 'gray';
+  isDark?: boolean;
 }) {
   const colorClasses = {
-    cyan: 'text-cyan-400',
-    green: 'text-green-400',
-    amber: 'text-amber-400',
-    purple: 'text-purple-400',
-    red: 'text-red-400',
-    gray: 'text-gray-400',
+    cyan: 'text-cyan-500',
+    green: 'text-green-500',
+    amber: 'text-amber-500',
+    purple: 'text-purple-500',
+    red: 'text-red-500',
+    gray: isDark ? 'text-gray-400' : 'text-slate-500',
   };
 
   return (
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center gap-2">
         <Icon className={cn('h-4 w-4', colorClasses[color])} />
-        <span className="text-sm text-gray-400">{label}</span>
+        <span className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>{label}</span>
       </div>
-      <span className="font-mono text-sm text-white">{value}</span>
+      <span className={cn('font-mono text-sm', isDark ? 'text-white' : 'text-slate-900')}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -122,6 +128,9 @@ export function FolderDetailsPanel({
   onEdit,
   onClose,
 }: FolderDetailsPanelProps) {
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const { data: config, isLoading: configLoading } = useConfig();
   const { data: status, isLoading: statusLoading } = useFolderStatus(folderId);
   const pauseFolder = usePauseFolder();
@@ -196,7 +205,14 @@ export function FolderDetailsPanel({
 
   if (!folder) {
     return (
-      <div className="flex items-center justify-center py-12 text-gray-400">Folder not found</div>
+      <div
+        className={cn(
+          'flex items-center justify-center py-12',
+          isDark ? 'text-gray-400' : 'text-slate-500'
+        )}
+      >
+        Folder not found
+      </div>
     );
   }
 
@@ -223,7 +239,9 @@ export function FolderDetailsPanel({
           )}
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-semibold text-white">{folder.label || folder.id}</h3>
+          <h3 className={cn('text-xl font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+            {folder.label || folder.id}
+          </h3>
           <div className="mt-1 flex items-center gap-2">
             <SyncStateIndicator state={state} />
           </div>
@@ -235,20 +253,35 @@ export function FolderDetailsPanel({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-lg border border-white/10 bg-white/5 p-4"
+        className={cn(
+          'rounded-lg border p-4',
+          isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'
+        )}
       >
         <div className="mb-2 flex items-center gap-2">
-          <Folder className="h-4 w-4 text-purple-400" />
-          <span className="text-xs tracking-wider text-gray-400 uppercase">Path</span>
+          <Folder className="h-4 w-4 text-purple-500" />
+          <span
+            className={cn(
+              'text-xs tracking-wider uppercase',
+              isDark ? 'text-gray-400' : 'text-slate-500'
+            )}
+          >
+            Path
+          </span>
         </div>
-        <code className="block font-mono text-xs break-all text-gray-300">
+        <code
+          className={cn(
+            'block font-mono text-xs break-all',
+            isDark ? 'text-gray-300' : 'text-slate-600'
+          )}
+        >
           {folder.path || 'Unknown'}
         </code>
         {folder.path && (
           <Button
             variant="ghost"
             size="sm"
-            className="mt-2 h-7 text-xs text-cyan-400 hover:text-cyan-300"
+            className="mt-2 h-7 text-xs text-cyan-500 hover:text-cyan-600"
             onClick={handleOpenInExplorer}
           >
             <ExternalLink className="mr-1 h-3 w-3" />
@@ -263,13 +296,23 @@ export function FolderDetailsPanel({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="rounded-lg border border-cyan-400/30 bg-cyan-400/5 p-4"
+          className={cn(
+            'rounded-lg border p-4',
+            isDark ? 'border-cyan-400/30 bg-cyan-400/5' : 'border-cyan-500/30 bg-cyan-50'
+          )}
         >
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm text-cyan-400">Sync Progress</span>
-            <span className="font-mono text-sm text-white">{syncProgress}%</span>
+            <span className="text-sm text-cyan-500">Sync Progress</span>
+            <span className={cn('font-mono text-sm', isDark ? 'text-white' : 'text-slate-900')}>
+              {syncProgress}%
+            </span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-700">
+          <div
+            className={cn(
+              'h-2 w-full overflow-hidden rounded-full',
+              isDark ? 'bg-gray-700' : 'bg-slate-200'
+            )}
+          >
             <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all"
               style={{ width: `${syncProgress}%` }}
@@ -283,42 +326,52 @@ export function FolderDetailsPanel({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="divide-y divide-white/10 rounded-lg border border-white/10 bg-white/5 p-4"
+        className={cn(
+          'divide-y rounded-lg border p-4',
+          isDark
+            ? 'divide-white/10 border-white/10 bg-white/5'
+            : 'divide-slate-200 border-slate-200 bg-slate-50'
+        )}
       >
         <StatRow
           icon={File}
           label="Local Files"
           value={status?.localFiles?.toLocaleString() || '0'}
           color="cyan"
+          isDark={isDark}
         />
         <StatRow
           icon={HardDrive}
           label="Local Size"
           value={formatBytes(status?.localBytes || 0)}
           color="purple"
+          isDark={isDark}
         />
         <StatRow
           icon={File}
           label="Global Files"
           value={status?.globalFiles?.toLocaleString() || '0'}
           color="green"
+          isDark={isDark}
         />
         <StatRow
           icon={HardDrive}
           label="Global Size"
           value={formatBytes(status?.globalBytes || 0)}
           color="green"
+          isDark={isDark}
         />
         {(status?.needFiles || 0) > 0 && (
           <StatRow
             icon={AlertTriangle}
             label="Needs Sync"
             value={
-              <Badge variant="outline" className="border-amber-400/50 text-amber-400">
+              <Badge variant="outline" className="border-amber-500/50 text-amber-500">
                 {status?.needFiles} files
               </Badge>
             }
             color="amber"
+            isDark={isDark}
           />
         )}
       </motion.div>
@@ -328,14 +381,19 @@ export function FolderDetailsPanel({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="rounded-lg border border-white/10 bg-white/5 p-4"
+        className={cn(
+          'rounded-lg border p-4',
+          isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'
+        )}
       >
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-cyan-400" />
-            <span className="text-sm font-medium text-white">Shared With</span>
+            <Users className="h-4 w-4 text-cyan-500" />
+            <span className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
+              Shared With
+            </span>
           </div>
-          <Badge variant="outline" className="border-cyan-400/50 text-cyan-400">
+          <Badge variant="outline" className="border-cyan-500/50 text-cyan-500">
             {sharedDevices.length}
           </Badge>
         </div>
@@ -344,20 +402,27 @@ export function FolderDetailsPanel({
             {sharedDevices.slice(0, 5).map((device) => (
               <div
                 key={device.deviceID}
-                className="flex items-center gap-2 rounded-md bg-white/5 px-3 py-2"
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-3 py-2',
+                  isDark ? 'bg-white/5' : 'bg-white'
+                )}
               >
-                <HardDrive className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-300">{device.name}</span>
+                <HardDrive className={cn('h-4 w-4', isDark ? 'text-gray-400' : 'text-slate-500')} />
+                <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                  {device.name}
+                </span>
               </div>
             ))}
             {sharedDevices.length > 5 && (
-              <p className="text-center text-xs text-gray-500">
+              <p className={cn('text-center text-xs', isDark ? 'text-gray-500' : 'text-slate-500')}>
                 +{sharedDevices.length - 5} more devices
               </p>
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Not shared with any devices</p>
+          <p className={cn('text-sm', isDark ? 'text-gray-500' : 'text-slate-500')}>
+            Not shared with any devices
+          </p>
         )}
       </motion.div>
 
@@ -370,7 +435,9 @@ export function FolderDetailsPanel({
       >
         <Button
           variant="outline"
-          className="border-white/20 hover:bg-white/10"
+          className={cn(
+            isDark ? 'border-white/20 hover:bg-white/10' : 'border-slate-300 hover:bg-slate-100'
+          )}
           onClick={handleTogglePause}
           disabled={pauseFolder.isPending || resumeFolder.isPending}
         >
@@ -388,7 +455,9 @@ export function FolderDetailsPanel({
         </Button>
         <Button
           variant="outline"
-          className="border-white/20 hover:bg-white/10"
+          className={cn(
+            isDark ? 'border-white/20 hover:bg-white/10' : 'border-slate-300 hover:bg-slate-100'
+          )}
           onClick={handleRescan}
           disabled={rescanFolder.isPending || isSyncing}
         >
@@ -398,7 +467,12 @@ export function FolderDetailsPanel({
         {onShare && (
           <Button
             variant="outline"
-            className="border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10"
+            className={cn(
+              'text-cyan-500',
+              isDark
+                ? 'border-cyan-400/30 hover:bg-cyan-400/10'
+                : 'border-cyan-500/30 hover:bg-cyan-50'
+            )}
             onClick={onShare}
           >
             <Share2 className="mr-2 h-4 w-4" />
@@ -408,7 +482,12 @@ export function FolderDetailsPanel({
         {onBrowse && (
           <Button
             variant="outline"
-            className="border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
+            className={cn(
+              'text-purple-500',
+              isDark
+                ? 'border-purple-400/30 hover:bg-purple-400/10'
+                : 'border-purple-500/30 hover:bg-purple-50'
+            )}
             onClick={onBrowse}
           >
             <FolderOpen className="mr-2 h-4 w-4" />

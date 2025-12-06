@@ -6,6 +6,7 @@
  * - MeshDistortMaterial with pulsing distortion
  * - Touch-accessible indicators with static positions
  * - Camera-facing stats overlay always visible
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -17,6 +18,7 @@ import { useConnections, useConfig } from '@/hooks/syncthing';
 import { useFolderStatuses } from '@/hooks/syncthing/folders';
 import { usePendingDevices, usePendingFolders } from '@/hooks/syncthing/pending';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -42,6 +44,7 @@ const HEALTH_COLORS: Record<HealthLevel, string> = {
 export function Heart({ visible = true }: HeartProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
 
   const { data: connections } = useConnections();
@@ -152,8 +155,8 @@ export function Heart({ visible = true }: HeartProps) {
       {/* Main Heart */}
       <Icosahedron ref={meshRef} args={[coreSize, 4]}>
         <MeshDistortMaterial
-          color="#020202"
-          roughness={0.1}
+          color={isDark ? '#020202' : '#e8e8e8'}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

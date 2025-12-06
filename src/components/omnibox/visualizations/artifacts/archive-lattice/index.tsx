@@ -6,6 +6,7 @@
  * - MeshDistortMaterial core
  * - Touch-accessible folder indicators
  * - Camera-facing stats overlay always visible
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -16,6 +17,7 @@ import { Icosahedron, MeshDistortMaterial } from '@react-three/drei';
 import { useConfig } from '@/hooks/syncthing';
 import { useFolderStatuses } from '@/hooks/syncthing/folders';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -45,6 +47,7 @@ const STATE_COLORS: Record<string, string> = {
 export function ArchiveLattice({ visible = true }: ArchiveLatticeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
 
   const { data: config } = useConfig();
@@ -112,8 +115,8 @@ export function ArchiveLattice({ visible = true }: ArchiveLatticeProps) {
       {/* Main Lattice Core */}
       <Icosahedron ref={meshRef} args={[coreSize, 3]}>
         <MeshDistortMaterial
-          color="#010101"
-          roughness={0.1}
+          color={isDark ? '#010101' : '#e8e8e8'}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

@@ -7,6 +7,7 @@
  * - Touch-accessible device indicators at static positions
  * - Camera-facing stats overlay always visible
  * - Click device → enter Layer 3 glass panel (per UX guide)
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -17,6 +18,8 @@ import { Icosahedron, MeshDistortMaterial } from '@react-three/drei';
 import { useConnections, useConfig } from '@/hooks/syncthing';
 import { useVisualizationStore } from '@/store/omnibox';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
+import { formatBytes } from '@/lib/utils';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -28,24 +31,13 @@ interface NexusPrismProps {
 }
 
 // =============================================================================
-// Format bytes helper
-// =============================================================================
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-// =============================================================================
 // Main Nexus Prism Component
 // =============================================================================
 
 export function NexusPrism({ visible = true }: NexusPrismProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
   const { enterRoom } = useVisualizationStore();
 
@@ -128,8 +120,8 @@ export function NexusPrism({ visible = true }: NexusPrismProps) {
       {/* Main Distorted Icosahedron */}
       <Icosahedron ref={meshRef} args={[coreSize, 4]}>
         <MeshDistortMaterial
-          color="#010101"
-          roughness={0.1}
+          color={isDark ? '#010101' : '#e8e8e8'}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

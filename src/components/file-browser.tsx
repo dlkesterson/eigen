@@ -11,6 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QuickLook, useQuickLook } from '@/components/quick-look';
+import { VersionTimeline } from '@/components/version-timeline';
+import { formatBytes } from '@/lib/utils';
 import {
   FolderOpen,
   X,
@@ -24,6 +26,7 @@ import {
   History,
   RotateCcw,
   Clock,
+  GitBranch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -42,14 +45,6 @@ interface FileEntry {
   size?: number;
   modTime?: string;
   permissions?: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 function formatDate(dateInput: string | number): string {
@@ -80,6 +75,7 @@ export function FileBrowser({
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [showVersions, setShowVersions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [timelineFile, setTimelineFile] = useState<{ name: string; path: string } | null>(null);
 
   const quickLook = useQuickLook();
   const openInExplorer = useOpenFolderInExplorer();
@@ -410,6 +406,24 @@ export function FileBrowser({
                           Restore
                         </Button>
                       )}
+                      {!showVersions && entry.type === 'file' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const filePath =
+                              currentPath.length > 0
+                                ? currentPath.join('/') + '/' + entry.name
+                                : entry.name;
+                            setTimelineFile({ name: entry.name, path: filePath });
+                          }}
+                          title="View version timeline"
+                        >
+                          <GitBranch className="h-4 w-4" />
+                        </Button>
+                      )}
                       {entry.type === 'directory' && (
                         <ChevronRight className="text-muted-foreground h-4 w-4" />
                       )}
@@ -437,6 +451,17 @@ export function FileBrowser({
           fileName={quickLook.selectedFile.name}
           filePath={quickLook.selectedFile.path}
           fileSize={quickLook.selectedFile.size}
+        />
+      )}
+
+      {/* Version Timeline */}
+      {timelineFile && (
+        <VersionTimeline
+          open={!!timelineFile}
+          onOpenChange={(open) => !open && setTimelineFile(null)}
+          folderPath={folderPath}
+          filePath={timelineFile.path}
+          fileName={timelineFile.name}
         />
       )}
     </div>

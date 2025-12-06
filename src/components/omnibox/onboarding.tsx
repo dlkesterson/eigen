@@ -20,6 +20,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useResolvedTheme } from '@/components/theme-provider';
 
 // =============================================================================
 // Types
@@ -114,10 +115,12 @@ function StepIndicator({
   steps,
   currentStep,
   onStepClick,
+  isDark,
 }: {
   steps: OnboardingStep[];
   currentStep: number;
   onStepClick: (index: number) => void;
+  isDark: boolean;
 }) {
   return (
     <div className="flex items-center justify-center gap-2">
@@ -131,7 +134,9 @@ function StepIndicator({
               ? 'w-8 bg-cyan-500'
               : index < currentStep
                 ? 'w-2 bg-cyan-500/50 hover:bg-cyan-500/70'
-                : 'w-2 bg-white/20 hover:bg-white/30'
+                : isDark
+                  ? 'w-2 bg-white/20 hover:bg-white/30'
+                  : 'w-2 bg-gray-300 hover:bg-gray-400'
           )}
           aria-label={`Go to step ${index + 1}: ${step.title}`}
         />
@@ -185,6 +190,8 @@ function HighlightOverlay({ highlight }: { highlight?: OnboardingStep['highlight
 export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
 
   const step = ONBOARDING_STEPS[currentStep];
   const isFirstStep = currentStep === 0;
@@ -243,9 +250,19 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
         animate={{ opacity: 1, y: 0 }}
         className="absolute bottom-24 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4"
       >
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 shadow-2xl backdrop-blur-xl">
+        <div
+          className={cn(
+            'overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl',
+            isDark ? 'border-white/10 bg-slate-900/95' : 'border-gray-200/60 bg-white/95'
+          )}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <div
+            className={cn(
+              'flex items-center justify-between border-b px-6 py-4',
+              isDark ? 'border-white/10' : 'border-gray-200/60'
+            )}
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600">
                 {isLastStep ? (
@@ -255,8 +272,10 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-white">{step.title}</h3>
-                <p className="text-xs text-gray-400">
+                <h3 className={cn('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                  {step.title}
+                </h3>
+                <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
                   Step {currentStep + 1} of {ONBOARDING_STEPS.length}
                 </p>
               </div>
@@ -264,7 +283,12 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
 
             <button
               onClick={onSkip}
-              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+              className={cn(
+                'rounded-lg p-2 transition-colors',
+                isDark
+                  ? 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+              )}
               aria-label="Skip tutorial"
             >
               <X className="h-5 w-5" />
@@ -281,23 +305,51 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="leading-relaxed text-gray-300">{step.description}</p>
+                <p className={cn('leading-relaxed', isDark ? 'text-gray-300' : 'text-gray-600')}>
+                  {step.description}
+                </p>
 
                 {/* Tip */}
                 {step.tip && (
-                  <div className="mt-4 flex items-start gap-2 rounded-lg bg-cyan-500/10 px-3 py-2">
-                    <Zap className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-400" />
-                    <p className="text-sm text-cyan-300">{step.tip}</p>
+                  <div
+                    className={cn(
+                      'mt-4 flex items-start gap-2 rounded-lg px-3 py-2',
+                      isDark ? 'bg-cyan-500/10' : 'bg-cyan-50'
+                    )}
+                  >
+                    <Zap
+                      className={cn(
+                        'mt-0.5 h-4 w-4 flex-shrink-0',
+                        isDark ? 'text-cyan-400' : 'text-cyan-600'
+                      )}
+                    />
+                    <p className={cn('text-sm', isDark ? 'text-cyan-300' : 'text-cyan-700')}>
+                      {step.tip}
+                    </p>
                   </div>
                 )}
 
                 {/* Action hint */}
                 {step.action && (
-                  <div className="mt-4 flex items-center gap-2 rounded-lg border border-dashed border-white/20 bg-white/5 px-3 py-2">
-                    <Command className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-300">{step.action.label}</span>
+                  <div
+                    className={cn(
+                      'mt-4 flex items-center gap-2 rounded-lg border border-dashed px-3 py-2',
+                      isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-gray-50'
+                    )}
+                  >
+                    <Command
+                      className={cn('h-4 w-4', isDark ? 'text-gray-400' : 'text-gray-500')}
+                    />
+                    <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-600')}>
+                      {step.action.label}
+                    </span>
                     {step.action.command && (
-                      <code className="ml-auto rounded bg-black/30 px-2 py-0.5 font-mono text-xs text-cyan-400">
+                      <code
+                        className={cn(
+                          'ml-auto rounded px-2 py-0.5 font-mono text-xs',
+                          isDark ? 'bg-black/30 text-cyan-400' : 'bg-cyan-100 text-cyan-700'
+                        )}
+                      >
                         {step.action.command}
                       </code>
                     )}
@@ -308,18 +360,29 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-white/10 px-6 py-4">
+          <div
+            className={cn(
+              'flex items-center justify-between border-t px-6 py-4',
+              isDark ? 'border-white/10' : 'border-gray-200/60'
+            )}
+          >
             <StepIndicator
               steps={ONBOARDING_STEPS}
               currentStep={currentStep}
               onStepClick={goToStep}
+              isDark={isDark}
             />
 
             <div className="flex items-center gap-2">
               {!isFirstStep && (
                 <button
                   onClick={prevStep}
-                  className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg px-3 py-2 text-sm transition-colors',
+                    isDark
+                      ? 'text-gray-400 hover:bg-white/5 hover:text-white'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                  )}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Back
@@ -332,7 +395,9 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
                   'flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-all',
                   isLastStep
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500'
-                    : 'bg-white/10 text-white hover:bg-white/20'
+                    : isDark
+                      ? 'bg-white/10 text-white hover:bg-white/20'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                 )}
               >
                 {isLastStep ? (
@@ -352,16 +417,34 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
         </div>
 
         {/* Keyboard hints */}
-        <div className="mt-3 flex justify-center gap-4 text-xs text-gray-500">
+        <div
+          className={cn(
+            'mt-3 flex justify-center gap-4 text-xs',
+            isDark ? 'text-gray-500' : 'text-gray-400'
+          )}
+        >
           <span>
-            <kbd className="rounded bg-white/10 px-1.5 py-0.5">←</kbd>
-            <kbd className="ml-1 rounded bg-white/10 px-1.5 py-0.5">→</kbd> Navigate
+            <kbd className={cn('rounded px-1.5 py-0.5', isDark ? 'bg-white/10' : 'bg-gray-200')}>
+              ←
+            </kbd>
+            <kbd
+              className={cn('ml-1 rounded px-1.5 py-0.5', isDark ? 'bg-white/10' : 'bg-gray-200')}
+            >
+              →
+            </kbd>{' '}
+            Navigate
           </span>
           <span>
-            <kbd className="rounded bg-white/10 px-1.5 py-0.5">Enter</kbd> Continue
+            <kbd className={cn('rounded px-1.5 py-0.5', isDark ? 'bg-white/10' : 'bg-gray-200')}>
+              Enter
+            </kbd>{' '}
+            Continue
           </span>
           <span>
-            <kbd className="rounded bg-white/10 px-1.5 py-0.5">Esc</kbd> Skip
+            <kbd className={cn('rounded px-1.5 py-0.5', isDark ? 'bg-white/10' : 'bg-gray-200')}>
+              Esc
+            </kbd>{' '}
+            Skip
           </span>
         </div>
       </motion.div>
@@ -426,6 +509,8 @@ export function useOnboarding() {
 
 export function WelcomeBadge({ onReplayTutorial }: { onReplayTutorial: () => void }) {
   const [dismissed, setDismissed] = useState(false);
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     // Auto-dismiss after 10 seconds
@@ -442,22 +527,39 @@ export function WelcomeBadge({ onReplayTutorial }: { onReplayTutorial: () => voi
       exit={{ opacity: 0, y: -10 }}
       className="fixed top-4 right-4 z-40"
     >
-      <div className="flex items-center gap-3 rounded-xl border border-cyan-500/20 bg-slate-900/90 px-4 py-3 shadow-lg backdrop-blur-sm">
-        <Eye className="h-5 w-5 text-cyan-400" />
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm',
+          isDark ? 'border-cyan-500/20 bg-slate-900/90' : 'border-blue-400/30 bg-white/90'
+        )}
+      >
+        <Eye className={cn('h-5 w-5', isDark ? 'text-cyan-400' : 'text-blue-600')} />
         <div>
-          <p className="text-sm font-medium text-white">Ready to explore!</p>
-          <p className="text-xs text-gray-400">Press Ctrl+K to open the Omnibox</p>
+          <p className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+            Ready to explore!
+          </p>
+          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            Press Ctrl+K to open the Omnibox
+          </p>
         </div>
         <div className="ml-2 flex items-center gap-1">
           <button
             onClick={onReplayTutorial}
-            className="rounded-lg px-2 py-1 text-xs text-cyan-400 transition-colors hover:bg-white/5"
+            className={cn(
+              'rounded-lg px-2 py-1 text-xs transition-colors',
+              isDark ? 'text-cyan-400 hover:bg-white/5' : 'text-blue-600 hover:bg-gray-100'
+            )}
           >
             Replay
           </button>
           <button
             onClick={() => setDismissed(true)}
-            className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+            className={cn(
+              'rounded-lg p-1 transition-colors',
+              isDark
+                ? 'text-gray-400 hover:bg-white/5 hover:text-white'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+            )}
           >
             <X className="h-4 w-4" />
           </button>

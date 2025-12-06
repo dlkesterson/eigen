@@ -7,6 +7,7 @@
  * - Touch-accessible folder indicators
  * - Camera-facing stats overlay always visible
  * - Click folder → enter Layer 3 glass panel (per UX guide)
+ * - Theme-aware styling (dark/light mode)
  */
 
 'use client';
@@ -18,6 +19,8 @@ import { useConfig } from '@/hooks/syncthing';
 import { useFolderStatuses } from '@/hooks/syncthing/folders';
 import { useVisualizationStore } from '@/store/omnibox';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
+import { useShellTheme } from '../../_shell/LiminalShell';
+import { formatBytes } from '@/lib/utils';
 import * as THREE from 'three';
 
 // =============================================================================
@@ -26,18 +29,6 @@ import * as THREE from 'three';
 
 interface ObsidianCoreProps {
   visible?: boolean;
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 const FOLDER_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#06b6d4'];
@@ -49,6 +40,7 @@ const FOLDER_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#
 export function ObsidianCore({ visible = true }: ObsidianCoreProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
+  const { isDark } = useShellTheme();
   const isMobile = size.width < 768;
   const { enterRoom } = useVisualizationStore();
 
@@ -138,8 +130,8 @@ export function ObsidianCore({ visible = true }: ObsidianCoreProps) {
       {/* Main Distorted Sphere */}
       <Icosahedron ref={meshRef} args={[coreSize, 4]}>
         <MeshDistortMaterial
-          color="#010101"
-          roughness={0.1}
+          color={isDark ? '#010101' : '#e8e8e8'}
+          roughness={isDark ? 0.1 : 0.3}
           metalness={1}
           clearcoat={1}
           clearcoatRoughness={1}

@@ -5,7 +5,7 @@
  * Features:
  * - CosmicSearchBar as the singular input method
  * - ArtifactRouter for cinematic hero visualizations
- * - HUD panels for real-time sync metrics
+ * - StatsStack for compact sync metrics (top-right)
  * - StatusHUD for connection, refresh, settings, notifications
  * - Glass overlays for Layer 3 rooms (per UX guide)
  */
@@ -14,11 +14,11 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Bell, Activity, Database } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Omnibox, OnboardingTutorial, useOnboarding, WelcomeBadge } from '@/components/omnibox';
 import { ArtifactRouter } from '@/components/omnibox/artifact-router';
 import { CosmicSearchBar } from '@/components/constellation/cosmic-search-bar';
-import { HudPanel, StatusHud } from '@/components/constellation/hud-panel';
+import { StatusHud, StatsStack } from '@/components/constellation/hud-panel';
 import { GlassOverlay } from '@/components/omnibox/visualizations/_shell';
 import {
   DeviceDetailsPanel,
@@ -41,23 +41,8 @@ import {
   restartSyncthing,
 } from '@/lib/tauri-commands';
 import { logger } from '@/lib/logger';
-
-// =============================================================================
-// Format helpers
-// =============================================================================
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-function formatRate(bytesPerSec: number): string {
-  if (bytesPerSec === 0) return '0 B/s';
-  return formatBytes(bytesPerSec) + '/s';
-}
+import { useResolvedTheme } from '@/components/theme-provider';
+import { cn, formatBytes, formatRate } from '@/lib/utils';
 
 export function OmniboxDashboard() {
   const { actions } = useOmnibox();
@@ -73,6 +58,10 @@ export function OmniboxDashboard() {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const { showOnboarding, hasChecked, completeOnboarding, skipOnboarding, resetOnboarding } =
     useOnboarding();
+
+  // Theme support
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
 
   // Local state for pending dialog (legacy fallback)
   const [showPendingDialog, setShowPendingDialog] = useState(false);
@@ -250,13 +239,14 @@ export function OmniboxDashboard() {
       {/* Film grain overlay for premium texture */}
       <div className="bg-noise" />
 
-      {/* Status HUD — Top right: Connection, Refresh, Settings, Notifications */}
+      {/* Top-right HUD — Status controls and stats in a vertical column */}
       <motion.div
-        className="absolute top-6 right-6 z-40"
+        className="absolute top-6 right-6 z-50 flex flex-col items-end gap-3"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
+        {/* Status Controls — Connection, Refresh, Settings, Notifications */}
         <StatusHud
           isOnline={isOnline}
           isRefetching={isRefetching}
@@ -264,6 +254,15 @@ export function OmniboxDashboard() {
           onRefresh={() => refetch()}
           onOpenSettings={() => enterRoom('settings')}
           onOpenPending={() => setShowPendingDialog(true)}
+        />
+
+        {/* Stats Stack — Only visible when connected, below controls */}
+        <StatsStack
+          isOnline={isOnline}
+          syncRate={hudMetrics.syncRate}
+          connectedNodes={hudMetrics.connectedNodes}
+          folderCount={hudMetrics.folders}
+          pendingCount={hudMetrics.pendingArtifacts}
         />
       </motion.div>
 
@@ -292,39 +291,6 @@ export function OmniboxDashboard() {
         <ArtifactRouter />
       </motion.div>
 
-      {/* HUD Panels — Bottom left */}
-      <motion.div
-        className="absolute bottom-8 left-8 z-20 flex gap-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-      >
-        <HudPanel
-          title="SYNC RATE"
-          value={hudMetrics.syncRate}
-          icon={<Activity className="h-5 w-5 text-cyan-400" />}
-        />
-        <HudPanel
-          title="CONNECTED"
-          value={hudMetrics.connectedNodes}
-          icon={<Bell className="h-5 w-5 text-green-400" />}
-        />
-      </motion.div>
-
-      {/* HUD Panels — Bottom right */}
-      <motion.div
-        className="absolute right-8 bottom-8 z-20 flex gap-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-      >
-        <HudPanel
-          title="FOLDERS"
-          value={hudMetrics.folders.toString()}
-          icon={<Database className="h-5 w-5 text-purple-400" />}
-        />
-      </motion.div>
-
       {/* Current artifact indicator */}
       {currentArtifact && (
         <motion.div
@@ -333,9 +299,19 @@ export function OmniboxDashboard() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
         >
-          <div className="glow-text flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 backdrop-blur-xl">
-            <Sparkles className="h-4 w-4 text-cyan-400" />
-            <span className="font-mono text-xs tracking-widest text-cyan-300 uppercase">
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-full px-4 py-2 backdrop-blur-xl',
+              isDark ? 'bg-black/60' : 'bg-white/70'
+            )}
+          >
+            <Sparkles className={cn('h-4 w-4', isDark ? 'text-cyan-400' : 'text-blue-600')} />
+            <span
+              className={cn(
+                'font-mono text-xs tracking-widest uppercase',
+                isDark ? 'text-cyan-300' : 'text-blue-700'
+              )}
+            >
               {currentArtifact.artifactType.replace('-', ' ')}
             </span>
           </div>
@@ -349,9 +325,22 @@ export function OmniboxDashboard() {
         animate={{ opacity: 0.5 }}
         transition={{ delay: 1 }}
       >
-        <div className="rounded-lg bg-black/40 px-3 py-1.5 text-xs text-gray-500 backdrop-blur-sm">
-          Press <kbd className="mx-1 rounded bg-white/10 px-1.5 py-0.5 text-white">Ctrl+K</kbd> for
-          commands
+        <div
+          className={cn(
+            'rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm',
+            isDark ? 'bg-black/40 text-gray-500' : 'bg-white/60 text-gray-500'
+          )}
+        >
+          Press{' '}
+          <kbd
+            className={cn(
+              'mx-1 rounded px-1.5 py-0.5',
+              isDark ? 'bg-white/10 text-white' : 'bg-gray-200 text-gray-700'
+            )}
+          >
+            Ctrl+K
+          </kbd>{' '}
+          for commands
         </div>
       </motion.div>
 
