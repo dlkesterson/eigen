@@ -176,6 +176,20 @@ export const VISUALIZATION_PRESETS: Record<VisualizationType, VisualizationPrese
 /**
  * Artifact registry for the new cinematic visualization system.
  * Each artifact is a single, hero object displayed in the LiminalShell environment.
+ *
+ * Mapping from Syncthing concepts to artifacts:
+ * | Syncthing Concept    | Artifact Type      | Visual Treatment                           |
+ * |----------------------|--------------------|--------------------------------------------|
+ * | This Device (local)  | Heart              | Pulsing crystalline core, golden geometry  |
+ * | Remote Device        | Nexus Prism        | Floating refracting prism                  |
+ * | Folder (synced)      | Obsidian Core      | Black monolith with glowing file runes     |
+ * | Pending Device       | Request Beacon     | Orange rotating octahedron, particle trail |
+ * | Pending Folder       | Request Beacon     | Orange rotating octahedron, particle trail |
+ * | Conflict Set         | Fracture           | Shattered mirror versions orbiting void    |
+ * | Version History      | Archive Lattice    | Infinite crystalline grid extending fog    |
+ * | Health / Errors      | Conduit            | Broken/repairing energy conduits           |
+ * | Help / Search        | Help Monolith      | 2001-style monolith                        |
+ * | Timeline             | Spire              | Tall glowing tower, height = uptime        |
  */
 export const ARTIFACTS = {
   'device-topology': {
@@ -217,6 +231,11 @@ export const ARTIFACTS = {
     component: lazy(() => import('./artifacts/help-monolith')),
     title: 'Monolith',
     description: 'Help and documentation',
+  },
+  'pending-requests': {
+    component: lazy(() => import('./artifacts/request-beacon')),
+    title: 'Request Beacon',
+    description: 'Pending device and folder requests',
   },
 } as const;
 

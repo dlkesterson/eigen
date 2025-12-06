@@ -6,15 +6,17 @@
  * - MeshDistortMaterial for liquid metal look
  * - Touch-accessible folder indicators
  * - Camera-facing stats overlay always visible
+ * - Click folder → enter Layer 3 glass panel (per UX guide)
  */
 
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Icosahedron, MeshDistortMaterial } from '@react-three/drei';
 import { useConfig } from '@/hooks/syncthing';
 import { useFolderStatuses } from '@/hooks/syncthing/folders';
+import { useVisualizationStore } from '@/store/omnibox';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
 import * as THREE from 'three';
 
@@ -48,6 +50,7 @@ export function ObsidianCore({ visible = true }: ObsidianCoreProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
   const isMobile = size.width < 768;
+  const { enterRoom } = useVisualizationStore();
 
   const { data: config } = useConfig();
 
@@ -101,6 +104,18 @@ export function ObsidianCore({ visible = true }: ObsidianCoreProps) {
 
   const coreSize = isMobile ? 0.6 : 0.8;
 
+  // Handle folder click → enter glass panel room
+  const handleFolderClick = useCallback(
+    (folderId: string) => {
+      const folder = metrics.folders.find((f) => f.id === folderId);
+      enterRoom('folder-explorer', {
+        entityId: folderId,
+        entityLabel: folder?.label || folderId,
+      });
+    },
+    [enterRoom, metrics.folders]
+  );
+
   useFrame(({ clock }) => {
     if (meshRef.current && visible) {
       meshRef.current.rotation.y = clock.getElapsedTime() * 0.08;
@@ -146,7 +161,9 @@ export function ObsidianCore({ visible = true }: ObsidianCoreProps) {
       </mesh>
 
       {/* Folder indicator ring */}
-      {ringItems.length > 0 && <IndicatorRing items={ringItems} radius={coreSize + 0.9} />}
+      {ringItems.length > 0 && (
+        <IndicatorRing items={ringItems} radius={coreSize + 0.9} onClick={handleFolderClick} />
+      )}
 
       {/* Camera-facing stats panel */}
       <StatsPanel position="bottom">

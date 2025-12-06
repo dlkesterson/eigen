@@ -95,8 +95,34 @@
 @utility glass-card {
   @apply border-border bg-card/50 rounded-xl border shadow-xl backdrop-blur-xl;
 }
+@utility glass-modal {
+  @apply border-border bg-card/60 rounded-2xl border shadow-2xl backdrop-blur-2xl;
+}
+@utility glass-floating {
+  @apply border-border bg-card/40 rounded-xl border backdrop-blur-md;
+  box-shadow:
+    0 0 30px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(34, 211, 238, 0.1);
+}
 @utility animate-glow {
   animation: glow 2s ease-in-out infinite alternate;
+}
+
+/* Layer hierarchy glow effects (per UX guide) */
+@utility glow-cyan {
+  box-shadow:
+    0 0 30px rgba(34, 211, 238, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+@utility glow-amber {
+  box-shadow:
+    0 0 30px rgba(251, 191, 36, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+@utility glow-purple {
+  box-shadow:
+    0 0 30px rgba(192, 132, 252, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
 }
 
 /* Shimmer animation for skeleton loading */
@@ -394,4 +420,146 @@
   z-index: 50;
   opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* =============================================================================
+   COSMIC ARTIFACT CHAMBER STYLES
+   ============================================================================= */
+
+/* Cosmic background — deep void with subtle radial gradient */
+.bg-cosmic {
+  background: radial-gradient(circle at 50% 30%, #0f0f2e 0%, #050510 50%, #000000 100%);
+}
+
+/* Glowing text effect — cyan accent */
+.glow-text {
+  text-shadow:
+    0 0 20px rgba(34, 211, 238, 0.8),
+    0 0 40px rgba(34, 211, 238, 0.4);
+  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.5));
+}
+
+/* Gold glow for warnings/pending */
+.glow-text-gold {
+  text-shadow:
+    0 0 20px rgba(251, 191, 36, 0.8),
+    0 0 40px rgba(251, 191, 36, 0.4);
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5));
+}
+
+/* Particle trail effect */
+.particle-trail {
+  background: linear-gradient(90deg, transparent, #22d3ee, transparent);
+  mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+}
+
+/* Liminal fog overlay */
+.liminal-fog {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(15, 15, 46, 0.3) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  pointer-events: none;
+}
+
+/* Artifact glow ring */
+.artifact-glow {
+  box-shadow:
+    0 0 30px rgba(34, 211, 238, 0.3),
+    0 0 60px rgba(34, 211, 238, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Pulsing beacon animation */
+@keyframes beacon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.5;
+  }
+}
+
+.animate-beacon-pulse {
+  animation: beacon-pulse 2s ease-in-out infinite;
+}
+
+/* Liminal transition */
+@keyframes liminal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.animate-liminal-enter {
+  animation: liminal-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Artifact floating animation */
+@keyframes artifact-float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(0.5deg);
+  }
+  75% {
+    transform: translateY(5px) rotate(-0.5deg);
+  }
+}
+
+.animate-artifact-float {
+  animation: artifact-float 6s ease-in-out infinite;
+}
+
+/* HUD panel border glow */
+.hud-glow {
+  box-shadow:
+    0 0 25px rgba(96, 165, 250, 0.15),
+    0 0 50px rgba(96, 165, 250, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.08);
+}
+
+/* Monolith appearance animation */
+@keyframes monolith-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-monolith-rise {
+  animation: monolith-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Cosmic search pulse */
+@keyframes cosmic-search-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
+  }
+}
+
+.animate-cosmic-search {
+  animation: cosmic-search-pulse 2s ease-in-out infinite;
 }

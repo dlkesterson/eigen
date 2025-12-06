@@ -8,6 +8,7 @@ import i18n from '@/lib/i18n';
 import { SyncthingManager } from './syncthing-manager';
 import { ErrorBoundary } from './error-boundary';
 import DebugPanel from './debug-panel';
+import { FocusMode } from './focus-mode';
 import { registerDefaultHealthChecks } from '@/lib/health-monitor';
 import { autoRecovery, registerDefaultRecoveryStrategies } from '@/lib/auto-recovery';
 import { logger } from '@/lib/logger';
@@ -108,6 +109,7 @@ export function Providers({ children }: { children: ReactNode }) {
               <SyncthingManager>{children}</SyncthingManager>
               <ThemedToaster />
               <DebugPanel />
+              <FocusMode />
             </ThemeProvider>
           </SyncthingClientProvider>
         </QueryClientProvider>

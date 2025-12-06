@@ -6,14 +6,16 @@
  * - MeshDistortMaterial for organic, liquid metal look
  * - Touch-accessible device indicators at static positions
  * - Camera-facing stats overlay always visible
+ * - Click device → enter Layer 3 glass panel (per UX guide)
  */
 
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Icosahedron, MeshDistortMaterial } from '@react-three/drei';
 import { useConnections, useConfig } from '@/hooks/syncthing';
+import { useVisualizationStore } from '@/store/omnibox';
 import { StatsPanel, StatsCard, IndicatorRing } from '../_shared';
 import * as THREE from 'three';
 
@@ -45,6 +47,7 @@ export function NexusPrism({ visible = true }: NexusPrismProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
   const isMobile = size.width < 768;
+  const { enterRoom } = useVisualizationStore();
 
   const { data: connections } = useConnections();
   const { data: config } = useConfig();
@@ -88,6 +91,18 @@ export function NexusPrism({ visible = true }: NexusPrismProps) {
   }, [connections, config]);
 
   const coreSize = isMobile ? 0.6 : 0.8;
+
+  // Handle device click → enter glass panel room
+  const handleDeviceClick = useCallback(
+    (deviceId: string) => {
+      const device = metrics.deviceConnections.find((d) => d.id === deviceId);
+      enterRoom('device-details', {
+        entityId: deviceId,
+        entityLabel: device?.name || deviceId.slice(0, 8),
+      });
+    },
+    [enterRoom, metrics.deviceConnections]
+  );
 
   // Slow rotation
   useFrame(({ clock }) => {
@@ -136,7 +151,9 @@ export function NexusPrism({ visible = true }: NexusPrismProps) {
       </mesh>
 
       {/* Device indicator ring */}
-      {ringItems.length > 0 && <IndicatorRing items={ringItems} radius={coreSize + 0.9} />}
+      {ringItems.length > 0 && (
+        <IndicatorRing items={ringItems} radius={coreSize + 0.9} onClick={handleDeviceClick} />
+      )}
 
       {/* Camera-facing stats panel */}
       <StatsPanel position="bottom">

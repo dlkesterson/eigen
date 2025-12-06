@@ -2,44 +2,57 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAppStore } from '@/store';
 import { useSystemStatus, usePendingRequestsManager } from '@/hooks/useSyncthing';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AISearchBar } from '@/components/ai-search-bar';
 import { PendingRequestsDialog } from '@/components/pending-requests-dialog';
-import { RefreshCw, Wifi, WifiOff, Bell } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, Bell, Command, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
+/**
+ * Minimal header for the unified cosmic UI.
+ *
+ * Features:
+ * - Omnibox trigger (main navigation method)
+ * - Connection status
+ * - Pending requests notification
+ * - Refresh action
+ */
 export function Header() {
   const { t } = useTranslation();
-  const { activeTab, setActiveTab } = useAppStore();
   const { data: status, isError, refetch, isRefetching } = useSystemStatus();
   const { totalPending } = usePendingRequestsManager();
   const [showPendingDialog, setShowPendingDialog] = useState(false);
 
   const isOnline = !isError && status?.myID;
 
-  const handleSearchResultSelect = (_path: string) => {
-    // Navigate to folders tab and potentially open file browser
-    setActiveTab('folders');
-    // TODO: Open file browser at the selected path
-  };
-
   return (
     <>
-      <header className="border-border bg-card/50 relative z-40 flex h-16 items-center justify-between border-b px-6 backdrop-blur-xl">
-        <div className="flex items-center gap-4">
-          <h1 className="text-foreground text-xl font-semibold">
-            {t(`nav.${activeTab}`, { defaultValue: t('nav.dashboard') })}
-          </h1>
+      <header className="glass-panel relative z-40 flex h-14 items-center justify-between border-b border-white/10 px-4">
+        {/* Left: Cosmic hint */}
+        <div className="text-muted-foreground/60 flex items-center gap-2 text-sm">
+          <Sparkles className="h-4 w-4 text-cyan-400/50" />
+          <span className="hidden sm:inline">Cosmos</span>
         </div>
 
-        {/* AI Search Bar */}
-        <div className="relative z-40 mx-4 max-w-md flex-1">
-          <AISearchBar onResultSelect={handleSearchResultSelect} className="w-full" />
-        </div>
+        {/* Center: Omnibox Trigger */}
+        <button
+          className={cn(
+            'group flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2',
+            'transition-all duration-200 hover:border-cyan-500/30 hover:bg-white/10',
+            'focus:ring-2 focus:ring-cyan-500/50 focus:outline-none'
+          )}
+          onClick={() => window.dispatchEvent(new CustomEvent('open-omnibox'))}
+        >
+          <Command className="h-4 w-4 text-cyan-400" />
+          <span className="text-muted-foreground text-sm">Search, commands, or ask AI...</span>
+          <kbd className="text-muted-foreground/60 rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs">
+            ⌘K
+          </kbd>
+        </button>
 
-        <div className="flex items-center gap-3">
+        {/* Right: Status & Actions */}
+        <div className="flex items-center gap-2">
           {/* Pending Requests Button */}
           <Button
             variant="ghost"
@@ -57,13 +70,13 @@ export function Header() {
           </Button>
 
           {/* Connection Status */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {isOnline ? (
               <Wifi className="h-4 w-4 text-emerald-400" />
             ) : (
               <WifiOff className="h-4 w-4 text-red-400" />
             )}
-            <Badge variant={isOnline ? 'success' : 'destructive'}>
+            <Badge variant={isOnline ? 'success' : 'destructive'} className="hidden sm:flex">
               {isOnline ? t('common.connected') : t('common.disconnected')}
             </Badge>
           </div>

@@ -1,13 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useAppStore } from '@/store';
-import { FolderList } from '@/components/folder-list';
-import { DeviceList } from '@/components/device-list';
-import { SettingsPage } from '@/components/settings-page';
-import { LogsPage } from '@/components/logs-page';
 import { MotionPage } from '@/components/ui/motion';
-import { AnimatePresence } from 'framer-motion';
 
 // Dynamically import the 3D dashboard to avoid SSR issues with Three.js
 const OmniboxDashboard = dynamic(
@@ -15,80 +9,20 @@ const OmniboxDashboard = dynamic(
   { ssr: false }
 );
 
-// Use Omnibox dashboard as default, fallback to constellation
-function DashboardView() {
-  return (
-    <MotionPage className="h-full">
-      <OmniboxDashboard />
-    </MotionPage>
-  );
-}
-
-function FoldersView() {
-  return (
-    <MotionPage className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">All Folders</h2>
-      </div>
-      <FolderList />
-    </MotionPage>
-  );
-}
-
-function DevicesView() {
-  return (
-    <MotionPage className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">All Devices</h2>
-      </div>
-      <DeviceList />
-    </MotionPage>
-  );
-}
-
-function LogsView() {
-  return (
-    <MotionPage>
-      <LogsPage />
-    </MotionPage>
-  );
-}
-
-function SettingsView() {
-  return (
-    <MotionPage>
-      <SettingsPage />
-    </MotionPage>
-  );
-}
-
+/**
+ * Main Content — The Cosmic Chamber
+ *
+ * The unified 3D visualization interface. All 2D views (folders, devices,
+ * settings, logs) are now accessed via Focus Mode (Ctrl+K).
+ *
+ * Per the UX guide: "3D is for feeling. 2D is for reading, editing, deciding."
+ */
 export function MainContent() {
-  const { activeTab } = useAppStore();
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <DashboardView />;
-      case 'folders':
-        return <FoldersView />;
-      case 'devices':
-        return <DevicesView />;
-      case 'logs':
-        return <LogsView />;
-      case 'settings':
-        return <SettingsView />;
-      default:
-        return <DashboardView />;
-    }
-  };
-
   return (
-    <main className="relative z-0 flex h-full flex-1 flex-col overflow-hidden p-4">
-      <AnimatePresence mode="wait">
-        <div key={activeTab} className="h-full flex-1">
-          {renderContent()}
-        </div>
-      </AnimatePresence>
+    <main className="relative z-0 flex h-full flex-1 flex-col overflow-hidden">
+      <MotionPage className="h-full">
+        <OmniboxDashboard />
+      </MotionPage>
     </main>
   );
 }

@@ -191,25 +191,9 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
     return geometry;
   }, [device.isSyncing, device.isLocal]);
 
-  // Handle tooltip delay (1.5 seconds)
+  // Show tooltip immediately on hover
   useEffect(() => {
-    if (isHovered) {
-      hoverTimerRef.current = setTimeout(() => {
-        setShowTooltip(true);
-      }, 1500);
-    } else {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-      }
-      setShowTooltip(false);
-    }
-
-    return () => {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-      }
-    };
+    setShowTooltip(isHovered);
   }, [isHovered]);
 
   useFrame((state) => {
@@ -460,7 +444,7 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
         </group>
       )}
 
-      {/* Tooltip - only shows after 1.5s hover */}
+      {/* Tooltip */}
       {showTooltip && (
         <Html
           center
