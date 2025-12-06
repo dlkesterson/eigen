@@ -110,6 +110,10 @@ class ErrorNotificationService {
    * Notify about connection recovery
    */
   notifyRecovery(serviceName: string = 'Connection') {
+    // Dismiss the loading toast first
+    toast.dismiss(`recovery-${serviceName}`);
+
+    // Show success toast
     toast.success(`${serviceName} restored`, {
       description: 'The connection has been re-established',
     });
@@ -367,6 +371,44 @@ class ErrorNotificationService {
     }
 
     return false;
+  }
+
+  /**
+   * Notify user that auto-recovery is in progress
+   */
+  notifyRecovering(serviceName: string, attemptInfo: string = '') {
+    const message =
+      serviceName === 'syncthing-restart' ? 'Restarting Syncthing' : `Recovering ${serviceName}`;
+
+    toast.loading(`${message}${attemptInfo}...`, {
+      id: `recovery-${serviceName}`,
+      description: 'Please wait while we restore the connection',
+    });
+
+    logger.info(`Recovery started: ${serviceName}`, { attemptInfo });
+  }
+
+  /**
+   * Notify user that recovery is retrying
+   */
+  notifyRecoveryRetrying(serviceName: string, attempt: number, maxAttempts: number) {
+    toast.loading(`Retrying ${serviceName}...`, {
+      id: `recovery-${serviceName}`,
+      description: `Attempt ${attempt} of ${maxAttempts}`,
+    });
+  }
+
+  /**
+   * Notify user that recovery failed after all attempts
+   */
+  notifyRecoveryFailed(serviceName: string, maxAttempts: number) {
+    toast.error('Recovery Failed', {
+      id: `recovery-${serviceName}`,
+      description: `Could not restore ${serviceName} after ${maxAttempts} attempts. Please check your settings.`,
+      duration: 10000,
+    });
+
+    logger.error(`Recovery failed after ${maxAttempts} attempts: ${serviceName}`);
   }
 }
 

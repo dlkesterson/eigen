@@ -34,12 +34,5 @@ export { HealthDashboardVisualization } from './health-dashboard';
 export { HelpCenterVisualization } from './help-center';
 export { SettingsSpaceVisualization } from './settings-space';
 
-// Artifact components (new cinematic system)
-export { default as NexusPrism } from './artifacts/nexus-prism';
-export { default as ObsidianCore } from './artifacts/obsidian-core';
-export { default as Conduit } from './artifacts/conduit';
-export { default as Fracture } from './artifacts/fracture';
-export { default as ArchiveLattice } from './artifacts/archive-lattice';
-export { default as Heart } from './artifacts/heart';
-export { default as Spire } from './artifacts/spire';
-export { default as HelpMonolith } from './artifacts/help-monolith';
+// Artifact components (new cinematic system) - only keeping request-beacon
+export { default as RequestBeacon } from './artifacts/request-beacon';

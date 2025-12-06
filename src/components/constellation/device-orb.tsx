@@ -153,7 +153,7 @@ export function DeviceOrb({ device, isDark = true, onClick }: DeviceOrbProps) {
   const particleMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const _hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get unique preset for this device based on ID and state
   const preset = useMemo(

@@ -68,7 +68,10 @@ export type CommandAction =
   | 'share'
   | 'ignore'
   | 'resolve'
-  | 'navigate';
+  | 'navigate'
+  | 'pause-all-except'
+  | 'only-sync'
+  | 'nuclear-option';
 
 // =============================================================================
 // Parsed Command

@@ -116,11 +116,11 @@ export function CommandMenu() {
               className="text-muted-foreground px-2 py-1.5 text-xs font-medium"
             >
               <Command.Item
-                onSelect={() => navigateTo('dashboard')}
+                onSelect={() => navigateTo('devices')}
                 className="hover:bg-accent aria-selected:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm"
               >
                 <LayoutDashboard className="h-4 w-4" />
-                <span>Dashboard</span>
+                <span>Devices</span>
                 <span className="text-muted-foreground ml-auto text-xs">Overview</span>
               </Command.Item>
               <Command.Item

@@ -180,62 +180,80 @@ export const VISUALIZATION_PRESETS: Record<VisualizationType, VisualizationPrese
  * Mapping from Syncthing concepts to artifacts:
  * | Syncthing Concept    | Artifact Type      | Visual Treatment                           |
  * |----------------------|--------------------|--------------------------------------------|
- * | This Device (local)  | Heart              | Pulsing crystalline core, golden geometry  |
- * | Remote Device        | Nexus Prism        | Floating refracting prism                  |
- * | Folder (synced)      | Obsidian Core      | Black monolith with glowing file runes     |
  * | Pending Device       | Request Beacon     | Orange rotating octahedron, particle trail |
  * | Pending Folder       | Request Beacon     | Orange rotating octahedron, particle trail |
- * | Conflict Set         | Fracture           | Shattered mirror versions orbiting void    |
- * | Version History      | Archive Lattice    | Infinite crystalline grid extending fog    |
- * | Health / Errors      | Conduit            | Broken/repairing energy conduits           |
- * | Help / Search        | Help Monolith      | 2001-style monolith                        |
- * | Timeline             | Spire              | Tall glowing tower, height = uptime        |
+ * | Timeline             | Spire              | Vertical timeline with events              |
+ * | Device Topology      | Nexus Prism        | Network constellation view                 |
+ * | Storage Globe        | Obsidian Core      | 3D globe with storage distribution         |
+ * | Sync Flow            | Conduit            | Real-time data flow visualization          |
+ * | Conflict Space       | Fracture           | Conflict file visualization                |
  */
 export const ARTIFACTS = {
-  'device-topology': {
-    component: lazy(() => import('./artifacts/nexus-prism')),
-    title: 'Nexus Prism',
-    description: 'Device network visualization',
-  },
-  'storage-globe': {
-    component: lazy(() => import('./artifacts/obsidian-core')),
-    title: 'Obsidian Core',
-    description: 'Storage capacity and distribution',
-  },
-  'sync-flow': {
-    component: lazy(() => import('./artifacts/conduit')),
-    title: 'Conduit',
-    description: 'Data transfer visualization',
-  },
-  'conflict-space': {
-    component: lazy(() => import('./artifacts/fracture')),
-    title: 'Fracture',
-    description: 'File conflict visualization',
-  },
-  'folder-explorer': {
-    component: lazy(() => import('./artifacts/archive-lattice')),
-    title: 'Archive Lattice',
-    description: 'Folder structure visualization',
-  },
-  'health-dashboard': {
-    component: lazy(() => import('./artifacts/heart')),
-    title: 'Heart',
-    description: 'System health monitoring',
-  },
-  timeline: {
-    component: lazy(() => import('./artifacts/spire')),
-    title: 'Spire',
-    description: 'Event history timeline',
-  },
-  'help-center': {
-    component: lazy(() => import('./artifacts/help-monolith')),
-    title: 'Monolith',
-    description: 'Help and documentation',
-  },
   'pending-requests': {
     component: lazy(() => import('./artifacts/request-beacon')),
     title: 'Request Beacon',
     description: 'Pending device and folder requests',
+  },
+  timeline: {
+    component: lazy(() => import('./timeline').then((m) => ({ default: m.TimelineVisualization }))),
+    title: 'Spire',
+    description: 'Recent file changes and sync activity',
+  },
+  'device-topology': {
+    component: lazy(() =>
+      import('./device-topology').then((m) => ({ default: m.DeviceTopologyVisualization }))
+    ),
+    title: 'Nexus Prism',
+    description: 'Device constellation and connectivity',
+  },
+  'storage-globe': {
+    component: lazy(() =>
+      import('./storage-globe').then((m) => ({ default: m.StorageGlobeVisualization }))
+    ),
+    title: 'Obsidian Core',
+    description: 'Storage distribution across devices',
+  },
+  'sync-flow': {
+    component: lazy(() =>
+      import('./sync-flow').then((m) => ({ default: m.SyncFlowVisualization }))
+    ),
+    title: 'Conduit',
+    description: 'Real-time sync activity',
+  },
+  'conflict-space': {
+    component: lazy(() =>
+      import('./conflict-space').then((m) => ({ default: m.ConflictSpaceVisualization }))
+    ),
+    title: 'Fracture',
+    description: 'File conflicts requiring attention',
+  },
+  'folder-explorer': {
+    component: lazy(() =>
+      import('./folder-explorer').then((m) => ({ default: m.FolderExplorerVisualization }))
+    ),
+    title: 'Archive Lattice',
+    description: 'Folder structure explorer',
+  },
+  'health-dashboard': {
+    component: lazy(() =>
+      import('./health-dashboard').then((m) => ({ default: m.HealthDashboardVisualization }))
+    ),
+    title: 'Heart',
+    description: 'System health and status',
+  },
+  'help-center': {
+    component: lazy(() =>
+      import('./help-center').then((m) => ({ default: m.HelpCenterVisualization }))
+    ),
+    title: 'Monolith',
+    description: 'Help and command reference',
+  },
+  'settings-space': {
+    component: lazy(() =>
+      import('./settings-space').then((m) => ({ default: m.SettingsSpaceVisualization }))
+    ),
+    title: 'Settings',
+    description: 'Configuration options',
   },
 } as const;
 

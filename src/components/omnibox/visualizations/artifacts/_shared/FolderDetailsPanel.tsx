@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Folder,
@@ -19,11 +19,9 @@ import {
   Pause,
   Play,
   RefreshCw,
-  Settings,
   Share2,
   Users,
   HardDrive,
-  Clock,
   AlertTriangle,
   CheckCircle,
   Loader2,
@@ -125,8 +123,8 @@ export function FolderDetailsPanel({
   folderId,
   onShare,
   onBrowse,
-  onEdit,
-  onClose,
+  onEdit: _onEdit,
+  onClose: _onClose,
 }: FolderDetailsPanelProps) {
   const resolvedTheme = useResolvedTheme();
   const isDark = resolvedTheme === 'dark';

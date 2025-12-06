@@ -64,7 +64,7 @@ function TitleOverlay({ title, description, isPending, isDark = true }: TitleOve
   // Map artifact titles to user-friendly page names
   const getPageName = (artifactTitle: string): string => {
     const pageNames: Record<string, string> = {
-      'Nexus Prism': 'Dashboard',
+      'Nexus Prism': 'Devices',
       'Obsidian Core': 'Storage',
       Conduit: 'Sync Activity',
       Fracture: 'Conflicts',
@@ -184,8 +184,8 @@ export function ArtifactRouter() {
       return type as ArtifactType;
     }
 
-    // Default to device-topology (Nexus Prism)
-    return 'device-topology' as ArtifactType;
+    // Default to timeline (Spire) - the "at rest" state per PRD
+    return 'timeline' as ArtifactType;
   }, [type, currentArtifact]);
 
   const artifact = ARTIFACTS[artifactType];

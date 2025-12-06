@@ -19,7 +19,6 @@ import {
   useRestartSyncthing,
 } from '@/hooks/syncthing';
 import type { Options } from '@/hooks/syncthing';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LogViewer } from '@/components/log-viewer';
@@ -485,7 +484,7 @@ function SystemActions() {
 // Main Settings Panel
 // =============================================================================
 
-export function SettingsPanel({ onClose }: SettingsPanelProps) {
+export function SettingsPanel({ onClose: _onClose }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
   const [logViewerOpen, setLogViewerOpen] = useState(false);
   const resolvedTheme = useResolvedTheme();

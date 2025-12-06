@@ -18,7 +18,10 @@ import { Sparkles } from 'lucide-react';
 import { Omnibox, OnboardingTutorial, useOnboarding, WelcomeBadge } from '@/components/omnibox';
 import { ArtifactRouter } from '@/components/omnibox/artifact-router';
 import { CosmicSearchBar } from '@/components/constellation/cosmic-search-bar';
-import { StatusHud, StatsStack } from '@/components/constellation/hud-panel';
+import { StatusHud, StatsStack, DeviceTrafficPanel } from '@/components/constellation/hud-panel';
+import { NavigationDock } from '@/components/constellation/navigation-dock';
+import { HelpPanel } from '@/components/omnibox/glass-panels/help-panel';
+import { ConflictsPanel } from '@/components/conflicts-panel';
 import { GlassOverlay } from '@/components/omnibox/visualizations/_shell';
 import {
   DeviceDetailsPanel,
@@ -42,7 +45,7 @@ import {
 } from '@/lib/tauri-commands';
 import { logger } from '@/lib/logger';
 import { useResolvedTheme } from '@/components/theme-provider';
-import { cn, formatBytes, formatRate } from '@/lib/utils';
+import { cn, formatRate } from '@/lib/utils';
 
 export function OmniboxDashboard() {
   const { actions } = useOmnibox();
@@ -65,6 +68,8 @@ export function OmniboxDashboard() {
 
   // Local state for pending dialog (legacy fallback)
   const [showPendingDialog, setShowPendingDialog] = useState(false);
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
+  const [showConflictsPanel, setShowConflictsPanel] = useState(false);
 
   // System status for connection state
   const { data: status, isError, refetch, isRefetching } = useSystemStatus();
@@ -110,6 +115,28 @@ export function OmniboxDashboard() {
       folders: folderCount,
     };
   }, [connections, config, pendingDevices, pendingFolders]);
+
+  // Calculate per-device traffic data for sparkline panel
+  const deviceTrafficData = useMemo(() => {
+    const connectionList = connections?.connections || {};
+    const devices = config?.devices || [];
+
+    return Object.entries(connectionList).map(([deviceId, conn]) => {
+      const c = conn as {
+        connected?: boolean;
+        inBytesPerSecond?: number;
+        outBytesPerSecond?: number;
+      };
+      const deviceConfig = devices.find((d) => d.deviceID === deviceId);
+      return {
+        deviceId,
+        deviceName: deviceConfig?.name || deviceId.slice(0, 8),
+        inRate: c.inBytesPerSecond || 0,
+        outRate: c.outBytesPerSecond || 0,
+        connected: c.connected || false,
+      };
+    });
+  }, [connections, config]);
 
   // Handle cosmic search with layer-aware display
   const handleCosmicSearch = useCallback(
@@ -206,6 +233,52 @@ export function OmniboxDashboard() {
               }
               break;
 
+            // Power commands
+            case 'pause-all-except': {
+              const keepFolder = command.entities.folders?.[0];
+              const allFolders = config?.folders || [];
+              let pausedCount = 0;
+              for (const folder of allFolders) {
+                if (folder.id !== keepFolder && !folder.paused) {
+                  await pauseFolder(folder.id);
+                  pausedCount++;
+                }
+              }
+              logger.info('Paused folders except one', {
+                component: 'OmniboxDashboard',
+                keepFolder,
+                pausedCount,
+              });
+              break;
+            }
+
+            case 'nuclear-option': {
+              // Pause all folders and devices
+              const allFolders = config?.folders || [];
+              const allDevices = config?.devices || [];
+              let foldersPaused = 0;
+              let devicesPaused = 0;
+
+              for (const folder of allFolders) {
+                if (!folder.paused) {
+                  await pauseFolder(folder.id);
+                  foldersPaused++;
+                }
+              }
+              for (const device of allDevices) {
+                if (!device.paused) {
+                  await pauseDevice(device.deviceID);
+                  devicesPaused++;
+                }
+              }
+              logger.warn('Nuclear option engaged', {
+                component: 'OmniboxDashboard',
+                foldersPaused,
+                devicesPaused,
+              });
+              break;
+            }
+
             default:
               logger.debug('Unhandled action', {
                 component: 'OmniboxDashboard',
@@ -231,7 +304,7 @@ export function OmniboxDashboard() {
         actions.setFocusedFolder(command.entities.folders[0]);
       }
     },
-    [actions, setActiveTab]
+    [actions, setActiveTab, config]
   );
 
   return (
@@ -241,19 +314,20 @@ export function OmniboxDashboard() {
 
       {/* Top-right HUD — Status controls and stats in a vertical column */}
       <motion.div
-        className="absolute top-6 right-6 z-50 flex flex-col items-end gap-3"
+        className="absolute top-4 right-6 z-[60] flex flex-col items-end gap-3"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
         {/* Status Controls — Connection, Refresh, Settings, Notifications */}
         <StatusHud
-          isOnline={isOnline}
           isRefetching={isRefetching}
           pendingCount={hudMetrics.pendingArtifacts}
           onRefresh={() => refetch()}
           onOpenSettings={() => enterRoom('settings')}
           onOpenPending={() => setShowPendingDialog(true)}
+          onOpenHelp={() => setShowHelpPanel(true)}
+          onOpenConflicts={() => setShowConflictsPanel(true)}
         />
 
         {/* Stats Stack — Only visible when connected, below controls */}
@@ -264,7 +338,13 @@ export function OmniboxDashboard() {
           folderCount={hudMetrics.folders}
           pendingCount={hudMetrics.pendingArtifacts}
         />
+
+        {/* Per-device Traffic Panel with Sparklines */}
+        {isOnline && <DeviceTrafficPanel devices={deviceTrafficData} maxDevices={3} />}
       </motion.div>
+
+      {/* Navigation Dock — Top-left icon navigation */}
+      <NavigationDock />
 
       {/* Cosmic Search Trigger — Click to open Omnibox menu */}
       <motion.div
@@ -411,6 +491,16 @@ export function OmniboxDashboard() {
       >
         <SettingsPanel onClose={exitRoom} />
       </GlassOverlay>
+
+      {/* Help Panel — Glass overlay for help/docs */}
+      <AnimatePresence>
+        {showHelpPanel && <HelpPanel onClose={() => setShowHelpPanel(false)} />}
+      </AnimatePresence>
+
+      {/* Conflicts Panel — Glass overlay for file conflicts */}
+      <AnimatePresence>
+        {showConflictsPanel && <ConflictsPanel onClose={() => setShowConflictsPanel(false)} />}
+      </AnimatePresence>
 
       {/* Pending Requests Dialog (legacy fallback for notification bell) */}
       <PendingRequestsDialog open={showPendingDialog} onClose={() => setShowPendingDialog(false)} />

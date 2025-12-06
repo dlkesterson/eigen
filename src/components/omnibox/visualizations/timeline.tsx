@@ -75,14 +75,32 @@ function TimelineAxis({ length }: { length: number }) {
         );
       })}
 
-      {/* Time labels */}
-      <Text position={[-length / 2, -0.8, 0]} fontSize={0.3} color="#64748b" anchorX="center">
+      {/* Time labels - always face camera */}
+      <Text
+        position={[-length / 2, -0.8, 0]}
+        fontSize={0.3}
+        color="#64748b"
+        anchorX="center"
+        rotation={[0, 0, 0]}
+      >
         7 days ago
       </Text>
-      <Text position={[0, -0.8, 0]} fontSize={0.3} color="#64748b" anchorX="center">
+      <Text
+        position={[0, -0.8, 0]}
+        fontSize={0.3}
+        color="#64748b"
+        anchorX="center"
+        rotation={[0, 0, 0]}
+      >
         Now
       </Text>
-      <Text position={[length / 2, -0.8, 0]} fontSize={0.3} color="#64748b" anchorX="center">
+      <Text
+        position={[length / 2, -0.8, 0]}
+        fontSize={0.3}
+        color="#64748b"
+        anchorX="center"
+        rotation={[0, 0, 0]}
+      >
         Future
       </Text>
     </group>
@@ -108,12 +126,9 @@ function EventMarker({ event, isSelected, onSelect, visible = true }: EventMarke
 
   useFrame((state) => {
     if (meshRef.current) {
-      // Floating animation
+      // Floating animation only
       const float = Math.sin(state.clock.elapsedTime * 2 + event.position[0]) * 0.1;
       meshRef.current.position.y = event.position[1] + float;
-
-      // Rotation
-      meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
     }
   });
 
@@ -205,7 +220,13 @@ function TimePeriodIndicator({ label, startX, endX, color }: TimePeriodIndicator
         <planeGeometry args={[width, 2]} />
         <meshBasicMaterial color={color} transparent opacity={0.1} />
       </mesh>
-      <Text position={[0, 0.1, 1.2]} fontSize={0.25} color={color} anchorX="center">
+      <Text
+        position={[0, 0.1, 1.2]}
+        fontSize={0.25}
+        color={color}
+        anchorX="center"
+        rotation={[0, 0, 0]}
+      >
         {label}
       </Text>
     </group>
@@ -325,16 +346,37 @@ export function TimelineVisualization({
 
       {/* Empty state */}
       {events.length === 0 && (
-        <Text position={[0, 2, 0]} fontSize={0.5} color="#6b7280" anchorX="center" anchorY="middle">
+        <Text
+          position={[0, 2, 0]}
+          fontSize={0.5}
+          color="#6b7280"
+          anchorX="center"
+          anchorY="middle"
+          rotation={[0, 0, 0]}
+        >
           No recent activity
         </Text>
       )}
 
       {/* Header */}
-      <Text position={[0, 5, 0]} fontSize={0.6} color="white" anchorX="center" anchorY="bottom">
+      <Text
+        position={[0, 5, 0]}
+        fontSize={0.6}
+        color="white"
+        anchorX="center"
+        anchorY="bottom"
+        rotation={[0, 0, 0]}
+      >
         Activity Timeline
       </Text>
-      <Text position={[0, 4.3, 0]} fontSize={0.3} color="#64748b" anchorX="center" anchorY="bottom">
+      <Text
+        position={[0, 4.3, 0]}
+        fontSize={0.3}
+        color="#64748b"
+        anchorX="center"
+        anchorY="bottom"
+        rotation={[0, 0, 0]}
+      >
         {events.length} events in the last 7 days
       </Text>
 

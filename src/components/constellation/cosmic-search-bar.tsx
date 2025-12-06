@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { Search, Sparkles, Command } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ interface CosmicSearchBarProps {
 }
 
 // Easter egg phrases
-const EASTER_EGG_TRIGGERS = ['eigen', 'vvsvs', 'the future'];
+const EASTER_EGG_TRIGGERS = ['eigen', 'vvsvs', 'the future', 'cosmos'];
 
 export function CosmicSearchBar({
   onSearch,
@@ -24,17 +24,15 @@ export function CosmicSearchBar({
 }: CosmicSearchBarProps) {
   const [focused, setFocused] = useState(false);
   const [value, setValue] = useState('');
-  const [showEasterEgg, setShowEasterEgg] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { isOpen: omniboxOpen, setOpen: openOmnibox } = useOmniboxUIStore();
   const theme = useResolvedTheme();
   const isDark = theme === 'dark';
 
-  // Check for easter egg
-  useEffect(() => {
+  // Derive easter egg state from value (no useEffect needed)
+  const showEasterEgg = useMemo(() => {
     const lowerValue = value.toLowerCase();
-    const isEasterEgg = EASTER_EGG_TRIGGERS.some((trigger) => lowerValue.includes(trigger));
-    setShowEasterEgg(isEasterEgg);
+    return EASTER_EGG_TRIGGERS.some((trigger) => lowerValue.includes(trigger));
   }, [value]);
 
   const handleSubmit = useCallback(

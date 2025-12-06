@@ -28,7 +28,6 @@ import {
   RefreshCw,
   Trash2,
   Plus,
-  Share2,
   FileX,
   FolderOpen,
   ExternalLink,
@@ -37,12 +36,10 @@ import {
   X,
   History,
   Loader2,
-  Sparkles,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddFolderDialog } from '@/components/add-folder-dialog';
-import { ShareFolderDialog } from '@/components/share-folder-dialog';
 import { IgnorePatternsDialog } from '@/components/ignore-patterns-dialog';
 import { FileBrowser } from '@/components/file-browser';
 import { ConflictResolver } from '@/components/conflict-resolver';
@@ -55,7 +52,6 @@ function FolderCard({
   folder,
   devices,
   localDeviceId,
-  onShare,
   onIgnorePatterns,
   onBrowse,
   onConflicts,
@@ -70,7 +66,6 @@ function FolderCard({
   };
   devices: { deviceID: string; name?: string }[];
   localDeviceId?: string;
-  onShare: (id: string, label?: string) => void;
   onIgnorePatterns: (id: string, label?: string) => void;
   onBrowse: (id: string, path: string, label?: string) => void;
   onConflicts: (id: string, path: string, label?: string) => void;
@@ -364,15 +359,6 @@ function FolderCard({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onShare(folder.id, folder.label)}
-                className="text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300"
-                title="Share folder"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={handleRescan}
                 disabled={rescanFolder.isPending || isPaused}
                 title="Rescan"
@@ -491,10 +477,6 @@ function CompactFolderItem({
 
 export function FolderList({ compact = false }: { compact?: boolean }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [shareData, setShareData] = useState<{
-    id: string;
-    label?: string;
-  } | null>(null);
   const [ignoreData, setIgnoreData] = useState<{
     id: string;
     label?: string;
@@ -609,7 +591,6 @@ export function FolderList({ compact = false }: { compact?: boolean }) {
             folder={folder}
             devices={config.devices || []}
             localDeviceId={localDeviceId}
-            onShare={(id, label) => setShareData({ id, label })}
             onIgnorePatterns={(id, label) => setIgnoreData({ id, label })}
             onBrowse={(id, path, label) => setBrowseData({ id, path, label })}
             onConflicts={(id, path, label) =>
@@ -632,12 +613,6 @@ export function FolderList({ compact = false }: { compact?: boolean }) {
         </Card>
       </div>
       <AddFolderDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-      <ShareFolderDialog
-        open={!!shareData}
-        onOpenChange={(open) => !open && setShareData(null)}
-        folderId={shareData?.id || ''}
-        folderLabel={shareData?.label}
-      />
       <IgnorePatternsDialog
         open={!!ignoreData}
         onOpenChange={(open) => !open && setIgnoreData(null)}

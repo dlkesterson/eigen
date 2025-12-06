@@ -1,0 +1,128 @@
+name: Auto Tag on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, master]
+
+jobs:
+  auto-tag:
+    name: Auto Tag Release
+    # Only run if the PR was merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for tags
+          ref: ${{ github.event.pull_request.base.ref }} # Checkout the base branch (main)
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version bump type
+        id: version-type
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_LABELS="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+
+          # Default to patch
+          BUMP_TYPE="patch"
+
+          # Check PR labels first
+          if echo "$PR_LABELS" | grep -qi "major"; then
+            BUMP_TYPE="major"
+          elif echo "$PR_LABELS" | grep -qi "minor"; then
+            BUMP_TYPE="minor"
+          elif echo "$PR_LABELS" | grep -qi "patch"; then
+            BUMP_TYPE="patch"
+          # Check PR title for conventional commit prefixes
+          elif echo "$PR_TITLE" | grep -qi "^BREAKING CHANGE:"; then
+            BUMP_TYPE="major"
+          elif echo "$PR_TITLE" | grep -qi "^feat!:"; then
+            BUMP_TYPE="major"
+          elif echo "$PR_TITLE" | grep -qi "^feat:"; then
+            BUMP_TYPE="minor"
+          elif echo "$PR_TITLE" | grep -qi "^fix:"; then
+            BUMP_TYPE="patch"
+          # Check PR body for version bump instructions
+          elif echo "$PR_BODY" | grep -qi "\[major\]"; then
+            BUMP_TYPE="major"
+          elif echo "$PR_BODY" | grep -qi "\[minor\]"; then
+            BUMP_TYPE="minor"
+          fi
+
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Determined version bump type: $BUMP_TYPE"
+
+      - name: Get latest tag and calculate new version
+        id: calculate-version
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          # Remove 'v' prefix for parsing
+          VERSION_NUM="${LATEST_TAG#v}"
+
+          # Split into major.minor.patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NUM"
+
+          # Handle cases where parsing might fail
+          MAJOR=${MAJOR:-0}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
+
+          # Bump version based on type
+          BUMP_TYPE="${{ steps.version-type.outputs.bump_type }}"
+
+          if [ "$BUMP_TYPE" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Create and push tag
+        env:
+          NEW_VERSION: ${{ steps.calculate-version.outputs.new_version }}
+        run: |
+          # Create annotated tag with PR information
+          git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION
+
+          Merged PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}
+          Author: ${{ github.event.pull_request.user.login }}
+
+          ${{ github.event.pull_request.html_url }}"
+
+          # Push the tag
+          git push origin "$NEW_VERSION"
+          echo "✅ Created and pushed tag: $NEW_VERSION"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newVersion = '${{ steps.calculate-version.outputs.new_version }}';
+            const bumpType = '${{ steps.version-type.outputs.bump_type }}';
+
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **Auto-tagged as ${newVersion}** (${bumpType} bump)\n\nThe release workflow will now build and publish this version.`
+            });

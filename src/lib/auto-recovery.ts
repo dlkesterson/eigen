@@ -138,6 +138,11 @@ class AutoRecoveryService {
     state.attempts++;
     state.lastAttempt = new Date();
 
+    // User-facing notification
+    const attemptMsg =
+      state.attempts > 1 ? ` (attempt ${state.attempts}/${strategy.maxAttempts})` : '';
+    errorNotifications.notifyRecovering(name, attemptMsg);
+
     logger.info(`Attempting recovery: ${name}`, {
       attempt: state.attempts,
       maxAttempts: strategy.maxAttempts,
@@ -153,6 +158,13 @@ class AutoRecoveryService {
         errorNotifications.notifyRecovery(name);
       } else {
         logger.warn(`Recovery returned false: ${name}`);
+
+        // Show user feedback on failure
+        if (state.attempts < strategy.maxAttempts) {
+          errorNotifications.notifyRecoveryRetrying(name, state.attempts, strategy.maxAttempts);
+        } else {
+          errorNotifications.notifyRecoveryFailed(name, strategy.maxAttempts);
+        }
       }
     } catch (error) {
       logger.error(`Recovery failed: ${name}`, {
@@ -160,11 +172,11 @@ class AutoRecoveryService {
         attempt: state.attempts,
       });
 
-      if (state.attempts >= strategy.maxAttempts) {
-        errorNotifications.notify(error, {
-          showToast: true,
-          autoRecover: false,
-        });
+      // Show user feedback on error
+      if (state.attempts < strategy.maxAttempts) {
+        errorNotifications.notifyRecoveryRetrying(name, state.attempts, strategy.maxAttempts);
+      } else {
+        errorNotifications.notifyRecoveryFailed(name, strategy.maxAttempts);
       }
     } finally {
       state.isRecovering = false;

@@ -14,7 +14,7 @@
 
 import { Suspense, useRef, useState, createContext, useContext } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html, Icosahedron, MeshDistortMaterial, Float } from '@react-three/drei';
+import { Html, Icosahedron, MeshDistortMaterial, Float, OrbitControls } from '@react-three/drei';
 import { EffectComposer, DepthOfField, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
@@ -193,6 +193,16 @@ function SceneContent({ children, enableEffects }: SceneContentProps) {
       {/* Theme-aware background */}
       <color attach="background" args={[backgroundColor]} />
       <fog attach="fog" args={[fogColor, 8, 30]} />
+
+      {/* Camera controls */}
+      <OrbitControls
+        enablePan={true}
+        enableZoom={true}
+        enableRotate={true}
+        minDistance={1}
+        maxDistance={10}
+        makeDefault
+      />
 
       {/* Theme-aware lighting - no external HDR dependencies */}
       <ambientLight intensity={ambientIntensity} />

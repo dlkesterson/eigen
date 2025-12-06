@@ -3,6 +3,7 @@
  *
  * Shows folder structure as nested 3D blocks in a treemap-style layout.
  * Color indicates sync status, size indicates storage usage.
+ * Includes predictive sync badge for folders being prioritized.
  */
 
 'use client';
@@ -13,6 +14,7 @@ import { Text, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useConfig } from '@/hooks/syncthing';
 import { useFolderStatuses } from '@/hooks/syncthing/folders';
+import { usePredictiveSync } from '@/hooks/usePredictiveSync';
 
 // =============================================================================
 // Types
@@ -28,6 +30,7 @@ interface FolderBlockData {
   completion: number;
   localBytes: number;
   globalBytes: number;
+  predictiveActive?: boolean;
 }
 
 // =============================================================================
@@ -162,6 +165,24 @@ function FolderBlock({ data, isSelected, onSelect, visible = true }: FolderBlock
           <meshBasicMaterial color="#22d3ee" transparent opacity={0.6} side={THREE.DoubleSide} />
         </mesh>
       )}
+
+      {/* Predictive Sync Badge */}
+      {data.predictiveActive && (
+        <Html
+          position={[
+            data.position[0] + data.size[0] / 2 - 0.3,
+            data.position[1] + data.size[1] / 2 + 0.2,
+            data.position[2] + data.size[2] / 2 - 0.3,
+          ]}
+          center
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="flex items-center gap-1 rounded-full bg-purple-500/80 px-2 py-0.5 text-[10px] font-medium text-white shadow-lg backdrop-blur-sm">
+            <span className="animate-pulse">⚡</span>
+            <span>Predictive</span>
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -197,6 +218,7 @@ export function FolderExplorerVisualization({
 }: FolderExplorerVisualizationProps) {
   const { data: config } = useConfig();
   const [localSelected, setLocalSelected] = useState<string[]>(selectedFolders);
+  const { foldersToSyncNow, isEnabled: predictiveEnabled } = usePredictiveSync();
 
   // Get folder IDs
   const folderIds = useMemo(() => {
@@ -257,6 +279,13 @@ export function FolderExplorerVisualization({
       // Size based on storage (normalized)
       const sizeScale = Math.max(0.5, Math.min(2, Math.log10(Math.max(globalBytes, 1)) / 10));
 
+      // Check if this folder is being predictively boosted
+      const isPredictiveActive = !!(
+        predictiveEnabled &&
+        folder.path &&
+        foldersToSyncNow.includes(folder.path)
+      );
+
       return {
         id: folder.id,
         label: folder.label || folder.id,
@@ -267,9 +296,10 @@ export function FolderExplorerVisualization({
         completion,
         localBytes,
         globalBytes,
+        predictiveActive: isPredictiveActive,
       };
     });
-  }, [config, folderStatuses]);
+  }, [config, folderStatuses, foldersToSyncNow, predictiveEnabled]);
 
   const handleSelect = (id: string) => {
     setLocalSelected((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));

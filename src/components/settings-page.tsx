@@ -310,9 +310,11 @@ function NetworkSettings() {
         globalAnnounceEnabled: config.options.globalAnnounceEnabled,
         localAnnounceEnabled: config.options.localAnnounceEnabled,
         relaysEnabled: config.options.relaysEnabled,
+        natEnabled: config.options.natEnabled,
         maxSendKbps: config.options.maxSendKbps,
         maxRecvKbps: config.options.maxRecvKbps,
         listenAddresses: config.options.listenAddresses,
+        insecureAllowOldTLSVersions: config.options.insecureAllowOldTLSVersions,
       });
     }
   }, [config?.options]);
@@ -417,6 +419,25 @@ function NetworkSettings() {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-foreground text-sm">NAT Traversal (UPnP)</p>
+          <p className="text-muted-foreground text-xs">Automatically configure routers</p>
+        </div>
+        <Button
+          variant={localOptions.natEnabled ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => updateField('natEnabled', !localOptions.natEnabled)}
+          className={cn(
+            localOptions.natEnabled
+              ? 'bg-emerald-600 hover:bg-emerald-700'
+              : 'border-border bg-secondary/50 text-muted-foreground hover:bg-accent'
+          )}
+        >
+          {localOptions.natEnabled ? 'On' : 'Off'}
+        </Button>
+      </div>
+
       {/* Bandwidth Limits */}
       <div className="border-border border-t pt-2">
         <p className="text-foreground mb-2 text-sm">Bandwidth Limits</p>
@@ -467,7 +488,7 @@ function NetworkSettings() {
           placeholder="default, tcp://0.0.0.0:22000"
         />
         <p className="text-muted-foreground mt-1 text-xs">
-          Comma-separated list of listen addresses
+          Comma-separated list of listen addresses. Use tls:// prefix for HTTPS.
         </p>
       </div>
 

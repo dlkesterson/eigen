@@ -44,13 +44,16 @@ function ParticleTrail({ color }: { color: string }) {
   const particlesRef = useRef<THREE.Points>(null);
   const count = 50;
 
+  // Use stable pseudo-random values based on index (deterministic)
   const particles = useMemo(() => {
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
-      const radius = 1 + Math.random() * 0.5;
+      // Use deterministic variation based on index instead of Math.random()
+      const seededVariation = ((i * 7919) % 1000) / 1000; // Prime-based pseudo-random
+      const radius = 1 + seededVariation * 0.5;
       positions[i * 3] = Math.cos(angle) * radius;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
+      positions[i * 3 + 1] = (seededVariation - 0.5) * 0.5;
       positions[i * 3 + 2] = Math.sin(angle) * radius;
     }
     return positions;

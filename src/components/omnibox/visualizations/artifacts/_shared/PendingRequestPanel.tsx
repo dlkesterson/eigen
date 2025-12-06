@@ -9,13 +9,11 @@
 
 'use client';
 
-import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Laptop, Folder, CheckCircle, XCircle, AlertTriangle, Clock, Shield } from 'lucide-react';
+import { Laptop, Folder, CheckCircle, XCircle, AlertTriangle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useResolvedTheme } from '@/components/theme-provider';
 import {
   useAcceptPendingDevice,
   useDismissPendingDevice,
@@ -85,7 +83,7 @@ export function PendingRequestPanel({
 
   const Icon = requestType === 'device' ? Laptop : Folder;
   const typeLabel = requestType === 'device' ? 'Device' : 'Folder';
-  const typeColor = requestType === 'device' ? 'amber' : 'orange';
+  const _typeColor = requestType === 'device' ? 'amber' : 'orange';
 
   return (
     <div className="space-y-6">
@@ -176,7 +174,7 @@ export function PendingRequestPanel({
             <p className="text-sm font-medium text-amber-300">Security Notice</p>
             <p className="text-muted-foreground mt-1 text-xs">
               Only accept requests from {requestType === 'device' ? 'devices' : 'folders'} you
-              recognize. If you don't recognize this request, it's safe to ignore it.
+              recognize. If you don&apos;t recognize this request, it&apos;s safe to ignore it.
             </p>
           </div>
         </div>

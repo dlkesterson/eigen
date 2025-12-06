@@ -13,14 +13,10 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Laptop,
-  Smartphone,
-  Server,
   Wifi,
   WifiOff,
   Pause,
   Play,
-  RefreshCw,
   Settings,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -106,7 +102,11 @@ function DeviceIcon({ isOnline, isPaused }: { isOnline: boolean; isPaused: boole
 // Main Component
 // =============================================================================
 
-export function DeviceDetailsPanel({ deviceId, onEdit, onClose }: DeviceDetailsPanelProps) {
+export function DeviceDetailsPanel({
+  deviceId,
+  onEdit,
+  onClose: _onClose,
+}: DeviceDetailsPanelProps) {
   const resolvedTheme = useResolvedTheme();
   const isDark = resolvedTheme === 'dark';
 

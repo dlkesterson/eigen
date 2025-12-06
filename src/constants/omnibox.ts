@@ -305,6 +305,34 @@ export const COMMANDS: CommandDefinition[] = [
     examples: ['network settings', 'bandwidth settings'],
   },
 
+  // Power Commands
+  {
+    id: 'pause-all-except',
+    aliases: ['pause everything except', 'pause all except', 'only sync'],
+    category: 'action',
+    description: 'Pause all folders except one',
+    visualization: 'folder-explorer',
+    examples: ['pause everything except Documents', 'only sync Photos'],
+    parameters: [
+      {
+        name: 'folder',
+        type: 'folder',
+        required: true,
+        description: 'The only folder to keep syncing',
+      },
+    ],
+    action: 'pause-all-except',
+  },
+  {
+    id: 'nuclear-option',
+    aliases: ['nuclear option', 'nuclear', 'stop everything', 'pause all', 'emergency stop'],
+    category: 'action',
+    description: 'Pause all folders and devices immediately',
+    visualization: 'device-topology',
+    examples: ['nuclear option', 'stop everything', 'emergency stop'],
+    action: 'nuclear-option',
+  },
+
   // Navigation
   {
     id: 'help',
@@ -449,7 +477,7 @@ export const OMNIBOX_CONFIG = {
   enableAI: true,
 
   /** Default visualization on startup */
-  defaultVisualization: 'device-topology' as VisualizationType,
+  defaultVisualization: 'timeline' as VisualizationType,
 
   /** Keyboard shortcuts */
   shortcuts: {
