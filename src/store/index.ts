@@ -1,5 +1,3 @@
-'use client';
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type TabId, DEFAULT_TAB, type Theme, type AIStatus, DEFAULTS } from '@/constants';

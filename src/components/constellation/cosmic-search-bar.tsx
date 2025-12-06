@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { Search, Sparkles, Command } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

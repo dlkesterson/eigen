@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import { useSystemLogs } from '@/hooks/useSyncthing';
 import { Button } from '@/components/ui/button';

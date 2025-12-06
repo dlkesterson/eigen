@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Search Results Panel — Layer-Aware Results Display
  *

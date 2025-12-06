@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useBrowseVersions, useRestoreVersion, VersionEntry } from '@/hooks/useSyncthing';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Re-exports from modular syncthing hooks
  * @deprecated Import directly from '@/hooks/syncthing' instead

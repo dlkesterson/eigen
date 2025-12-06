@@ -1,5 +1,3 @@
-'use client';
-
 import { Command, Settings, Search, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { useVisualizationStore } from '@/store/omnibox';
 import { useSystemStatus } from '@/hooks/syncthing';

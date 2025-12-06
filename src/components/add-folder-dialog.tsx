@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useAddFolderAdvanced } from '@/hooks/useSyncthing';
 import { Button } from '@/components/ui/button';

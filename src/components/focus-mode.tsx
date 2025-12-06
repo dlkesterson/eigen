@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Focus Mode — The Nuclear Option (Ctrl/Cmd + K)
  *

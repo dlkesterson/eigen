@@ -1,5 +1,3 @@
-'use client';
-
 import { useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';

@@ -1,10 +1,7 @@
-'use client';
-
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Bug, Command, ChevronLeft, ChevronRight, Sparkles, Keyboard } from 'lucide-react';
-import Image from 'next/image';
 
 /**
  * Minimal sidebar for the unified 3D + Omnibox UI.
@@ -31,7 +28,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-white/5 px-3">
-        <Image src="/app_icon.png" alt="Eigen" width={32} height={32} className="rounded-lg" />
+        <img src="/app_icon.png" alt="Eigen" width={32} height={32} className="rounded-lg" />
         {sidebarOpen && (
           <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-lg font-bold text-transparent">
             Eigen

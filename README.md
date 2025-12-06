@@ -1,6 +1,6 @@
 # Eigen
 
-> A modern, AI-powered desktop client for Syncthing built with Tauri v2, Next.js 16, and Rust.
+> A modern, AI-powered desktop client for Syncthing built with Tauri v2, Vite 7, React 19, and Rust.
 
 ![Eigen Demo](docs/demo.gif)
 
@@ -65,19 +65,19 @@
 
 ### Frontend
 
-| Technology            | Purpose                            |
-| --------------------- | ---------------------------------- |
-| **Next.js 16**        | React framework with static export |
-| **React 19**          | UI library with latest features    |
-| **Tailwind CSS 4**    | Utility-first styling              |
-| **React Three Fiber** | 3D constellation dashboard         |
-| **Three.js**          | WebGL rendering engine             |
-| **TanStack Query**    | Server state management & caching  |
-| **Zustand**           | Client state management            |
-| **Framer Motion**     | Smooth animations                  |
-| **Lucide Icons**      | Beautiful iconography              |
-| **Sonner**            | Toast notifications                |
-| **Zod**               | Runtime type validation            |
+| Technology            | Purpose                           |
+| --------------------- | --------------------------------- |
+| **Vite 7**            | Fast build tool and dev server    |
+| **React 19**          | UI library with latest features   |
+| **Tailwind CSS 4**    | Utility-first styling             |
+| **React Three Fiber** | 3D constellation dashboard        |
+| **Three.js**          | WebGL rendering engine            |
+| **TanStack Query**    | Server state management & caching |
+| **Zustand**           | Client state management           |
+| **Framer Motion**     | Smooth animations                 |
+| **Lucide Icons**      | Beautiful iconography             |
+| **Sonner**            | Toast notifications               |
+| **Zod**               | Runtime type validation           |
 
 ### Backend
 
@@ -147,8 +147,9 @@ pnpm tauri build
 
 ```
 eigen/
-├── src/                          # Next.js frontend
-│   ├── app/                      # App router pages
+├── src/                          # Vite + React frontend
+│   ├── main.tsx                  # Application entry point
+│   ├── App.tsx                   # Root application component
 │   ├── components/               # React components
 │   │   ├── ui/                   # Reusable UI components (button, card, etc.)
 │   │   ├── ai-search-bar.tsx     # AI-powered semantic search
@@ -240,7 +241,7 @@ Eigen follows a **Thin Client** architecture with clear separation of concerns:
 │                     Eigen Desktop App                        │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              Frontend (Next.js SSG)                  │    │
+│  │              Frontend (Vite + React)                 │    │
 │  │  • React Components  • TanStack Query  • Zustand    │    │
 │  │  • AI Search Worker  • IndexedDB Storage            │    │
 │  └──────────────────────────┬──────────────────────────┘    │
@@ -280,9 +281,9 @@ User UI ← React Component ← TanStack Query ← Tauri IPC ← Rust Backend �
 
 | Command                   | Description                            |
 | ------------------------- | -------------------------------------- |
-| `pnpm dev`                | Start Next.js dev server               |
+| `pnpm dev`                | Start Vite dev server                  |
 | `pnpm tauri dev`          | Start full Tauri development mode      |
-| `pnpm build`              | Build Next.js for production           |
+| `pnpm build`              | Build frontend for production          |
 | `pnpm tauri build`        | Build complete desktop application     |
 | `pnpm lint`               | Run ESLint                             |
 | `pnpm format`             | Format code with Prettier              |

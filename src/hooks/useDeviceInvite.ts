@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import { useDeviceId } from './useSyncthing';
 import { logger } from '@/lib/logger';

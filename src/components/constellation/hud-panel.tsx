@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useRef } from 'react';
 import { cn, formatBytes } from '@/lib/utils';
 import {

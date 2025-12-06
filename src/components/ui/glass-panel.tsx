@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Glass Panel — Reusable 2D Glass Substrate
  *

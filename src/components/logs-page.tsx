@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import { useSystemLogs } from '@/hooks/useSyncthing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

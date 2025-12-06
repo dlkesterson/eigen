@@ -1,5 +1,3 @@
-'use client';
-
 import { invoke } from '@tauri-apps/api/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Options } from './types';

@@ -1,12 +1,11 @@
-'use client';
-
-import dynamic from 'next/dynamic';
+import { lazy, Suspense } from 'react';
 import { MotionPage } from '@/components/ui/motion';
 
-// Dynamically import the 3D dashboard to avoid SSR issues with Three.js
-const OmniboxDashboard = dynamic(
-  () => import('@/components/omnibox/omnibox-dashboard').then((mod) => mod.OmniboxDashboard),
-  { ssr: false }
+// Dynamically import the 3D dashboard for code splitting
+const OmniboxDashboard = lazy(() =>
+  import('@/components/omnibox/omnibox-dashboard').then((mod) => ({
+    default: mod.OmniboxDashboard,
+  }))
 );
 
 /**
@@ -21,7 +20,11 @@ export function MainContent() {
   return (
     <main className="relative z-0 flex h-full flex-1 flex-col overflow-hidden">
       <MotionPage className="h-full">
-        <OmniboxDashboard />
+        <Suspense
+          fallback={<div className="flex h-full items-center justify-center">Loading...</div>}
+        >
+          <OmniboxDashboard />
+        </Suspense>
       </MotionPage>
     </main>
   );

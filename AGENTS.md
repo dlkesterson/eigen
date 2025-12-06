@@ -6,7 +6,7 @@ This document provides guidance for AI coding assistants (GitHub Copilot, Claude
 
 Eigen is a Tauri v2 desktop application that manages Syncthing. It has:
 
-- **Frontend**: Next.js 16 with React 19, TypeScript, TailwindCSS
+- **Frontend**: Vite 7 with React 19, TypeScript, TailwindCSS
 - **Backend**: Rust with Tauri v2
 - **3D Visualization**: React Three Fiber with Three.js for the Constellation Dashboard
 - **AI Features**: Client-side ML with transformers.js and IndexedDB

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -180,7 +178,6 @@ export function AddDeviceDialog({ open, onClose }: AddDeviceDialogProps) {
                 {isGeneratingQR || deviceIdLoading ? (
                   <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
                 ) : qrCodeUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={qrCodeUrl}
                     alt="Device ID QR Code"

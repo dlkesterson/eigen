@@ -2,7 +2,7 @@
 
 ## Project Context
 
-Eigen is a Tauri v2 desktop app for managing Syncthing, built with Next.js 16, React 19, and Rust.
+Eigen is a Tauri v2 desktop app for managing Syncthing, built with Vite 7, React 19, and Rust.
 
 ## Critical Rule: Tauri Command Registry
 

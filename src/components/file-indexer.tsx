@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * FileIndexer - Component for indexing files into IndexedDB with AI embeddings
  */

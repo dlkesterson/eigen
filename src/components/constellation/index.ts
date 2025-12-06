@@ -1,5 +1,3 @@
-'use client';
-
 export * from './device-orb';
 export * from './connection-wire';
 export * from './particle-flow';

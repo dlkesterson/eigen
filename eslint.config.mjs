@@ -1,5 +1,4 @@
 import js from '@eslint/js';
-import nextPlugin from '@next/eslint-plugin-next';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import typescriptPlugin from '@typescript-eslint/eslint-plugin';
@@ -13,8 +12,6 @@ export default [
   {
     ignores: [
       'node_modules/**',
-      '.next/**',
-      'out/**',
       'dist/**',
       'build/**',
       'src-tauri/target/**',
@@ -22,7 +19,6 @@ export default [
       '*.min.js',
       'coverage/**',
       'public/**',
-      'next-env.d.ts',
     ],
   },
 
@@ -58,7 +54,6 @@ export default [
       '@typescript-eslint': typescriptPlugin,
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
-      '@next/next': nextPlugin,
       prettier: prettierPlugin,
     },
     rules: {
@@ -143,10 +138,6 @@ export default [
       'react-hooks/unsupported-syntax': 'warn',
       'react-hooks/use-memo': 'warn',
       'react-hooks/incompatible-library': 'warn',
-
-      // Next.js rules
-      ...nextPlugin.configs.recommended.rules,
-      ...nextPlugin.configs['core-web-vitals'].rules,
 
       // Prettier
       'prettier/prettier': 'warn',

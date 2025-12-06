@@ -1,5 +1,3 @@
-'use client';
-
 import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { FolderStatusSchema, FolderConfigSchema, IgnorePatternsSchema } from './schemas';

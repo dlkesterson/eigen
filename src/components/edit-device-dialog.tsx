@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, ChangeEvent } from 'react';
 import { useUpdateDeviceConfig } from '@/hooks/useSyncthing';
 import { BaseDialog, DialogFooter, DialogInput } from '@/components/ui/base-dialog';
