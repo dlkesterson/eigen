@@ -6,27 +6,30 @@
  * - CosmicSearchBar as the singular input method
  * - ArtifactRouter for cinematic hero visualizations
  * - HUD panels for real-time sync metrics
+ * - StatusHUD for connection, refresh, settings, notifications
  * - Glass overlays for Layer 3 rooms (per UX guide)
  */
 
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Bell, Activity, Database, Wifi } from 'lucide-react';
+import { Sparkles, Bell, Activity, Database } from 'lucide-react';
 import { Omnibox, OnboardingTutorial, useOnboarding, WelcomeBadge } from '@/components/omnibox';
 import { ArtifactRouter } from '@/components/omnibox/artifact-router';
 import { CosmicSearchBar } from '@/components/constellation/cosmic-search-bar';
-import { HudPanel } from '@/components/constellation/hud-panel';
+import { HudPanel, StatusHud } from '@/components/constellation/hud-panel';
 import { GlassOverlay } from '@/components/omnibox/visualizations/_shell';
 import {
   DeviceDetailsPanel,
   FolderDetailsPanel,
   PendingRequestPanel,
+  SettingsPanel,
 } from '@/components/omnibox/visualizations/artifacts/_shared';
+import { PendingRequestsDialog } from '@/components/pending-requests-dialog';
 import { useOmnibox, useVisualizationStore } from '@/store/omnibox';
 import { useAppStore } from '@/store';
-import { useConnections, useConfig } from '@/hooks/syncthing';
+import { useSystemStatus, useConnections, useConfig } from '@/hooks/syncthing';
 import { usePendingDevices, usePendingFolders } from '@/hooks/syncthing/pending';
 import type { ParsedCommand } from '@/types/omnibox';
 import {
@@ -65,10 +68,18 @@ export function OmniboxDashboard() {
     setDisplayModeFromResults,
     currentRoom,
     exitRoom,
+    enterRoom,
   } = useVisualizationStore();
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const { showOnboarding, hasChecked, completeOnboarding, skipOnboarding, resetOnboarding } =
     useOnboarding();
+
+  // Local state for pending dialog (legacy fallback)
+  const [showPendingDialog, setShowPendingDialog] = useState(false);
+
+  // System status for connection state
+  const { data: status, isError, refetch, isRefetching } = useSystemStatus();
+  const isOnline = !isError && !!status?.myID;
 
   // Real-time data for HUD panels
   const { data: connections } = useConnections();
@@ -239,6 +250,23 @@ export function OmniboxDashboard() {
       {/* Film grain overlay for premium texture */}
       <div className="bg-noise" />
 
+      {/* Status HUD — Top right: Connection, Refresh, Settings, Notifications */}
+      <motion.div
+        className="absolute top-6 right-6 z-40"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <StatusHud
+          isOnline={isOnline}
+          isRefetching={isRefetching}
+          pendingCount={hudMetrics.pendingArtifacts}
+          onRefresh={() => refetch()}
+          onOpenSettings={() => enterRoom('settings')}
+          onOpenPending={() => setShowPendingDialog(true)}
+        />
+      </motion.div>
+
       {/* Cosmic Search Trigger — Click to open Omnibox menu */}
       <motion.div
         className="absolute top-8 left-1/2 z-40 -translate-x-1/2"
@@ -279,16 +307,8 @@ export function OmniboxDashboard() {
         <HudPanel
           title="CONNECTED"
           value={hudMetrics.connectedNodes}
-          icon={<Wifi className="h-5 w-5 text-green-400" />}
+          icon={<Bell className="h-5 w-5 text-green-400" />}
         />
-        {hudMetrics.pendingArtifacts > 0 && (
-          <HudPanel
-            title="PENDING"
-            value={hudMetrics.pendingArtifacts.toString()}
-            icon={<Bell className="h-5 w-5 text-amber-400" />}
-            className="border-amber-400/40"
-          />
-        )}
       </motion.div>
 
       {/* HUD Panels — Bottom right */}
@@ -391,6 +411,20 @@ export function OmniboxDashboard() {
           />
         )}
       </GlassOverlay>
+
+      {/* Settings Room — Full settings as glass overlay */}
+      <GlassOverlay
+        isOpen={currentRoom?.roomType === 'settings'}
+        onClose={exitRoom}
+        title="Settings"
+        subtitle="Configure Eigen"
+        size="large"
+      >
+        <SettingsPanel onClose={exitRoom} />
+      </GlassOverlay>
+
+      {/* Pending Requests Dialog (legacy fallback for notification bell) */}
+      <PendingRequestsDialog open={showPendingDialog} onClose={() => setShowPendingDialog(false)} />
     </div>
   );
 }

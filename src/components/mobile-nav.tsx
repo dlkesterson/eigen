@@ -1,7 +1,8 @@
 'use client';
 
-import { Command, Keyboard, Search, Bug } from 'lucide-react';
-import { useAppStore } from '@/store';
+import { Command, Settings, Search, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { useVisualizationStore } from '@/store/omnibox';
+import { useSystemStatus } from '@/hooks/syncthing';
 import { cn } from '@/lib/utils';
 
 /**
@@ -9,12 +10,15 @@ import { cn } from '@/lib/utils';
  *
  * On mobile, users navigate via:
  * - Omnibox: Search, commands, AI queries
- * - Focus Mode: Full 2D interface when needed
+ * - Settings: Opens settings glass panel
  *
  * The cosmic 3D dashboard is always the background.
  */
 export function MobileNav() {
-  const { toggleFocusMode, toggleDebugPanel } = useAppStore();
+  const { data: status, isError, refetch, isRefetching } = useSystemStatus();
+  const { enterRoom } = useVisualizationStore();
+
+  const isOnline = !isError && !!status?.myID;
 
   const actions = [
     {
@@ -24,27 +28,42 @@ export function MobileNav() {
       onClick: () => window.dispatchEvent(new CustomEvent('open-omnibox')),
     },
     {
-      id: 'omnibox',
+      id: 'commands',
       icon: Command,
       label: 'Commands',
       onClick: () => window.dispatchEvent(new CustomEvent('open-omnibox')),
     },
     {
-      id: 'focus',
-      icon: Keyboard,
-      label: 'Focus',
-      onClick: toggleFocusMode,
+      id: 'refresh',
+      icon: RefreshCw,
+      label: 'Refresh',
+      onClick: () => refetch(),
+      spinning: isRefetching,
     },
     {
-      id: 'debug',
-      icon: Bug,
-      label: 'Debug',
-      onClick: toggleDebugPanel,
+      id: 'settings',
+      icon: Settings,
+      label: 'Settings',
+      onClick: () => enterRoom('settings'),
     },
   ];
 
   return (
     <div className="safe-area-pb border-border bg-background/80 fixed right-0 bottom-0 left-0 z-50 flex h-16 items-center justify-around border-t backdrop-blur-xl md:hidden">
+      {/* Connection Status Indicator */}
+      <div
+        className={cn(
+          'flex flex-col items-center justify-center rounded-xl p-2',
+          isOnline ? 'text-emerald-400' : 'text-red-400'
+        )}
+      >
+        {isOnline ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
+        <span className="mt-1 text-[10px] font-medium opacity-70">
+          {isOnline ? 'Online' : 'Offline'}
+        </span>
+      </div>
+
+      {/* Action Buttons */}
       {actions.map((item) => {
         const Icon = item.icon;
         return (
@@ -58,7 +77,7 @@ export function MobileNav() {
             )}
             aria-label={item.label}
           >
-            <Icon className="h-5 w-5" />
+            <Icon className={cn('h-5 w-5', item.spinning && 'animate-spin')} />
             <span className="mt-1 text-[10px] font-medium opacity-70">{item.label}</span>
           </button>
         );

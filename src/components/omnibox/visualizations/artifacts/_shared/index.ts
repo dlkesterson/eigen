@@ -5,3 +5,4 @@ export type { StatsPanelProps, IndicatorProps, StatsCardProps, IndicatorRingProp
 export { DeviceDetailsPanel } from './DeviceDetailsPanel';
 export { FolderDetailsPanel } from './FolderDetailsPanel';
 export { PendingRequestPanel } from './PendingRequestPanel';
+export { SettingsPanel } from './settings-panel';

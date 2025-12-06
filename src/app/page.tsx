@@ -1,39 +1,27 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
-import { Header } from '@/components/header';
 import { MainContent } from '@/components/main-content';
 import { MobileNav } from '@/components/mobile-nav';
-import { PendingRequestsBanner } from '@/components/pending-requests-banner';
 
 /**
- * Main application page - Unified Cosmic UI
+ * Main application page - Pure Cosmic UI
  *
  * Architecture:
- * - Always-visible 3D cosmic dashboard (MainContent → OmniboxDashboard)
- * - Minimal sidebar with quick actions and keyboard hints
- * - Compact header with omnibox trigger
+ * - Full-screen 3D cosmic dashboard (MainContent → OmniboxDashboard)
+ * - All navigation via Omnibox (⌘K / Ctrl+K)
+ * - Status, notifications, settings integrated into 3D HUD
  * - Mobile navigation for touch devices
  *
- * Navigation methods:
- * - Omnibox (⌘K): Search, commands, AI queries
- * - Focus Mode (Ctrl+K): Full 2D interface overlay
- * - Direct interaction with 3D artifacts
+ * Per UX Guide:
+ * - "3D shows you **where** you are"
+ * - "Glass panels show you **what** is there"
+ * - All text-heavy interfaces (settings, logs) via glass overlays
  */
 export default function Home() {
   return (
     <div className="bg-background flex h-screen w-screen overflow-hidden">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden pb-16 md:pb-0">
-        <Header />
-        <PendingRequestsBanner />
-        <MainContent />
-      </div>
+      {/* Full-screen Cosmic Dashboard */}
+      <MainContent />
 
       {/* Mobile Bottom Navigation */}
       <MobileNav />
