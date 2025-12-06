@@ -14,6 +14,7 @@ import { useNativeNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { QUERY_KEYS } from '@/constants/routes';
+import { useStartupStore, startupToast } from '@/lib/startup-orchestrator';
 
 /**
  * Updates the system tray tooltip with current sync status
@@ -48,6 +49,10 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
   const installationToastShown = useRef(false);
   const connectedToastShown = useRef(false);
   const queryClient = useQueryClient();
+
+  // Startup orchestrator
+  const setPhase = useStartupStore((s) => s.setPhase);
+  const setConnectionEstablished = useStartupStore((s) => s.setConnectionEstablished);
 
   // Track last notification time per device to prevent spam
   const deviceNotificationTimestamps = useRef<Map<string, number>>(new Map());
@@ -131,7 +136,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
             break;
           }
 
-          toast.success('Device Connected', {
+          startupToast.success('Device Connected', {
             description: `${deviceName} is now online.`,
             duration: 5000,
           });
@@ -149,7 +154,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
             break;
           }
 
-          toast.info('Device Disconnected', {
+          startupToast.info('Device Disconnected', {
             description: `${deviceName} went offline.`,
             duration: 5000,
           });
@@ -169,7 +174,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
               break;
             }
 
-            toast.success('Sync Complete', {
+            startupToast.success('Sync Complete', {
               description: `Folder "${folderName}" is now in sync.`,
               duration: 3000,
             });
@@ -189,7 +194,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
               break;
             }
 
-            toast.error('Sync Errors', {
+            startupToast.error('Sync Errors', {
               description: `Folder "${folderName}" has ${errorCount} error(s).`,
               duration: 10000,
             });
@@ -214,6 +219,7 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
 
     if (installation && !installation.installed) {
       installationToastShown.current = true;
+      // Installation errors are critical and always shown
       toast.error('Syncthing not installed', {
         description: 'Please install Syncthing to use this app. Run: sudo apt install syncthing',
         duration: 15000,
@@ -224,8 +230,10 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
       });
     } else if (installation?.installed && installation.version) {
       logger.info('Syncthing found', { version: installation.version, path: installation.path });
+      // Move to connecting phase once installation is verified
+      setPhase('connecting');
     }
-  }, [installation, checkingInstallation]);
+  }, [installation, checkingInstallation, setPhase]);
 
   // Auto-start Syncthing if installed but not responding
   useEffect(() => {
@@ -241,12 +249,15 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
       startSyncthing.mutate(undefined, {
         onSuccess: (message) => {
           logger.info('Syncthing start result', { message });
-          toast.success('Starting Syncthing...', {
+          // Use startupToast to avoid clutter during onboarding
+          startupToast.info('Starting Syncthing...', {
             description: 'Please wait while Syncthing initializes.',
+            duration: 3000,
           });
         },
         onError: (err) => {
           logger.error('Failed to start Syncthing', { error: err });
+          // Errors are critical and always shown
           toast.error('Failed to start Syncthing', {
             description: err instanceof Error ? err.message : 'Unknown error',
             duration: 10000,
@@ -260,11 +271,15 @@ export function SyncthingManager({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (status?.myID && !connectedToastShown.current) {
       connectedToastShown.current = true;
-      toast.success('Connected to Syncthing', {
+      // Mark connection as established for startup orchestrator
+      setConnectionEstablished(true);
+      // Use startupToast - will be suppressed during onboarding
+      startupToast.success('Connected to Syncthing', {
         description: `Device ID: ${status.myID.slice(0, 7)}...`,
+        duration: 3000,
       });
     }
-  }, [status?.myID]);
+  }, [status?.myID, setConnectionEstablished]);
 
   // Update tray status based on connection and sync state
   useEffect(() => {

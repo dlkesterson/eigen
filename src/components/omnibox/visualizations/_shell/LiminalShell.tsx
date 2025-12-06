@@ -14,7 +14,7 @@
 
 import { Suspense, useRef, useState, createContext, useContext } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html, Icosahedron, MeshDistortMaterial, Environment, Float } from '@react-three/drei';
+import { Html, Icosahedron, MeshDistortMaterial, Float } from '@react-three/drei';
 import { EffectComposer, DepthOfField, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
@@ -186,8 +186,7 @@ function SceneContent({ children, enableEffects }: SceneContentProps) {
   // Theme-aware colors
   const backgroundColor = isDark ? '#050505' : '#f5f5f7';
   const fogColor = isDark ? '#161616' : '#e5e5e7';
-  const ambientIntensity = isDark ? 0.02 : 0.6;
-  const environmentPreset = isDark ? 'night' : 'city';
+  const ambientIntensity = isDark ? 0.15 : 0.7;
 
   return (
     <>
@@ -195,11 +194,18 @@ function SceneContent({ children, enableEffects }: SceneContentProps) {
       <color attach="background" args={[backgroundColor]} />
       <fog attach="fog" args={[fogColor, 8, 30]} />
 
-      {/* Theme-aware ambient lighting */}
+      {/* Theme-aware lighting - no external HDR dependencies */}
       <ambientLight intensity={ambientIntensity} />
-
-      {/* Environment for reflections on distort material */}
-      <Environment preset={environmentPreset} />
+      <directionalLight
+        position={[5, 5, 5]}
+        intensity={isDark ? 0.3 : 0.8}
+        color={isDark ? '#6366f1' : '#ffffff'}
+      />
+      <directionalLight
+        position={[-5, 3, -5]}
+        intensity={isDark ? 0.2 : 0.4}
+        color={isDark ? '#06b6d4' : '#e0e7ff'}
+      />
 
       {/* Distorted background spheres */}
       <DistortedMaterialProvider>

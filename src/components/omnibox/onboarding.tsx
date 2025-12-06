@@ -456,43 +456,70 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingProps) {
 // Onboarding Hook
 // =============================================================================
 
+import { useStartupStore } from '@/lib/startup-orchestrator';
+
 const ONBOARDING_STORAGE_KEY = 'eigen-omnibox-onboarding-complete';
 
 export function useOnboarding() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
+  const setOnboardingActive = useStartupStore((s) => s.setOnboardingActive);
+  const completeStartup = useStartupStore((s) => s.completeStartup);
+  const startupPhase = useStartupStore((s) => s.phase);
 
   useEffect(() => {
     // Check if user has completed onboarding
     const isComplete = localStorage.getItem(ONBOARDING_STORAGE_KEY) === 'true';
     if (!isComplete) {
       // Small delay to let the app load first
-      const timer = setTimeout(() => setShowOnboarding(true), 1000);
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+        setOnboardingActive(true);
+      }, 1000);
       return () => clearTimeout(timer);
     } else {
       // Only set hasChecked when onboarding is already complete
-      const timer = setTimeout(() => setHasChecked(true), 0);
+      // Delay the welcome badge to avoid overlapping with connection toasts
+      const timer = setTimeout(() => {
+        setHasChecked(true);
+        // If startup isn't complete yet, mark it as settling
+        if (startupPhase !== 'ready') {
+          completeStartup();
+        }
+      }, 2000); // Longer delay to let connection toast clear
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [setOnboardingActive, completeStartup, startupPhase]);
 
   const completeOnboarding = useCallback(() => {
     localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
     setShowOnboarding(false);
-    setHasChecked(true);
-  }, []);
+    setOnboardingActive(false);
+    // Delay hasChecked to give time for any pending toasts to clear
+    setTimeout(() => {
+      setHasChecked(true);
+      // Complete startup sequence
+      completeStartup();
+    }, 1500);
+  }, [setOnboardingActive, completeStartup]);
 
   const skipOnboarding = useCallback(() => {
     localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
     setShowOnboarding(false);
-    setHasChecked(true);
-  }, []);
+    setOnboardingActive(false);
+    // Delay hasChecked to give time for any pending toasts to clear
+    setTimeout(() => {
+      setHasChecked(true);
+      completeStartup();
+    }, 1500);
+  }, [setOnboardingActive, completeStartup]);
 
   const resetOnboarding = useCallback(() => {
     localStorage.removeItem(ONBOARDING_STORAGE_KEY);
     setShowOnboarding(true);
+    setOnboardingActive(true);
     setHasChecked(false);
-  }, []);
+  }, [setOnboardingActive]);
 
   return {
     showOnboarding,
@@ -509,23 +536,36 @@ export function useOnboarding() {
 
 export function WelcomeBadge({ onReplayTutorial }: { onReplayTutorial: () => void }) {
   const [dismissed, setDismissed] = useState(false);
+  const [visible, setVisible] = useState(false);
   const theme = useResolvedTheme();
   const isDark = theme === 'dark';
+  const startupPhase = useStartupStore((s) => s.phase);
+
+  // Delay visibility until startup is complete to avoid overlapping with toasts
+  useEffect(() => {
+    // Only show when startup is fully complete
+    if (startupPhase === 'ready') {
+      // Add extra delay to ensure toasts have time to be dismissed
+      const showTimer = setTimeout(() => setVisible(true), 500);
+      return () => clearTimeout(showTimer);
+    }
+  }, [startupPhase]);
 
   useEffect(() => {
-    // Auto-dismiss after 10 seconds
-    const timer = setTimeout(() => setDismissed(true), 10000);
+    if (!visible) return;
+    // Auto-dismiss after 8 seconds (shorter since we already delayed showing it)
+    const timer = setTimeout(() => setDismissed(true), 8000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [visible]);
 
-  if (dismissed) return null;
+  if (dismissed || !visible) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="fixed top-4 right-4 z-40"
+      exit={{ opacity: 0, y: 10 }}
+      className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2"
     >
       <div
         className={cn(
