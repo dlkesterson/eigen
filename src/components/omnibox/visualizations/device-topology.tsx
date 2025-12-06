@@ -147,7 +147,7 @@ export function DeviceTopologyVisualization({
     );
 
     return result;
-  }, [config?.devices, status?.myID, connections?.connections]);
+  }, [config, status, connections]);
 
   // Build connection data
   const connectionData = useMemo(() => {
@@ -162,7 +162,7 @@ export function DeviceTopologyVisualization({
         isSyncing: (conn.connected ?? false) && (inBytes > 0 || outBytes > 0),
       };
     });
-  }, [status?.myID, connections?.connections]);
+  }, [status, connections]);
 
   const localDevice = devices.find((d) => d.isLocal);
   const remoteDevices = devices.filter((d) => !d.isLocal);

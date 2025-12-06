@@ -62,7 +62,7 @@ export function InfoBeacon({
   className = '',
   pointerEvents = false,
 }: InfoBeaconProps) {
-  const { camera, size } = useThree();
+  const { camera: _camera, size } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const tempVector = useMemo(() => new THREE.Vector3(), []);
   const offsetVector = useMemo(() => new THREE.Vector3(...offset), [offset]);

@@ -360,15 +360,22 @@ export function HelpCenterVisualization({ visible = true }: HelpCenterVisualizat
 // Ambient Particles
 // =============================================================================
 
+// Seeded pseudo-random number generator for deterministic results
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9999) * 10000;
+  return x - Math.floor(x);
+}
+
 function AmbientParticles() {
   const particlesRef = useRef<THREE.Points>(null);
 
   const particles = useMemo(() => {
     const positions = new Float32Array(100 * 3);
     for (let i = 0; i < 100; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 30;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+      // Use deterministic seeded random values for consistent rendering
+      positions[i * 3] = (seededRandom(i) - 0.5) * 30;
+      positions[i * 3 + 1] = (seededRandom(i + 100) - 0.5) * 20;
+      positions[i * 3 + 2] = (seededRandom(i + 200) - 0.5) * 20;
     }
     return positions;
   }, []);

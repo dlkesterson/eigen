@@ -16,7 +16,8 @@ import {
   useOnboarding,
   WelcomeBadge,
 } from '@/components/omnibox';
-import { useOmnibox } from '@/store/omnibox';
+import { ArtifactRouter } from '@/components/omnibox/artifact-router';
+import { useOmnibox, useVisualizationStore } from '@/store/omnibox';
 import { useAppStore } from '@/store';
 import type { ParsedCommand } from '@/types/omnibox';
 import {
@@ -31,6 +32,7 @@ import { logger } from '@/lib/logger';
 
 export function OmniboxDashboard() {
   const { actions, visualizationType: _visualizationType, breadcrumbs } = useOmnibox();
+  const { useArtifacts, toggleArtifactMode } = useVisualizationStore();
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const { showOnboarding, hasChecked, completeOnboarding, skipOnboarding, resetOnboarding } =
     useOnboarding();
@@ -143,7 +145,7 @@ export function OmniboxDashboard() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <VisualizationRouter />
+        {useArtifacts ? <ArtifactRouter /> : <VisualizationRouter />}
       </motion.div>
 
       {/* Visualization type indicator */}
@@ -153,9 +155,17 @@ export function OmniboxDashboard() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <div className="rounded-lg border border-white/5 bg-black/60 px-3 py-1.5 text-xs text-gray-400 backdrop-blur-sm">
-          Press <kbd className="mx-1 rounded bg-white/10 px-1.5 py-0.5 text-white">Ctrl+K</kbd> to
-          open Omnibox
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg border border-white/5 bg-black/60 px-3 py-1.5 text-xs text-gray-400 backdrop-blur-sm">
+            Press <kbd className="mx-1 rounded bg-white/10 px-1.5 py-0.5 text-white">Ctrl+K</kbd> to
+            open Omnibox
+          </div>
+          <button
+            onClick={toggleArtifactMode}
+            className="rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-gray-400 backdrop-blur-sm transition-colors hover:border-cyan-500/50 hover:text-cyan-400"
+          >
+            {useArtifacts ? '◈ Artifact' : '◇ Classic'}
+          </button>
         </div>
       </motion.div>
 

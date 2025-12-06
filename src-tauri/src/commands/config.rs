@@ -1,6 +1,6 @@
 //! Configuration commands.
 
-use crate::{SyncthingError, SyncthingState};
+use crate::{SyncthingClient, SyncthingError, SyncthingState};
 use tauri::State;
 
 /// Get Syncthing configuration
@@ -8,25 +8,8 @@ use tauri::State;
 pub async fn get_config(
     state: State<'_, SyncthingState>,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
+    let client = SyncthingClient::new(&state.config);
+    client.get("/rest/config").await
 }
 
 /// Get Syncthing connections info
@@ -34,25 +17,8 @@ pub async fn get_config(
 pub async fn get_connections(
     state: State<'_, SyncthingState>,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/connections",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
+    let client = SyncthingClient::new(&state.config);
+    client.get("/rest/system/connections").await
 }
 
 /// Update global Syncthing options
@@ -61,58 +27,50 @@ pub async fn update_options(
     state: State<'_, SyncthingState>,
     options: serde_json::Value,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
+    let client = SyncthingClient::new(&state.config);
 
-    let get_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
+    // Get current config
+    let current_config: serde_json::Value = client.get("/rest/config").await?;
 
-    let current_config: serde_json::Value = client
-        .get(&get_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+    // Merge options into current config
+    let updated_config = merge_options(current_config, options)?;
 
-    let mut updated_config = current_config.clone();
-    if let (Some(config_obj), Some(current_options)) = (
-        updated_config.as_object_mut(),
-        current_config.get("options"),
-    ) {
-        let mut new_options = current_options.clone();
-        if let (Some(opts_obj), Some(updates_obj)) =
-            (new_options.as_object_mut(), options.as_object())
-        {
+    // Update config
+    client.put("/rest/config", &updated_config).await
+}
+
+/// Merge new options into current config, returning the updated config
+fn merge_options(
+    mut config: serde_json::Value,
+    options: serde_json::Value,
+) -> Result<serde_json::Value, SyncthingError> {
+    let config_obj = config
+        .as_object_mut()
+        .ok_or_else(|| SyncthingError::parse("Config is not an object"))?;
+
+    let current_options = config_obj
+        .get("options")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    let mut new_options = current_options;
+
+    match (new_options.as_object_mut(), options.as_object()) {
+        (Some(opts_obj), Some(updates_obj)) => {
             for (key, value) in updates_obj {
                 opts_obj.insert(key.clone(), value.clone());
             }
-        }
-        config_obj.insert("options".to_string(), new_options);
+        },
+        (None, _) => {
+            return Err(SyncthingError::parse("Current options is not an object"));
+        },
+        (_, None) => {
+            return Err(SyncthingError::validation(
+                "Options to update must be an object",
+            ));
+        },
     }
 
-    let put_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .put(&put_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&updated_config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    if !res.status().is_success() {
-        return Err(SyncthingError::HttpError(format!(
-            "Failed to update options: {}",
-            res.status()
-        )));
-    }
-
-    Ok(())
+    config_obj.insert("options".to_string(), new_options);
+    Ok(config)
 }

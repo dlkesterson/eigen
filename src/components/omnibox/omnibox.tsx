@@ -66,10 +66,6 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   ArrowLeftRight: Activity, // Fallback
 };
 
-function getIcon(iconName: string) {
-  return ICON_MAP[iconName] || Command;
-}
-
 // =============================================================================
 // Suggestion Item Component
 // =============================================================================
@@ -81,9 +77,13 @@ interface SuggestionItemProps {
   onClick: () => void;
 }
 
-function SuggestionItem({ suggestion, isSelected, isActive, onClick }: SuggestionItemProps) {
-  const Icon = getIcon(suggestion.icon);
+// Render the icon inline to avoid creating components during render
+function renderIcon(iconName: string, className: string) {
+  const IconComponent = ICON_MAP[iconName] || Command;
+  return <IconComponent className={className} />;
+}
 
+function SuggestionItem({ suggestion, isSelected, isActive, onClick }: SuggestionItemProps) {
   return (
     <motion.button
       type="button"
@@ -106,7 +106,7 @@ function SuggestionItem({ suggestion, isSelected, isActive, onClick }: Suggestio
           isSelected ? 'bg-primary/20' : isActive ? 'bg-cyan-500/20' : 'bg-muted'
         )}
       >
-        <Icon className="h-4 w-4" />
+        {renderIcon(suggestion.icon, 'h-4 w-4')}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 truncate font-medium">
@@ -342,6 +342,54 @@ export function Omnibox({ onCommand, className }: OmniboxProps) {
     setSuggestions(newSuggestions);
   }, [input, devices, folders, recentCommands, setSuggestions]);
 
+  // Handle command submission - defined before useEffect that uses it
+  const handleCommandSubmit = useCallback(
+    (commandText: string) => {
+      if (!commandText.trim()) return;
+
+      actions.setProcessing(true);
+
+      try {
+        const parsed = parseCommand(commandText, {
+          context: { devices, folders },
+        });
+
+        // Add to history
+        actions.addRecentCommand(commandText);
+        actions.addHistoryEntry({
+          id: Date.now().toString(),
+          command: commandText,
+          parsedCommand: parsed,
+          timestamp: Date.now(),
+        });
+
+        // Update context based on parsed entities
+        if (parsed.entities.devices?.[0]) {
+          actions.setFocusedDevice(parsed.entities.devices[0]);
+        }
+        if (parsed.entities.folders?.[0]) {
+          actions.setFocusedFolder(parsed.entities.folders[0]);
+        }
+
+        // Update visualization
+        actions.setVisualization(parsed.visualization);
+
+        // Notify parent
+        onCommand?.(parsed);
+
+        // Reset UI and close omnibox
+        actions.resetUI();
+        actions.close();
+        setHistoryIndex(-1);
+      } catch (err) {
+        actions.setError(err instanceof Error ? err.message : 'Failed to parse command');
+      } finally {
+        actions.setProcessing(false);
+      }
+    },
+    [devices, folders, actions, onCommand]
+  );
+
   // Handle keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -410,7 +458,17 @@ export function Omnibox({ onCommand, className }: OmniboxProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, input, suggestions, selectedIndex, showHelp, historyIndex, recentCommands, actions]);
+  }, [
+    isOpen,
+    input,
+    suggestions,
+    selectedIndex,
+    showHelp,
+    historyIndex,
+    recentCommands,
+    actions,
+    handleCommandSubmit,
+  ]);
 
   // Focus input when opened
   useEffect(() => {
@@ -418,54 +476,6 @@ export function Omnibox({ onCommand, className }: OmniboxProps) {
       inputRef.current.focus();
     }
   }, [isOpen]);
-
-  // Handle command submission
-  const handleCommandSubmit = useCallback(
-    (commandText: string) => {
-      if (!commandText.trim()) return;
-
-      actions.setProcessing(true);
-
-      try {
-        const parsed = parseCommand(commandText, {
-          context: { devices, folders },
-        });
-
-        // Add to history
-        actions.addRecentCommand(commandText);
-        actions.addHistoryEntry({
-          id: Date.now().toString(),
-          command: commandText,
-          parsedCommand: parsed,
-          timestamp: Date.now(),
-        });
-
-        // Update context based on parsed entities
-        if (parsed.entities.devices?.[0]) {
-          actions.setFocusedDevice(parsed.entities.devices[0]);
-        }
-        if (parsed.entities.folders?.[0]) {
-          actions.setFocusedFolder(parsed.entities.folders[0]);
-        }
-
-        // Update visualization
-        actions.setVisualization(parsed.visualization);
-
-        // Notify parent
-        onCommand?.(parsed);
-
-        // Reset UI and close omnibox
-        actions.resetUI();
-        actions.close();
-        setHistoryIndex(-1);
-      } catch (err) {
-        actions.setError(err instanceof Error ? err.message : 'Failed to parse command');
-      } finally {
-        actions.setProcessing(false);
-      }
-    },
-    [devices, folders, actions, onCommand]
-  );
 
   // Click outside to close
   useEffect(() => {

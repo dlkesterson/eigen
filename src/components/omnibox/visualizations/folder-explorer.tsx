@@ -269,7 +269,7 @@ export function FolderExplorerVisualization({
         globalBytes,
       };
     });
-  }, [config?.folders, folderStatuses]);
+  }, [config, folderStatuses]);
 
   const handleSelect = (id: string) => {
     setLocalSelected((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));

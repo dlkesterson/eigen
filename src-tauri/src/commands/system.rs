@@ -1,6 +1,7 @@
 //! System lifecycle and status commands.
 
-use crate::{SyncthingError, SyncthingState};
+use crate::SyncthingState;
+use crate::{SyncthingClient, SyncthingError};
 use serde::Serialize;
 use tauri::AppHandle;
 use tauri::State;
@@ -8,6 +9,7 @@ use tauri_plugin_shell::ShellExt;
 
 /// Information about Syncthing installation
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncthingInfo {
     pub installed: bool,
     pub version: Option<String>,
@@ -21,9 +23,7 @@ pub fn check_syncthing_installation() -> SyncthingInfo {
     use std::process::Command;
 
     // Try running syncthing --version
-    let syncthing_output = Command::new("syncthing").arg("--version").output();
-
-    match syncthing_output {
+    match Command::new("syncthing").arg("--version").output() {
         Ok(output) if output.status.success() => {
             let version_str = String::from_utf8_lossy(&output.stdout);
             let version = version_str
@@ -41,11 +41,14 @@ pub fn check_syncthing_installation() -> SyncthingInfo {
                 bundled: false,
             }
         },
-        _ => SyncthingInfo {
-            installed: true, // Bundled sidecar is always available
-            version: Some("bundled".to_string()),
-            path: Some("bundled sidecar".to_string()),
-            bundled: true,
+        Ok(_) | Err(_) => {
+            // Syncthing not found in PATH, but bundled sidecar is always available
+            SyncthingInfo {
+                installed: true,
+                version: Some("bundled".to_string()),
+                path: Some("bundled sidecar".to_string()),
+                bundled: true,
+            }
         },
     }
 }
@@ -56,43 +59,29 @@ fn find_syncthing_path() -> Option<String> {
 
     #[cfg(target_os = "windows")]
     {
-        // On Windows, use 'where' command
         Command::new("where")
             .arg("syncthing")
             .output()
             .ok()
+            .filter(|o| o.status.success())
             .and_then(|o| {
-                if o.status.success() {
-                    let p = String::from_utf8_lossy(&o.stdout)
-                        .lines()
-                        .next()
-                        .map(|s| s.trim().to_string());
-                    p.filter(|s| !s.is_empty())
-                } else {
-                    None
-                }
+                String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .next()
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
             })
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        // On Unix-like systems, use 'which' command
         Command::new("which")
             .arg("syncthing")
             .output()
             .ok()
-            .and_then(|o| {
-                if o.status.success() {
-                    let p = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                    if p.is_empty() {
-                        None
-                    } else {
-                        Some(p)
-                    }
-                } else {
-                    None
-                }
-            })
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .filter(|p| !p.is_empty())
     }
 }
 
@@ -105,8 +94,9 @@ pub async fn start_syncthing_sidecar(
     let mut child_guard = state
         .sidecar_child
         .lock()
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {e}")))?;
+        .map_err(|e| SyncthingError::lock(format!("Failed to acquire sidecar lock: {e}")))?;
 
+    // Check if already running - explicit pattern match
     if child_guard.is_some() {
         return Ok("Syncthing already running".into());
     }
@@ -115,7 +105,8 @@ pub async fn start_syncthing_sidecar(
         .shell()
         .sidecar("syncthing")
         .map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to create sidecar command: {e}"))
+            SyncthingError::process(format!("Failed to create sidecar command: {e}"))
+                .with_context("syncthing")
         })?
         .args([
             "-no-browser",
@@ -125,7 +116,8 @@ pub async fn start_syncthing_sidecar(
         ]);
 
     let (_rx, child) = sidecar_command.spawn().map_err(|e| {
-        SyncthingError::ProcessError(format!("Failed to spawn syncthing sidecar: {e}"))
+        SyncthingError::process(format!("Failed to spawn syncthing sidecar: {e}"))
+            .with_recovery_hint("Check that the Syncthing binary is accessible")
     })?;
 
     *child_guard = Some(child);
@@ -141,15 +133,16 @@ pub async fn stop_syncthing_sidecar(
     let mut child_guard = state
         .sidecar_child
         .lock()
-        .map_err(|e| SyncthingError::ProcessError(format!("Failed to acquire lock: {e}")))?;
+        .map_err(|e| SyncthingError::lock(format!("Failed to acquire sidecar lock: {e}")))?;
 
-    if let Some(child) = child_guard.take() {
-        child.kill().map_err(|e| {
-            SyncthingError::ProcessError(format!("Failed to kill sidecar process: {e}"))
-        })?;
-        Ok("Syncthing sidecar stopped".into())
-    } else {
-        Ok("Syncthing sidecar was not running".into())
+    match child_guard.take() {
+        Some(child) => {
+            child.kill().map_err(|e| {
+                SyncthingError::process(format!("Failed to kill sidecar process: {e}"))
+            })?;
+            Ok("Syncthing sidecar stopped".into())
+        },
+        None => Ok("Syncthing sidecar was not running".into()),
     }
 }
 
@@ -158,29 +151,8 @@ pub async fn stop_syncthing_sidecar(
 pub async fn ping_syncthing(
     state: State<'_, SyncthingState>,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let url = format!(
-        "http://{}:{}/rest/system/ping",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
+    let client = SyncthingClient::with_timeout(&state.config, 5)?;
+    client.get("/rest/system/ping").await
 }
 
 /// Get Syncthing system status
@@ -188,44 +160,15 @@ pub async fn ping_syncthing(
 pub async fn get_system_status(
     state: State<'_, SyncthingState>,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/status",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
+    let client = SyncthingClient::new(&state.config);
+    client.get("/rest/system/status").await
 }
 
 /// Restart Syncthing
 #[tauri::command]
 pub async fn restart_syncthing(state: State<'_, SyncthingState>) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/restart",
-        state.config.host, state.config.port
-    );
-
-    client
-        .post(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
+    let client = SyncthingClient::new(&state.config);
+    client.post_no_response("/rest/system/restart", None).await
 }
 
 /// Get the current API configuration (for debugging)

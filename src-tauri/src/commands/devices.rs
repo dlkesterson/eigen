@@ -1,33 +1,18 @@
 //! Device management commands.
 
-use crate::{SyncthingError, SyncthingState};
+use crate::{SyncthingClient, SyncthingError, SyncthingState};
 use tauri::State;
 
 /// Get this device's ID
 #[tauri::command]
 pub async fn get_device_id(state: State<'_, SyncthingState>) -> Result<String, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/system/status",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+    let client = SyncthingClient::new(&state.config);
+    let json: serde_json::Value = client.get("/rest/system/status").await?;
 
     json["myID"]
         .as_str()
         .map(std::string::ToString::to_string)
-        .ok_or_else(|| SyncthingError::ParseError("No device ID found".into()))
+        .ok_or_else(|| SyncthingError::parse("No device ID found in response"))
 }
 
 /// Add a new device to Syncthing
@@ -37,30 +22,17 @@ pub async fn add_device(
     device_id: String,
     name: String,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
+    let client = SyncthingClient::new(&state.config);
 
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
+    let mut config: serde_json::Value = client.get("/rest/config").await?;
 
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
+    // Check if device already exists using pattern matching
     if let Some(devices) = config["devices"].as_array() {
-        for device in devices {
-            if device["deviceID"].as_str() == Some(&device_id) {
-                return Err(SyncthingError::ProcessError("Device already exists".into()));
-            }
+        let exists = devices
+            .iter()
+            .any(|d| d["deviceID"].as_str() == Some(&device_id));
+        if exists {
+            return Err(SyncthingError::already_exists("Device").with_context(device_id));
         }
     }
 
@@ -74,19 +46,15 @@ pub async fn add_device(
         "autoAcceptFolders": false,
     });
 
-    if let Some(devices) = config["devices"].as_array_mut() {
-        devices.push(new_device);
+    // Use pattern matching to handle the array mutation
+    match config["devices"].as_array_mut() {
+        Some(devices) => devices.push(new_device),
+        None => {
+            return Err(SyncthingError::parse("Config devices is not an array"));
+        },
     }
 
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
+    client.put("/rest/config", &config).await
 }
 
 /// Add device with advanced options
@@ -103,30 +71,17 @@ pub async fn add_device_advanced(
     max_send_kbps: Option<u32>,
     max_recv_kbps: Option<u32>,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
+    let client = SyncthingClient::new(&state.config);
 
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
+    let mut config: serde_json::Value = client.get("/rest/config").await?;
 
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
+    // Check for existing device
     if let Some(devices) = config["devices"].as_array() {
-        for device in devices {
-            if device["deviceID"].as_str() == Some(&device_id) {
-                return Err(SyncthingError::ProcessError("Device already exists".into()));
-            }
+        let exists = devices
+            .iter()
+            .any(|d| d["deviceID"].as_str() == Some(&device_id));
+        if exists {
+            return Err(SyncthingError::already_exists("Device").with_context(device_id));
         }
     }
 
@@ -142,19 +97,14 @@ pub async fn add_device_advanced(
         "maxRecvKbps": max_recv_kbps.unwrap_or(0),
     });
 
-    if let Some(devices) = config["devices"].as_array_mut() {
-        devices.push(new_device);
+    match config["devices"].as_array_mut() {
+        Some(devices) => devices.push(new_device),
+        None => {
+            return Err(SyncthingError::parse("Config devices is not an array"));
+        },
     }
 
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
+    client.put("/rest/config", &config).await
 }
 
 /// Remove a device from Syncthing
@@ -163,20 +113,10 @@ pub async fn remove_device(
     state: State<'_, SyncthingState>,
     device_id: String,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
+    let client = SyncthingClient::new(&state.config);
     client
-        .delete(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
+        .delete(&format!("/rest/config/devices/{}", device_id))
         .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
 }
 
 /// Update device configuration
@@ -186,41 +126,27 @@ pub async fn update_device_config(
     device_id: String,
     updates: serde_json::Value,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
+    let client = SyncthingClient::new(&state.config);
+    let path = format!("/rest/config/devices/{}", device_id);
 
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    let mut device_config: serde_json::Value = client.get(&path).await?;
 
-    let mut device_config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    if let (Some(config_obj), Some(updates_obj)) =
-        (device_config.as_object_mut(), updates.as_object())
-    {
-        for (key, value) in updates_obj {
-            config_obj.insert(key.clone(), value.clone());
-        }
+    // Validate and merge updates
+    match (device_config.as_object_mut(), updates.as_object()) {
+        (Some(config_obj), Some(updates_obj)) => {
+            for (key, value) in updates_obj {
+                config_obj.insert(key.clone(), value.clone());
+            }
+        },
+        (None, _) => {
+            return Err(SyncthingError::parse("Device config is not an object"));
+        },
+        (_, None) => {
+            return Err(SyncthingError::validation("Updates must be an object"));
+        },
     }
 
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&device_config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
+    client.put(&path, &device_config).await
 }
 
 /// Get detailed device configuration
@@ -229,25 +155,10 @@ pub async fn get_device_config(
     state: State<'_, SyncthingState>,
     device_id: String,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
+    let client = SyncthingClient::new(&state.config);
+    client
+        .get(&format!("/rest/config/devices/{}", device_id))
         .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
 }
 
 /// Pause a device
@@ -256,35 +167,7 @@ pub async fn pause_device(
     state: State<'_, SyncthingState>,
     device_id: String,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    config["paused"] = serde_json::Value::Bool(true);
-
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
+    set_device_paused(&state, &device_id, true).await
 }
 
 /// Resume a device
@@ -293,33 +176,20 @@ pub async fn resume_device(
     state: State<'_, SyncthingState>,
     device_id: String,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/config/devices/{}",
-        state.config.host, state.config.port, device_id
-    );
+    set_device_paused(&state, &device_id, false).await
+}
 
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+/// Helper to set device paused state
+async fn set_device_paused(
+    state: &State<'_, SyncthingState>,
+    device_id: &str,
+    paused: bool,
+) -> Result<(), SyncthingError> {
+    let client = SyncthingClient::new(&state.config);
+    let path = format!("/rest/config/devices/{}", device_id);
 
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+    let mut config: serde_json::Value = client.get(&path).await?;
+    config["paused"] = serde_json::Value::Bool(paused);
 
-    config["paused"] = serde_json::Value::Bool(false);
-
-    client
-        .put(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    Ok(())
+    client.put(&path, &config).await
 }

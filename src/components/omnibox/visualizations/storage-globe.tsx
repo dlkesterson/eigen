@@ -283,7 +283,7 @@ export function StorageGlobeVisualization({
     });
 
     return { segments: segs, totalSize: total };
-  }, [config?.folders, folderStatuses]);
+  }, [config, folderStatuses]);
 
   const handleSelect = (id: string) => {
     setSelected(selected === id ? null : id);

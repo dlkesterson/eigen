@@ -3,7 +3,7 @@
 //! These commands handle incoming connection requests from other devices
 //! and folder share requests that haven't been accepted yet.
 
-use crate::{SyncthingError, SyncthingState};
+use crate::{SyncthingClient, SyncthingError, SyncthingState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
@@ -179,24 +179,11 @@ pub struct PendingRequests {
 pub async fn get_pending_devices(
     state: State<'_, SyncthingState>,
 ) -> Result<Vec<PendingDevice>, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/cluster/pending/devices",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    let client = SyncthingClient::new(&state.config);
 
     // The API returns a map of deviceID -> device info
-    let json: HashMap<String, serde_json::Value> = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+    let json: HashMap<String, serde_json::Value> =
+        client.get("/rest/cluster/pending/devices").await?;
 
     let devices: Vec<PendingDevice> = json
         .into_iter()
@@ -219,24 +206,11 @@ pub async fn get_pending_devices(
 pub async fn get_pending_folders(
     state: State<'_, SyncthingState>,
 ) -> Result<Vec<PendingFolder>, SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/cluster/pending/folders",
-        state.config.host, state.config.port
-    );
-
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    let client = SyncthingClient::new(&state.config);
 
     // The API returns: { folderID: { offeredBy: { deviceID: { time, label, ... } } } }
-    let json: HashMap<String, serde_json::Value> = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
+    let json: HashMap<String, serde_json::Value> =
+        client.get("/rest/cluster/pending/folders").await?;
 
     let mut folders: Vec<PendingFolder> = Vec::new();
 
@@ -291,38 +265,30 @@ pub async fn accept_pending_device(
     device_id: String,
     name: Option<String>,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
+    let client = SyncthingClient::new(&state.config);
 
-    // First, add the device to config
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
+    // Fetch current config
+    let mut config: serde_json::Value = client.get("/rest/config").await?;
 
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    // Check if device already exists using pattern matching
+    let device_exists = config["devices"].as_array().is_some_and(|devices| {
+        devices
+            .iter()
+            .any(|d| d["deviceID"].as_str() == Some(&device_id))
+    });
 
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Check if device already exists
-    if let Some(devices) = config["devices"].as_array() {
-        for device in devices {
-            if device["deviceID"].as_str() == Some(&device_id) {
-                // Device already exists, just remove from pending
-                return dismiss_pending_device(state, device_id).await;
-            }
-        }
+    if device_exists {
+        // Device already exists, just remove from pending
+        return dismiss_pending_device(state, device_id).await;
     }
 
-    // Add the device
-    let device_name = name.unwrap_or_else(|| format!("Device {}", &device_id[..7]));
+    // Add the device with explicit field initialization
+    let device_name = name.unwrap_or_else(|| {
+        // Safely truncate device ID for display name
+        let display_id = device_id.get(..7).unwrap_or(&device_id);
+        format!("Device {}", display_id)
+    });
+
     let new_device = serde_json::json!({
         "deviceID": device_id.clone(),
         "name": device_name,
@@ -333,17 +299,17 @@ pub async fn accept_pending_device(
         "autoAcceptFolders": false,
     });
 
-    if let Some(devices) = config["devices"].as_array_mut() {
-        devices.push(new_device);
+    match config["devices"].as_array_mut() {
+        Some(devices) => devices.push(new_device),
+        None => {
+            return Err(
+                SyncthingError::parse("Config devices field is not an array")
+                    .with_context(format!("device_id: {}", device_id)),
+            );
+        },
     }
 
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    client.put("/rest/config", &config).await?;
 
     Ok(())
 }
@@ -355,18 +321,10 @@ pub async fn dismiss_pending_device(
     state: State<'_, SyncthingState>,
     device_id: String,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/cluster/pending/devices?device={}",
-        state.config.host, state.config.port, device_id
-    );
+    let client = SyncthingClient::new(&state.config);
+    let endpoint = format!("/rest/cluster/pending/devices?device={}", device_id);
 
-    client
-        .delete(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    client.delete(&endpoint).await?;
 
     Ok(())
 }
@@ -383,92 +341,117 @@ pub async fn accept_pending_folder(
     folder_type: Option<FolderType>,
     versioning: Option<VersioningConfig>,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let config_url = format!(
-        "http://{}:{}/rest/config",
-        state.config.host, state.config.port
-    );
+    let client = SyncthingClient::new(&state.config);
 
-    let res = client
-        .get(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    // Fetch current config
+    let mut config: serde_json::Value = client.get("/rest/config").await?;
 
-    let mut config: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    // Check if folder already exists
+    // Check if folder already exists using pattern matching
     let folder_exists = config["folders"]
         .as_array()
         .is_some_and(|folders| folders.iter().any(|f| f["id"].as_str() == Some(&folder_id)));
 
     if folder_exists {
-        // Folder exists, just add the device to it
-        if let Some(folders) = config["folders"].as_array_mut() {
-            for folder in folders.iter_mut() {
-                if folder["id"].as_str() == Some(&folder_id) {
-                    if let Some(devices) = folder["devices"].as_array_mut() {
-                        // Check if device is already in folder
-                        let device_in_folder = devices
-                            .iter()
-                            .any(|d| d["deviceID"].as_str() == Some(&device_id));
-                        if !device_in_folder {
-                            devices.push(serde_json::json!({
-                                "deviceID": device_id.clone(),
-                                "introducedBy": ""
-                            }));
-                        }
-                    }
-                    break;
-                }
-            }
-        }
+        // Folder exists, add the device to it
+        add_device_to_existing_folder(&mut config, &folder_id, &device_id)?;
     } else {
         // Create new folder with this device
-        let label = folder_label.unwrap_or_else(|| folder_id.clone());
-        let sync_type = folder_type.unwrap_or_default();
-        let versioning_config = versioning.unwrap_or_default();
-
-        let new_folder = serde_json::json!({
-            "id": folder_id.clone(),
-            "label": label,
-            "path": folder_path,
-            "type": sync_type.as_str(),
-            "devices": [
-                {
-                    "deviceID": device_id.clone(),
-                    "introducedBy": ""
-                }
-            ],
-            "rescanIntervalS": 3600,
-            "fsWatcherEnabled": true,
-            "fsWatcherDelayS": 10,
-            "ignorePerms": false,
-            "autoNormalize": true,
-            "versioning": versioning_config.to_syncthing_json(),
-        });
-
-        if let Some(folders) = config["folders"].as_array_mut() {
-            folders.push(new_folder);
-        }
+        create_new_folder_with_device(
+            &mut config,
+            &folder_id,
+            &device_id,
+            &folder_path,
+            folder_label,
+            folder_type,
+            versioning,
+        )?;
     }
 
-    client
-        .put(&config_url)
-        .header("X-API-Key", &state.config.api_key)
-        .json(&config)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    client.put("/rest/config", &config).await?;
 
     // Remove from pending
     dismiss_pending_folder(state, folder_id, device_id).await?;
 
     Ok(())
+}
+
+/// Helper to add a device to an existing folder in the config
+fn add_device_to_existing_folder(
+    config: &mut serde_json::Value,
+    folder_id: &str,
+    device_id: &str,
+) -> Result<(), SyncthingError> {
+    let folders = config["folders"]
+        .as_array_mut()
+        .ok_or_else(|| SyncthingError::parse("Config folders field is not an array"))?;
+
+    for folder in folders.iter_mut() {
+        if folder["id"].as_str() == Some(folder_id) {
+            let devices = folder["devices"]
+                .as_array_mut()
+                .ok_or_else(|| SyncthingError::parse("Folder devices field is not an array"))?;
+
+            // Check if device is already in folder
+            let device_in_folder = devices
+                .iter()
+                .any(|d| d["deviceID"].as_str() == Some(device_id));
+
+            if !device_in_folder {
+                devices.push(serde_json::json!({
+                    "deviceID": device_id,
+                    "introducedBy": ""
+                }));
+            }
+            return Ok(());
+        }
+    }
+
+    Err(SyncthingError::not_found("Folder not found in config")
+        .with_context(format!("folder_id: {}", folder_id)))
+}
+
+/// Helper to create a new folder with a device
+fn create_new_folder_with_device(
+    config: &mut serde_json::Value,
+    folder_id: &str,
+    device_id: &str,
+    folder_path: &str,
+    folder_label: Option<String>,
+    folder_type: Option<FolderType>,
+    versioning: Option<VersioningConfig>,
+) -> Result<(), SyncthingError> {
+    let label = folder_label.unwrap_or_else(|| folder_id.to_string());
+    let sync_type = folder_type.unwrap_or_default();
+    let versioning_config = versioning.unwrap_or_default();
+
+    let new_folder = serde_json::json!({
+        "id": folder_id,
+        "label": label,
+        "path": folder_path,
+        "type": sync_type.as_str(),
+        "devices": [
+            {
+                "deviceID": device_id,
+                "introducedBy": ""
+            }
+        ],
+        "rescanIntervalS": 3600,
+        "fsWatcherEnabled": true,
+        "fsWatcherDelayS": 10,
+        "ignorePerms": false,
+        "autoNormalize": true,
+        "versioning": versioning_config.to_syncthing_json(),
+    });
+
+    match config["folders"].as_array_mut() {
+        Some(folders) => {
+            folders.push(new_folder);
+            Ok(())
+        },
+        None => Err(SyncthingError::parse(
+            "Config folders field is not an array",
+        )),
+    }
 }
 
 /// Dismiss/reject a pending folder share request
@@ -478,18 +461,13 @@ pub async fn dismiss_pending_folder(
     folder_id: String,
     device_id: String,
 ) -> Result<(), SyncthingError> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://{}:{}/rest/cluster/pending/folders?folder={}&device={}",
-        state.config.host, state.config.port, folder_id, device_id
+    let client = SyncthingClient::new(&state.config);
+    let endpoint = format!(
+        "/rest/cluster/pending/folders?folder={}&device={}",
+        folder_id, device_id
     );
 
-    client
-        .delete(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    client.delete(&endpoint).await?;
 
     Ok(())
 }

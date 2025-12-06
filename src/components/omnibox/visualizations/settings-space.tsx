@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { Html, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -177,7 +177,12 @@ interface SettingsPanelProps {
   visible?: boolean;
 }
 
-function SettingsPanel({ data, isSelected, onSelect, visible = true }: SettingsPanelProps) {
+function SettingsPanel({
+  data,
+  isSelected,
+  onSelect,
+  visible: _visible = true,
+}: SettingsPanelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -281,7 +286,7 @@ interface ContentPanelProps {
   visible?: boolean;
 }
 
-function ThemeSettings({ onClose }: { onClose: () => void }) {
+function ThemeSettings({ onClose: _onClose }: { onClose: () => void }) {
   const { theme, setTheme } = useAppStore();
 
   const themes = [
@@ -315,7 +320,7 @@ function ThemeSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-function SyncthingSettings({ onClose }: { onClose: () => void }) {
+function SyncthingSettings({ onClose: _onClose }: { onClose: () => void }) {
   const { data: installation, isLoading: installLoading } = useSyncthingInstallation();
   const { data: deviceId, isLoading: idLoading } = useDeviceId();
   const restartSyncthing = useRestartSyncthing();
@@ -390,30 +395,40 @@ function SyncthingSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-function NetworkSettings({ onClose }: { onClose: () => void }) {
+function NetworkSettings({ onClose: _onClose }: { onClose: () => void }) {
   const { data: config, isLoading } = useConfig();
   const updateOptions = useUpdateOptions();
-  const [localOptions, setLocalOptions] = useState<Partial<Options>>({});
 
-  useEffect(() => {
-    if (config?.options) {
-      setLocalOptions({
-        globalAnnounceEnabled: config.options.globalAnnounceEnabled,
-        localAnnounceEnabled: config.options.localAnnounceEnabled,
-        relaysEnabled: config.options.relaysEnabled,
-        maxSendKbps: config.options.maxSendKbps,
-        maxRecvKbps: config.options.maxRecvKbps,
-      });
+  // Use local state only for pending/optimistic updates
+  const [pendingUpdates, setPendingUpdates] = useState<Partial<Options>>({});
+
+  // Get effective value: pending update takes precedence over config
+  const getEffectiveValue = <K extends keyof Options>(key: K): Options[K] | undefined => {
+    if (key in pendingUpdates) {
+      return pendingUpdates[key] as Options[K];
     }
-  }, [config?.options]);
+    return config?.options?.[key];
+  };
 
   const toggleOption = async (key: keyof Options, value: boolean) => {
-    const newOptions = { ...localOptions, [key]: value };
-    setLocalOptions(newOptions);
+    // Optimistic update
+    setPendingUpdates((prev) => ({ ...prev, [key]: value }));
     try {
-      await updateOptions.mutateAsync(newOptions);
+      await updateOptions.mutateAsync({ [key]: value });
       toast.success('Settings saved');
+      // Clear pending on success (config will be refetched)
+      setPendingUpdates((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     } catch {
+      // Revert on failure
+      setPendingUpdates((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
       toast.error('Failed to save');
     }
   };
@@ -428,27 +443,51 @@ function NetworkSettings({ onClose }: { onClose: () => void }) {
     { key: 'relaysEnabled' as const, label: 'Relay Servers', icon: '🔀' },
   ];
 
+  // Handle bandwidth updates
+  const updateBandwidth = async (key: 'maxSendKbps' | 'maxRecvKbps', value: number) => {
+    setPendingUpdates((prev) => ({ ...prev, [key]: value }));
+    try {
+      await updateOptions.mutateAsync({ [key]: value });
+      toast.success('Settings saved');
+      setPendingUpdates((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } catch {
+      setPendingUpdates((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      toast.error('Failed to save');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-white">Network</h3>
 
       <div className="space-y-2">
-        {toggles.map(({ key, label, icon }) => (
-          <div key={key} className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">
-              {icon} {label}
-            </span>
-            <button
-              onClick={() => toggleOption(key, !localOptions[key])}
-              className={cn(
-                'rounded px-3 py-1 text-xs transition-all',
-                localOptions[key] ? 'bg-green-500/30 text-green-400' : 'bg-white/10 text-gray-500'
-              )}
-            >
-              {localOptions[key] ? 'On' : 'Off'}
-            </button>
-          </div>
-        ))}
+        {toggles.map(({ key, label, icon }) => {
+          const isEnabled = getEffectiveValue(key) ?? false;
+          return (
+            <div key={key} className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                {icon} {label}
+              </span>
+              <button
+                onClick={() => toggleOption(key, !isEnabled)}
+                className={cn(
+                  'rounded px-3 py-1 text-xs transition-all',
+                  isEnabled ? 'bg-green-500/30 text-green-400' : 'bg-white/10 text-gray-500'
+                )}
+              >
+                {isEnabled ? 'On' : 'Off'}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       <div className="border-t border-white/10 pt-3">
@@ -457,11 +496,11 @@ function NetworkSettings({ onClose }: { onClose: () => void }) {
             <label className="mb-1 block text-xs text-gray-500">Send (KB/s)</label>
             <input
               type="number"
-              value={localOptions.maxSendKbps || 0}
+              value={getEffectiveValue('maxSendKbps') || 0}
               onChange={(e) =>
-                setLocalOptions({ ...localOptions, maxSendKbps: Number(e.target.value) })
+                setPendingUpdates((prev) => ({ ...prev, maxSendKbps: Number(e.target.value) }))
               }
-              onBlur={() => updateOptions.mutate(localOptions)}
+              onBlur={(e) => updateBandwidth('maxSendKbps', Number(e.target.value))}
               className="w-full rounded bg-white/5 px-2 py-1 text-sm text-white"
               placeholder="0 = unlimited"
             />
@@ -470,11 +509,11 @@ function NetworkSettings({ onClose }: { onClose: () => void }) {
             <label className="mb-1 block text-xs text-gray-500">Receive (KB/s)</label>
             <input
               type="number"
-              value={localOptions.maxRecvKbps || 0}
+              value={getEffectiveValue('maxRecvKbps') || 0}
               onChange={(e) =>
-                setLocalOptions({ ...localOptions, maxRecvKbps: Number(e.target.value) })
+                setPendingUpdates((prev) => ({ ...prev, maxRecvKbps: Number(e.target.value) }))
               }
-              onBlur={() => updateOptions.mutate(localOptions)}
+              onBlur={(e) => updateBandwidth('maxRecvKbps', Number(e.target.value))}
               className="w-full rounded bg-white/5 px-2 py-1 text-sm text-white"
               placeholder="0 = unlimited"
             />
@@ -486,7 +525,7 @@ function NetworkSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-function NotificationSettings({ onClose }: { onClose: () => void }) {
+function NotificationSettings({ onClose: _onClose }: { onClose: () => void }) {
   const { nativeNotificationsEnabled, setNativeNotificationsEnabled } = useAppStore();
 
   const handleToggle = async () => {
@@ -534,7 +573,7 @@ function NotificationSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AISettings({ onClose }: { onClose: () => void }) {
+function AISettings({ onClose: _onClose }: { onClose: () => void }) {
   const { aiEnabled, setAiEnabled } = useAppStore();
 
   return (
@@ -577,7 +616,7 @@ function AISettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-function PollingSettings({ onClose }: { onClose: () => void }) {
+function PollingSettings({ onClose: _onClose }: { onClose: () => void }) {
   const { pollingInterval, setPollingInterval } = useAppStore();
 
   const intervals = [
@@ -621,7 +660,7 @@ function PollingSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AboutSettings({ onClose }: { onClose: () => void }) {
+function AboutSettings({ onClose: _onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-white">About Eigen</h3>

@@ -1,6 +1,6 @@
 //! Events, logs, and tray commands.
 
-use crate::{SyncthingError, SyncthingState};
+use crate::{SyncthingClient, SyncthingError, SyncthingState};
 use tauri::State;
 
 /// Get events from Syncthing (for real-time updates)
@@ -11,18 +11,10 @@ pub async fn get_events(
     limit: Option<u32>,
     timeout: Option<u32>,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(
-            u64::from(timeout.unwrap_or(60)) + 5,
-        ))
-        .build()
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
+    let timeout_secs = u64::from(timeout.unwrap_or(60)) + 5;
+    let client = SyncthingClient::with_timeout(&state.config, timeout_secs)?;
 
-    let mut url = format!(
-        "http://{}:{}/rest/events",
-        state.config.host, state.config.port
-    );
-
+    // Build URL with query parameters
     let mut params = Vec::new();
     if let Some(s) = since {
         params.push(format!("since={s}"));
@@ -34,23 +26,13 @@ pub async fn get_events(
         params.push(format!("timeout={t}"));
     }
 
-    if !params.is_empty() {
-        url = format!("{}?{}", url, params.join("&"));
-    }
+    let path = if params.is_empty() {
+        "/rest/events".to_string()
+    } else {
+        format!("/rest/events?{}", params.join("&"))
+    };
 
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
+    client.get(&path).await
 }
 
 /// Get Syncthing logs
@@ -59,29 +41,14 @@ pub async fn get_system_logs(
     state: State<'_, SyncthingState>,
     since: Option<String>,
 ) -> Result<serde_json::Value, SyncthingError> {
-    let client = reqwest::Client::new();
-    let mut url = format!(
-        "http://{}:{}/rest/system/log",
-        state.config.host, state.config.port
-    );
+    let client = SyncthingClient::new(&state.config);
 
-    if let Some(since_time) = since {
-        url = format!("{url}?since={since_time}");
-    }
+    let path = match since {
+        Some(since_time) => format!("/rest/system/log?since={since_time}"),
+        None => "/rest/system/log".to_string(),
+    };
 
-    let res = client
-        .get(&url)
-        .header("X-API-Key", &state.config.api_key)
-        .send()
-        .await
-        .map_err(|e| SyncthingError::HttpError(e.to_string()))?;
-
-    let json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| SyncthingError::ParseError(e.to_string()))?;
-
-    Ok(json)
+    client.get(&path).await
 }
 
 /// Update the system tray tooltip with current status

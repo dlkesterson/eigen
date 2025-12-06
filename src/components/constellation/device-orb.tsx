@@ -423,7 +423,6 @@ export function DeviceOrb({ device, onClick }: DeviceOrbProps) {
 
       {/* Internal particle system for online/syncing devices */}
       {particleMaterial && (
-        // eslint-disable-next-line react/no-unknown-property
         <points ref={particlesRef} geometry={particleGeometry} material={particleMaterial} />
       )}
 

@@ -296,7 +296,7 @@ export function SyncFlowVisualization({ visible = true }: SyncFlowVisualizationP
         isConnected: conn?.connected ?? false,
       };
     });
-  }, [config?.devices, status?.myID, connections?.connections]);
+  }, [config, status, connections]);
 
   // Calculate totals
   const totalIn = connections?.total?.inBytesTotal || 0;

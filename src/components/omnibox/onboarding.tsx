@@ -386,8 +386,11 @@ export function useOnboarding() {
       // Small delay to let the app load first
       const timer = setTimeout(() => setShowOnboarding(true), 1000);
       return () => clearTimeout(timer);
+    } else {
+      // Only set hasChecked when onboarding is already complete
+      const timer = setTimeout(() => setHasChecked(true), 0);
+      return () => clearTimeout(timer);
     }
-    setHasChecked(true);
   }, []);
 
   const completeOnboarding = useCallback(() => {
