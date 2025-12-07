@@ -5,8 +5,6 @@
  * Replaces the traditional settings page with an immersive Omnibox-driven experience.
  */
 
-'use client';
-
 import { useRef, useState, useCallback } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { Html, Text } from '@react-three/drei';

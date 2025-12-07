@@ -5,8 +5,6 @@
  * and resolution options.
  */
 
-'use client';
-
 import { useRef, useState, useMemo, useCallback } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { Text, Html } from '@react-three/drei';

@@ -6,8 +6,6 @@
  * Theme-aware styling (dark/light mode).
  */
 
-'use client';
-
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html, Text } from '@react-three/drei';

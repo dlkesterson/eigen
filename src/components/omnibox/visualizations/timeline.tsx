@@ -4,8 +4,6 @@
  * Shows file change history as a 3D timeline with events as markers.
  */
 
-'use client';
-
 import { useMemo, useRef, useState } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { Text, Html, Line } from '@react-three/drei';

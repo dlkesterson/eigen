@@ -6,8 +6,6 @@
  * Handles transitions between visualizations and manages visualization state.
  */
 
-'use client';
-
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';

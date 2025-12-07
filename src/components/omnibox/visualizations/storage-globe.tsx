@@ -4,8 +4,6 @@
  * Shows storage distribution across devices as a 3D treemap/globe.
  */
 
-'use client';
-
 import { useMemo, useRef, useState } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { Text, Html } from '@react-three/drei';

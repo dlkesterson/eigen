@@ -5,8 +5,6 @@
  * displaying real-time stats, graphs, and alerts.
  */
 
-'use client';
-
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Html } from '@react-three/drei';

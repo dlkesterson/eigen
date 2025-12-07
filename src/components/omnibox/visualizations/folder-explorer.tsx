@@ -6,8 +6,6 @@
  * Includes predictive sync badge for folders being prioritized.
  */
 
-'use client';
-
 import { useMemo, useRef, useState } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { Text, Html } from '@react-three/drei';
