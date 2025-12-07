@@ -1,7 +1,6 @@
 import { useMemo, useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Stars, OrbitControls } from '@react-three/drei';
-import * as THREE from 'three';
 import {
   useSystemStatus,
   useConnections,
@@ -18,44 +17,17 @@ import { RequestBeacon } from './request-beacon';
 import { HudPanel } from './hud-panel';
 import { FolderList } from '@/components/folder-list';
 import { useResolvedTheme } from '@/components/theme-provider';
-import { ArrowDownToLine, ArrowUpFromLine, CheckCircle, XCircle, Link, Folder } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  CheckCircle,
+  XCircle,
+  Link,
+  Folder,
+  RefreshCw,
+  AlertCircle,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-// Pre-computed dust particle data (computed once at module load)
-const DUST_PARTICLES = Array.from({ length: 50 }).map((_, i) => ({
-  id: i,
-  position: [Math.random() * 60 - 30, Math.random() * 40 - 20, Math.random() * 60 - 30] as [
-    number,
-    number,
-    number,
-  ],
-  size: Math.random() * 0.05 + 0.01,
-  opacity: Math.random() * 0.3 + 0.05,
-}));
-
-// Shared geometry and material for dust particles (created once)
-const dustGeometry = new THREE.SphereGeometry(0.03, 6, 6);
-const dustMaterial = new THREE.MeshBasicMaterial({
-  color: new THREE.Color(0.2, 0.4, 0.6),
-  transparent: true,
-  opacity: 0.15,
-});
-
-// Cosmic dust particles for atmosphere - optimized with instancing concept
-function CosmicDust() {
-  return (
-    <group>
-      {DUST_PARTICLES.map((particle) => (
-        <mesh
-          key={`dust-${particle.id}`}
-          position={particle.position}
-          geometry={dustGeometry}
-          material={dustMaterial}
-        />
-      ))}
-    </group>
-  );
-}
 
 // The 3D scene containing all constellation elements
 function ConstellationScene({
@@ -74,37 +46,24 @@ function ConstellationScene({
 
   return (
     <>
-      {/* Lighting - adapted for theme */}
-      <ambientLight intensity={isDark ? 0.25 : 0.6} color={isDark ? '#1a3a52' : '#ffffff'} />
-      <pointLight
-        position={[25, 25, 25]}
-        intensity={isDark ? 1.2 : 1.5}
-        color={isDark ? '#5ba3d0' : '#60a5fa'}
-        decay={2}
-      />
-      <pointLight
-        position={[-25, -15, 15]}
-        intensity={isDark ? 0.6 : 0.8}
-        color={isDark ? '#8b5cf6' : '#a78bfa'}
-        decay={2}
-      />
-      <pointLight
-        position={[0, -20, 0]}
-        intensity={isDark ? 0.4 : 0.5}
-        color={isDark ? '#f97316' : '#fb923c'}
-        decay={2}
-      />
+      {/* Lighting - simplified, minimal lights */}
+      <ambientLight intensity={isDark ? 0.3 : 0.8} color={isDark ? '#1a3a52' : '#ffffff'} />
 
-      {/* Stars background - only in dark mode */}
+      {/* Only add colored lights in dark mode where they're visible */}
       {isDark && (
-        <Stars radius={150} depth={75} count={1500} factor={5} saturation={0.3} fade speed={0.05} />
+        <>
+          <pointLight position={[25, 25, 25]} intensity={1.2} color="#5ba3d0" decay={2} />
+          <pointLight position={[-25, -15, 15]} intensity={0.6} color="#8b5cf6" decay={2} />
+        </>
       )}
 
-      {/* Atmospheric fog - adapted for theme */}
-      <fog attach="fog" args={[isDark ? '#050810' : '#e2e8f0', 15, 100]} />
+      {/* Stars background - only in dark mode, static for performance */}
+      {isDark && (
+        <Stars radius={150} depth={75} count={500} factor={3} saturation={0.2} fade speed={0} />
+      )}
 
-      {/* Cosmic dust particles - only in dark mode */}
-      {isDark && <CosmicDust />}
+      {/* Fog only in dark mode - not visible in light theme anyway */}
+      {isDark && <fog attach="fog" args={['#050810', 25, 100]} />}
 
       {/* Device constellation */}
       <group>
@@ -141,14 +100,19 @@ function ConstellationScene({
         {pendingCount > 0 && <RequestBeacon position={[-5, 5, -2]} />}
       </group>
 
-      {/* Camera controls */}
+      {/* Camera controls - disable damping for better performance */}
       <OrbitControls
-        enablePan={false}
+        enablePan={true}
         enableZoom={true}
-        minDistance={10}
-        maxDistance={40}
-        autoRotate
+        enableDamping={false}
+        minDistance={18}
+        maxDistance={45}
+        minPolarAngle={Math.PI / 6}
+        maxPolarAngle={Math.PI / 2}
+        autoRotate={false}
         autoRotateSpeed={0.3}
+        target={[0, 0, 0]}
+        makeDefault
       />
     </>
   );
@@ -221,7 +185,7 @@ function RequestNotification({
 }
 
 export function ConstellationDashboard() {
-  const { data: status, isError: statusError } = useSystemStatus();
+  const { data: status, isError: statusError, failureCount } = useSystemStatus();
   const { data: connections } = useConnections();
   const { data: config } = useConfig();
   const { data: pendingRequests } = usePendingRequests();
@@ -231,6 +195,10 @@ export function ConstellationDashboard() {
   const isDark = theme === 'dark';
 
   const [showRequest, setShowRequest] = useState(true);
+
+  // Determine connection state
+  const isOnline = !statusError && status?.myID;
+  const isRetrying = statusError && failureCount > 0 && failureCount < 3;
 
   // Calculate device positions in 3D space (orbital layout)
   const devices = useMemo<DeviceOrbData[]>(() => {
@@ -325,18 +293,24 @@ export function ConstellationDashboard() {
     <div
       className={`relative h-full w-full overflow-hidden rounded-xl ${isDark ? 'bg-black' : 'bg-slate-100'}`}
     >
-      {/* 3D Canvas */}
+      {/* 3D Canvas - Performance optimized */}
       <Canvas
         style={{
           position: 'absolute',
           width: '100%',
           height: '100%',
         }}
-        camera={{ position: [0, 5, 20], fov: 45 }}
+        camera={{ position: [0, 12, 30], fov: 55, near: 0.1, far: 200 }}
+        dpr={[1, 1.5]}
+        frameloop="demand"
         gl={{
-          antialias: true,
+          antialias: false,
           powerPreference: 'high-performance',
+          alpha: false,
+          stencil: false,
+          depth: true,
         }}
+        performance={{ min: 0.5 }}
       >
         <Suspense fallback={null}>
           <ConstellationScene
@@ -354,55 +328,115 @@ export function ConstellationDashboard() {
         <div className="pointer-events-auto absolute top-6 right-6 space-y-3">
           <HudPanel
             title="STATUS"
-            value={statusError ? 'Offline' : 'Online'}
+            value={
+              isOnline ? 'Online' : isRetrying ? `Reconnecting (${failureCount}/3)` : 'Offline'
+            }
             icon={
-              statusError ? (
-                <XCircle className="h-5 w-5 text-red-400" />
-              ) : (
+              isOnline ? (
                 <CheckCircle className="h-5 w-5 text-green-400" />
+              ) : isRetrying ? (
+                <RefreshCw className="h-5 w-5 animate-spin text-amber-400" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-400" />
               )
             }
+            className={
+              isRetrying
+                ? isDark
+                  ? 'border-amber-500/40 bg-amber-950/30'
+                  : 'border-amber-400/50 bg-amber-50/80'
+                : undefined
+            }
           />
-          <HudPanel
-            title="DEVICES"
-            value={`${connectedDevices}/${totalDevices}`}
-            icon={<Link className="h-5 w-5 text-blue-400" />}
-          />
-          <HudPanel
-            title="DOWNLOADED"
-            value={formatBytes(inBytes)}
-            icon={<ArrowDownToLine className="h-5 w-5 text-green-400" />}
-          />
-          <HudPanel
-            title="UPLOADED"
-            value={formatBytes(outBytes)}
-            icon={<ArrowUpFromLine className="h-5 w-5 text-blue-400" />}
-          />
+
+          {/* Only show stats when connected */}
+          {isOnline && (
+            <>
+              <HudPanel
+                title="DEVICES"
+                value={`${connectedDevices}/${totalDevices}`}
+                icon={<Link className="h-5 w-5 text-blue-400" />}
+              />
+              <HudPanel
+                title="DOWNLOADED"
+                value={formatBytes(inBytes)}
+                icon={<ArrowDownToLine className="h-5 w-5 text-green-400" />}
+              />
+              <HudPanel
+                title="UPLOADED"
+                value={formatBytes(outBytes)}
+                icon={<ArrowUpFromLine className="h-5 w-5 text-blue-400" />}
+              />
+            </>
+          )}
         </div>
 
-        {/* Bottom-left - Synced folders panel */}
-        <div className="pointer-events-auto absolute bottom-6 left-6 w-96">
-          <div
-            className={`rounded-xl border p-5 backdrop-blur-xl ${
-              isDark ? 'border-blue-400/30 bg-black/50' : 'border-blue-400/40 bg-white/70'
-            }`}
-            style={{
-              boxShadow: isDark
-                ? '0 0 25px rgba(96, 165, 250, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.05)'
-                : '0 0 25px rgba(96, 165, 250, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-            }}
-          >
-            <div className="mb-4 flex items-center gap-2">
-              <Folder className={`h-5 w-5 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />
-              <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                Synced Folders
-              </h3>
-            </div>
-            <div className="max-h-48 overflow-y-auto">
-              <FolderList compact />
+        {/* Show folder list only when connected */}
+        {isOnline ? (
+          <div className="pointer-events-auto absolute bottom-6 left-6 w-96">
+            <div
+              className={`rounded-xl border p-5 backdrop-blur-xl ${
+                isDark ? 'border-blue-400/30 bg-black/50' : 'border-blue-400/40 bg-white/70'
+              }`}
+              style={{
+                boxShadow: isDark
+                  ? '0 0 25px rgba(96, 165, 250, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.05)'
+                  : '0 0 25px rgba(96, 165, 250, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+              }}
+            >
+              <div className="mb-4 flex items-center gap-2">
+                <Folder className={`h-5 w-5 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />
+                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                  Synced Folders
+                </h3>
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                <FolderList compact />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          /* Disconnected state message */
+          <div className="pointer-events-auto absolute bottom-6 left-6 w-96">
+            <div
+              className={cn(
+                'rounded-xl border p-6 backdrop-blur-xl',
+                isDark
+                  ? 'border-amber-500/30 bg-amber-950/20'
+                  : 'border-amber-400/40 bg-amber-50/80'
+              )}
+              style={{
+                boxShadow: isDark
+                  ? '0 0 25px rgba(251, 146, 60, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.05)'
+                  : '0 0 25px rgba(251, 146, 60, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <AlertCircle
+                  className={cn(
+                    'mt-0.5 h-5 w-5 shrink-0',
+                    isDark ? 'text-amber-400' : 'text-amber-600'
+                  )}
+                />
+                <div>
+                  <h3
+                    className={cn(
+                      'mb-1 font-semibold',
+                      isDark ? 'text-amber-200' : 'text-amber-900'
+                    )}
+                  >
+                    {isRetrying ? 'Reconnecting to Syncthing' : 'Disconnected'}
+                  </h3>
+                  <p className={cn('text-sm', isDark ? 'text-amber-300/70' : 'text-amber-700/80')}>
+                    {isRetrying
+                      ? 'Attempting to restore connection...'
+                      : "Unable to connect to Syncthing service. Check if it's running."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Center - Request notification */}
         <AnimatePresence>

@@ -14,7 +14,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 import { Omnibox, OnboardingTutorial, useOnboarding, WelcomeBadge } from '@/components/omnibox';
 import { ArtifactRouter } from '@/components/omnibox/artifact-router';
 import { CosmicSearchBar } from '@/components/constellation/cosmic-search-bar';
@@ -314,7 +313,7 @@ export function OmniboxDashboard() {
 
       {/* Top-right HUD — Status controls and stats in a vertical column */}
       <motion.div
-        className="absolute top-4 right-6 z-[60] flex flex-col items-end gap-3"
+        className="absolute top-4 right-6 z-60 flex flex-col items-end gap-3"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
@@ -370,33 +369,6 @@ export function OmniboxDashboard() {
       >
         <ArtifactRouter />
       </motion.div>
-
-      {/* Current artifact indicator */}
-      {currentArtifact && (
-        <motion.div
-          className="absolute top-24 left-1/2 z-30 -translate-x-1/2"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-        >
-          <div
-            className={cn(
-              'flex items-center gap-2 rounded-full px-4 py-2 backdrop-blur-xl',
-              isDark ? 'bg-black/60' : 'bg-white/70'
-            )}
-          >
-            <Sparkles className={cn('h-4 w-4', isDark ? 'text-cyan-400' : 'text-blue-600')} />
-            <span
-              className={cn(
-                'font-mono text-xs tracking-widest uppercase',
-                isDark ? 'text-cyan-300' : 'text-blue-700'
-              )}
-            >
-              {currentArtifact.artifactType.replace('-', ' ')}
-            </span>
-          </div>
-        </motion.div>
-      )}
 
       {/* Keyboard shortcut hint */}
       <motion.div

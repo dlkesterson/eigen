@@ -220,17 +220,20 @@ export function DeviceOrb({ device, isDark = true, onClick }: DeviceOrbProps) {
   }, [isHovered]);
 
   useFrame((state) => {
+    // Only animate if syncing, hovered, or local device - reduces CPU usage significantly
+    if (!device.isSyncing && !isHovered && !device.isLocal) return;
+
     const time = state.clock.getElapsedTime();
     const mat = materialRef.current;
     const particleMat = particleMaterialRef.current;
 
-    // Update shader time uniform
-    if (mat?.uniforms.time) {
+    // Update shader time uniform only if syncing
+    if (device.isSyncing && mat?.uniforms.time) {
       mat.uniforms.time.value = time;
     }
 
-    // Update particle shader time uniform
-    if (particleMat?.uniforms.time) {
+    // Update particle shader time uniform only if syncing
+    if (device.isSyncing && particleMat?.uniforms.time) {
       particleMat.uniforms.time.value = time;
     }
 
@@ -241,42 +244,42 @@ export function DeviceOrb({ device, isDark = true, onClick }: DeviceOrbProps) {
       mat.uniforms.hoverIntensity.value = currentHover + (targetHover - currentHover) * 0.1;
     }
 
-    // Rotation animation for syncing or based on profile
-    if (meshRef.current) {
-      if (device.isSyncing) {
-        meshRef.current.rotation.y += 0.01;
-      } else {
-        meshRef.current.rotation.y += orbProfile.rotationSpeed * 0.01;
-      }
+    // Rotation animation only for syncing devices
+    if (meshRef.current && device.isSyncing) {
+      meshRef.current.rotation.y += 0.01;
     }
 
-    // Floating/bobbing animation based on device profile
-    if (groupRef.current) {
+    // Floating/bobbing animation only for local device or when syncing
+    if (groupRef.current && (device.isLocal || device.isSyncing)) {
       const floatOffset = Math.sin(time * orbProfile.pulseSpeed * 0.5) * 0.15;
       groupRef.current.position.y = device.position[1] + floatOffset;
     }
 
-    // Pulse scale animation based on profile
-    if (meshRef.current) {
+    // Pulse scale animation only when hovered or syncing
+    if (meshRef.current && (isHovered || device.isSyncing)) {
       const pulseScale = 1 + Math.sin(time * orbProfile.pulseSpeed) * 0.05;
       const targetScale = isHovered ? 1.3 * pulseScale : pulseScale;
       meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     }
 
-    // Pulsing glow animation
-    if (glowRef.current) {
+    // Pulsing glow animation only when syncing
+    if (glowRef.current && device.isSyncing) {
       const pulseScale = 1 + Math.sin(time * 3) * 0.1;
       glowRef.current.scale.setScalar(pulseScale);
     }
 
-    // Outer glow with slower pulse
-    if (outerGlowRef.current) {
+    // Outer glow only when syncing
+    if (outerGlowRef.current && device.isSyncing) {
       const outerPulseScale = 1 + Math.sin(time * 1.5) * 0.05;
       outerGlowRef.current.scale.setScalar(outerPulseScale);
     }
 
-    // Inner core glow pulsing
-    if (coreRef.current && coreRef.current.material instanceof THREE.MeshPhysicalMaterial) {
+    // Inner core glow pulsing only when syncing
+    if (
+      device.isSyncing &&
+      coreRef.current &&
+      coreRef.current.material instanceof THREE.MeshPhysicalMaterial
+    ) {
       const coreIntensity =
         device.isOnline && !device.isPaused
           ? 0.4 + Math.sin(time * orbProfile.pulseSpeed * 2) * 0.2
@@ -284,22 +287,24 @@ export function DeviceOrb({ device, isDark = true, onClick }: DeviceOrbProps) {
       coreRef.current.material.emissiveIntensity = coreIntensity;
     }
 
-    // Animate glass layers with staggered rotation
-    glassLayersRef.current.forEach((layer, index) => {
-      if (layer) {
-        layer.rotation.y += orbProfile.rotationSpeed * 0.005 * (index + 1);
-        layer.rotation.x += orbProfile.rotationSpeed * 0.003 * (index + 1);
-      }
-    });
+    // Animate glass layers only when syncing
+    if (device.isSyncing) {
+      glassLayersRef.current.forEach((layer, index) => {
+        if (layer) {
+          layer.rotation.y += orbProfile.rotationSpeed * 0.005 * (index + 1);
+          layer.rotation.x += orbProfile.rotationSpeed * 0.003 * (index + 1);
+        }
+      });
+    }
 
     if (ringRef.current && device.isSyncing) {
       ringRef.current.rotation.z += 0.03;
     }
 
-    // Animate particles rotation
-    if (particlesRef.current) {
-      particlesRef.current.rotation.y += device.isSyncing ? 0.015 : 0.005;
-      particlesRef.current.rotation.x += device.isSyncing ? 0.008 : 0.002;
+    // Animate particles rotation only when syncing
+    if (particlesRef.current && device.isSyncing) {
+      particlesRef.current.rotation.y += 0.015;
+      particlesRef.current.rotation.x += 0.008;
     }
   });
 

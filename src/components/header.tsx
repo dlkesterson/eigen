@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSystemStatus, usePendingRequestsManager } from '@/hooks/useSyncthing';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PendingRequestsDialog } from '@/components/pending-requests-dialog';
-import { RefreshCw, Wifi, WifiOff, Bell, Command, Sparkles } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, Bell, Command, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -12,17 +13,19 @@ import { cn } from '@/lib/utils';
  *
  * Features:
  * - Omnibox trigger (main navigation method)
- * - Connection status
+ * - Connection status with retry state
  * - Pending requests notification
  * - Refresh action
  */
 export function Header() {
   const { t } = useTranslation();
-  const { data: status, isError, refetch, isRefetching } = useSystemStatus();
+  const queryClient = useQueryClient();
+  const { data: status, isError, refetch, isRefetching, failureCount } = useSystemStatus();
   const { totalPending } = usePendingRequestsManager();
   const [showPendingDialog, setShowPendingDialog] = useState(false);
 
   const isOnline = !isError && status?.myID;
+  const isRetrying = isError && failureCount > 0 && failureCount < 3;
 
   return (
     <>
@@ -71,11 +74,24 @@ export function Header() {
           <div className="flex items-center gap-1.5">
             {isOnline ? (
               <Wifi className="h-4 w-4 text-emerald-400" />
+            ) : isRetrying ? (
+              <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
             ) : (
               <WifiOff className="h-4 w-4 text-red-400" />
             )}
-            <Badge variant={isOnline ? 'success' : 'destructive'} className="hidden sm:flex">
-              {isOnline ? t('common.connected') : t('common.disconnected')}
+            <Badge
+              variant={isOnline ? 'success' : isRetrying ? 'default' : 'destructive'}
+              className={cn(
+                'hidden sm:flex',
+                isRetrying &&
+                  'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+              )}
+            >
+              {isOnline
+                ? t('common.connected')
+                : isRetrying
+                  ? `Reconnecting (${failureCount}/3)...`
+                  : t('common.disconnected')}
             </Badge>
           </div>
 
