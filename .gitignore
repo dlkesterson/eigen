@@ -47,3 +47,8 @@ coverage/
 src-tauri/binaries/
 repomix-output.xml
 tsconfig.tsbuildinfo
+
+# Agent Tracker test directory
+.agent-tracker-test/
+# Agent Tracker test directory
+.agent-tracker-test/
