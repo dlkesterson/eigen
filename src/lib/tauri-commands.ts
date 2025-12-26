@@ -500,3 +500,219 @@ export async function acceptPendingFolder(
 export async function dismissPendingFolder(folderId: string, deviceId: string): Promise<void> {
   return invoke('dismiss_pending_folder', { folderId, deviceId });
 }
+
+// =============================================================================
+// S3 Backend Commands
+// =============================================================================
+
+/**
+ * S3 configuration (public view, without secret key)
+ */
+export interface S3ConfigPublic {
+  endpoint: string;
+  region: string;
+  bucket_name: string;
+  access_key_id: string;
+  path_prefix: string | null;
+  is_configured: boolean;
+}
+
+/**
+ * S3 connection status
+ */
+export interface S3ConnectionStatus {
+  connected: boolean;
+  bucket_accessible: boolean;
+  error_message: string | null;
+}
+
+/**
+ * S3 object metadata
+ */
+export interface S3Object {
+  key: string;
+  size: number;
+  last_modified: string;
+  etag: string | null;
+  storage_class: string | null;
+}
+
+/**
+ * Result of listing S3 objects
+ */
+export interface S3ListResult {
+  objects: S3Object[];
+  common_prefixes: string[];
+  is_truncated: boolean;
+  next_continuation_token: string | null;
+}
+
+/**
+ * Upload progress event
+ */
+export interface S3UploadProgress {
+  file_path: string;
+  bytes_uploaded: number;
+  total_bytes: number;
+  percentage: number;
+}
+
+/**
+ * Download progress event
+ */
+export interface S3DownloadProgress {
+  s3_key: string;
+  bytes_downloaded: number;
+  total_bytes: number;
+  percentage: number;
+}
+
+/**
+ * File sync status
+ */
+export type SyncStatus = 'synced' | 'modified' | 'new' | 'deleted';
+
+/**
+ * Information about a file's sync state
+ */
+export interface FileSyncInfo {
+  local_path: string;
+  s3_key: string | null;
+  status: SyncStatus;
+  size: number;
+  last_modified: number;
+}
+
+/**
+ * Result of a folder sync operation
+ */
+export interface FolderSyncResult {
+  uploaded: number;
+  skipped: number;
+  failed: number;
+  bytes_uploaded: number;
+  errors: Array<[string, string]>;
+}
+
+/**
+ * Configure S3 backend with credentials and connection details
+ * @param endpoint - S3 endpoint URL (use "https://s3.amazonaws.com" for AWS)
+ * @param region - AWS region (e.g., "us-east-1")
+ * @param bucketName - Target bucket for backups
+ * @param accessKeyId - AWS access key ID
+ * @param secretAccessKey - AWS secret access key (will be stored in system keyring)
+ * @param pathPrefix - Optional prefix for organized storage (e.g., "eigen-backups/")
+ */
+export async function configureS3(
+  endpoint: string,
+  region: string,
+  bucketName: string,
+  accessKeyId: string,
+  secretAccessKey: string,
+  pathPrefix?: string
+): Promise<void> {
+  return invoke('configure_s3', {
+    endpoint,
+    region,
+    bucket_name: bucketName,
+    access_key_id: accessKeyId,
+    secret_access_key: secretAccessKey,
+    path_prefix: pathPrefix ?? null,
+  });
+}
+
+/**
+ * Get current S3 configuration (without exposing secret key)
+ * @returns S3 configuration or default values if not configured
+ */
+export async function getS3Config(): Promise<S3ConfigPublic> {
+  return invoke<S3ConfigPublic>('get_s3_config');
+}
+
+/**
+ * Test S3 connection and bucket access
+ * @returns Connection status with error message if failed
+ */
+export async function testS3Connection(): Promise<S3ConnectionStatus> {
+  return invoke<S3ConnectionStatus>('test_s3_connection');
+}
+
+/**
+ * Upload a file to S3
+ * @param localPath - Local file path to upload
+ * @param s3Key - Optional target S3 key (path in bucket). If not provided, uses filename with prefix
+ * @returns S3 object metadata
+ */
+export async function uploadFileToS3(
+  localPath: string,
+  s3Key?: string
+): Promise<S3Object> {
+  return invoke<S3Object>('upload_file_to_s3', {
+    local_path: localPath,
+    s3_key: s3Key ?? null,
+  });
+}
+
+/**
+ * Download a file from S3
+ * @param s3Key - S3 key (path in bucket) to download
+ * @param localPath - Local file path to save to
+ */
+export async function downloadFileFromS3(
+  s3Key: string,
+  localPath: string
+): Promise<void> {
+  return invoke('download_file_from_s3', {
+    s3_key: s3Key,
+    local_path: localPath,
+  });
+}
+
+/**
+ * List objects in S3 bucket
+ * @param prefix - Optional prefix to filter objects (for folder-like browsing)
+ * @param delimiter - Optional delimiter for hierarchical listing (use "/" for folder view)
+ * @param maxKeys - Maximum number of keys to return (default 1000, max 1000)
+ * @param continuationToken - Token for paginated results
+ * @returns List of S3 objects and common prefixes
+ */
+export async function listS3Objects(
+  prefix?: string,
+  delimiter?: string,
+  maxKeys?: number,
+  continuationToken?: string
+): Promise<S3ListResult> {
+  return invoke<S3ListResult>('list_s3_objects', {
+    prefix: prefix ?? null,
+    delimiter: delimiter ?? null,
+    max_keys: maxKeys ?? null,
+    continuation_token: continuationToken ?? null,
+  });
+}
+
+/**
+ * Delete a file from S3
+ * @param s3Key - S3 key (path in bucket) to delete
+ */
+export async function deleteFileFromS3(s3Key: string): Promise<void> {
+  return invoke('delete_file_from_s3', { s3_key: s3Key });
+}
+
+/**
+ * Sync a local folder to S3 (incremental upload)
+ * @param localFolderPath - Local folder to sync
+ * @param s3FolderPrefix - S3 prefix for the folder (e.g., "backups/my-folder/")
+ * @param excludePatterns - Optional glob patterns to exclude (e.g., ["*.tmp", ".git/**"])
+ * @returns Sync result with upload statistics
+ */
+export async function syncFolderToS3(
+  localFolderPath: string,
+  s3FolderPrefix: string,
+  excludePatterns?: string[]
+): Promise<FolderSyncResult> {
+  return invoke<FolderSyncResult>('sync_folder_to_s3', {
+    local_folder_path: localFolderPath,
+    s3_folder_prefix: s3FolderPrefix,
+    exclude_patterns: excludePatterns ?? null,
+  });
+}

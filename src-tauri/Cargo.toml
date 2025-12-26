@@ -52,3 +52,14 @@ tauri-plugin-dialog = "2.4.2"
 tauri-plugin-shell = "2.3.3"
 image = "0.25"
 
+# AWS S3 SDK for archival backups
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1"
+aws-credential-types = "1"
+
+# Secure credential storage
+keyring = "2"
+
+# Glob pattern matching for exclude patterns
+globset = "0.4"
+

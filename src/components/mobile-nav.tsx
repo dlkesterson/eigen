@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Folder, Laptop, Settings, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Folder, Laptop, Cloud, Settings, ScrollText } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +8,7 @@ const navItems = [
   { id: 'dashboard' as const, icon: LayoutDashboard, label: 'Dashboard' },
   { id: 'folders' as const, icon: Folder, label: 'Folders' },
   { id: 'devices' as const, icon: Laptop, label: 'Devices' },
+  { id: 's3' as const, icon: Cloud, label: 'S3' },
   { id: 'logs' as const, icon: ScrollText, label: 'Logs' },
   { id: 'settings' as const, icon: Settings, label: 'Settings' },
 ];

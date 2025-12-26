@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Folder,
   Laptop,
+  Cloud,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -25,6 +26,7 @@ const iconMap = {
   dashboard: LayoutDashboard,
   folders: Folder,
   devices: Laptop,
+  s3: Cloud,
   logs: ScrollText,
   settings: Settings,
 } as const;

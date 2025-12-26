@@ -8,6 +8,7 @@
 //! - `files`: File browser, conflicts, versions, ignores
 //! - `events`: Events, logs, tray updates
 //! - `pending`: Pending device/folder requests
+//! - `s3`: S3 backend for archival backups
 
 // Expose submodules publicly so Tauri's generate_handler! macro can access
 // the __cmd__ prefixed items it generates
@@ -17,6 +18,7 @@ pub mod events;
 pub mod files;
 pub mod folders;
 pub mod pending;
+pub mod s3;
 pub mod system;
 
 // Re-export all commands for use in lib.rs invoke_handler
@@ -58,4 +60,12 @@ pub use pending::{
     accept_pending_device, accept_pending_folder, dismiss_pending_device, dismiss_pending_folder,
     get_pending_devices, get_pending_folders, get_pending_requests, PendingDevice, PendingFolder,
     PendingRequests,
+};
+
+// S3 backend commands
+pub use s3::{
+    configure_s3, delete_file_from_s3, download_file_from_s3, get_s3_config, list_s3_objects,
+    sync_folder_to_s3, test_s3_connection, upload_file_to_s3, FileSyncInfo, FolderSyncResult,
+    S3ConfigPublic, S3ConnectionStatus, S3DownloadProgress, S3Error, S3ListResult, S3Object,
+    S3State, S3UploadProgress, SyncStatus,
 };

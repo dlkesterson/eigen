@@ -6,6 +6,7 @@ import { FolderList } from '@/components/folder-list';
 import { DeviceList } from '@/components/device-list';
 import { SettingsPage } from '@/components/settings-page';
 import { LogsPage } from '@/components/logs-page';
+import { S3Page } from '@/components/s3-page';
 import { MotionPage } from '@/components/ui/motion';
 import { AnimatePresence } from 'framer-motion';
 
@@ -56,6 +57,14 @@ function LogsView() {
   );
 }
 
+function S3View() {
+  return (
+    <MotionPage>
+      <S3Page />
+    </MotionPage>
+  );
+}
+
 function SettingsView() {
   return (
     <MotionPage>
@@ -75,6 +84,8 @@ export function MainContent() {
         return <FoldersView />;
       case 'devices':
         return <DevicesView />;
+      case 's3':
+        return <S3View />;
       case 'logs':
         return <LogsView />;
       case 'settings':

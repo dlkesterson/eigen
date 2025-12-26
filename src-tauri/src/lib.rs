@@ -116,6 +116,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .manage(SyncthingState::default())
+        .manage(commands::S3State::default())
         .setup(|app| {
             // Set up tray menu
             use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
@@ -281,6 +282,15 @@ pub fn run() {
             commands::pending::dismiss_pending_device,
             commands::pending::accept_pending_folder,
             commands::pending::dismiss_pending_folder,
+            // S3 backend commands
+            commands::s3::configure_s3,
+            commands::s3::get_s3_config,
+            commands::s3::test_s3_connection,
+            commands::s3::upload_file_to_s3,
+            commands::s3::download_file_from_s3,
+            commands::s3::list_s3_objects,
+            commands::s3::delete_file_from_s3,
+            commands::s3::sync_folder_to_s3,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

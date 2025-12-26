@@ -1,4 +1,4 @@
-export const TABS = ['dashboard', 'folders', 'devices', 'settings', 'logs'] as const;
+export const TABS = ['dashboard', 'folders', 'devices', 's3', 'settings', 'logs'] as const;
 export type TabId = (typeof TABS)[number];
 
 export const DEFAULT_TAB: TabId = 'dashboard';
@@ -15,6 +15,10 @@ export const TAB_CONFIG = {
   devices: {
     label: 'Devices',
     description: 'Connected devices',
+  },
+  s3: {
+    label: 'S3 Storage',
+    description: 'Cloud backup and archival',
   },
   settings: {
     label: 'Settings',
@@ -43,4 +47,8 @@ export const QUERY_KEYS = {
   PENDING_DEVICES: 'pendingDevices',
   PENDING_FOLDERS: 'pendingFolders',
   PENDING_REQUESTS: 'pendingRequests',
+  // S3 storage
+  S3_CONFIG: ['s3Config'],
+  S3_OBJECTS: (prefix?: string) => ['s3Objects', prefix],
+  S3_CONNECTION_STATUS: ['s3ConnectionStatus'],
 } as const;
