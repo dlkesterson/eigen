@@ -268,20 +268,31 @@ export function registerDefaultRecoveryStrategies() {
 
         await invoke('start_syncthing_sidecar');
 
+        // Detect first-run and adjust timeout accordingly
+        const isConfigured = await invoke<boolean>('is_syncthing_configured');
+        const isFirstRun = !isConfigured;
+        const waitTime = isFirstRun ? 10000 : 5000;
+
+        logger.info(`Waiting for Syncthing to start... (${waitTime / 1000}s)`, {
+          isFirstRun,
+          waitTime,
+        });
+
         // Wait for startup with progress indicator
-        logger.info('Waiting for Syncthing to start...');
-        let countdown = 5;
+        let countdown = Math.floor(waitTime / 1000);
         const countdownInterval = setInterval(() => {
           countdown--;
           if (countdown > 0) {
             toast.loading(`Starting Syncthing... ${countdown}s remaining`, {
               id: toastId,
-              description: 'This may take 10-15 seconds on first run',
+              description: isFirstRun
+                ? 'First-run initialization may take 10-15 seconds'
+                : 'This may take a few seconds',
             });
           }
         }, 1000);
 
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
         clearInterval(countdownInterval);
 
         // Check again via Tauri invoke

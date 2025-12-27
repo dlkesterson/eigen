@@ -234,3 +234,10 @@ pub async fn restart_syncthing(state: State<'_, SyncthingState>) -> Result<(), S
 pub fn get_api_config(state: State<'_, SyncthingState>) -> (String, u16) {
     (state.config.host.clone(), state.config.port)
 }
+
+/// Check if Syncthing is configured (has existing config.xml)
+/// Returns false for first-run scenarios where no config exists
+#[tauri::command]
+pub fn is_syncthing_configured() -> bool {
+    crate::SyncthingConfig::config_exists()
+}

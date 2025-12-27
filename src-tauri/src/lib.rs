@@ -82,6 +82,18 @@ impl SyncthingConfig {
             })
             .collect()
     }
+
+    /// Check if Syncthing configuration exists
+    /// Returns true if a valid config.xml with API key is found
+    pub fn config_exists() -> bool {
+        Self::read_api_key().is_some()
+    }
+
+    /// Check if this is a first-time run (no Syncthing config)
+    /// Returns true if no configuration exists
+    pub fn is_first_run() -> bool {
+        !Self::config_exists()
+    }
 }
 
 impl Default for SyncthingConfig {
@@ -268,6 +280,7 @@ pub fn run() {
             commands::system::get_system_status,
             commands::system::restart_syncthing,
             commands::system::get_api_config,
+            commands::system::is_syncthing_configured,
             // Config commands
             commands::config::get_connections,
             commands::config::get_config,
