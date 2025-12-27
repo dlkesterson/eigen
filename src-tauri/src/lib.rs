@@ -5,6 +5,7 @@ use tauri::Manager;
 use tauri_plugin_shell::process::CommandChild;
 
 pub mod commands;
+pub mod config;
 
 #[derive(Debug, Clone)]
 pub struct SyncthingConfig {
@@ -61,12 +62,37 @@ impl SyncthingConfig {
         }
         None
     }
+
+    /// Generate a cryptographically secure random API key for first-time setup
+    /// This ensures we have a valid API key when Syncthing config doesn't exist
+    ///
+    /// Uses the `rand` crate to generate 32 random hexadecimal characters,
+    /// matching Syncthing's API key format exactly.
+    fn generate_api_key() -> String {
+        use rand::Rng;
+
+        const CHARSET: &[u8] = b"0123456789abcdef";
+        let mut rng = rand::thread_rng();
+
+        // Generate 32 random hex characters (same format as Syncthing)
+        (0..32)
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET[idx] as char
+            })
+            .collect()
+    }
 }
 
 impl Default for SyncthingConfig {
     fn default() -> Self {
+        let api_key = Self::read_api_key().unwrap_or_else(|| {
+            eprintln!("No Syncthing config found, generating new API key for first-time setup");
+            Self::generate_api_key()
+        });
+
         Self {
-            api_key: Self::read_api_key().unwrap_or_else(|| "no-api-key".to_string()),
+            api_key,
             port: 8384,
             host: "127.0.0.1".to_string(),
         }
@@ -226,6 +252,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Config commands
+            config::get_settings_cmd,
+            config::save_settings_cmd,
+            config::get_credentials_cmd,
+            config::save_credentials_cmd,
+            config::get_state_cmd,
+            config::save_state_cmd,
+            config::get_config_dir_cmd,
             // System commands
             commands::system::check_syncthing_installation,
             commands::system::start_syncthing_sidecar,
