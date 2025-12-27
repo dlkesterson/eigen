@@ -2,10 +2,27 @@
 // Automatic recovery service for common failure scenarios
 
 import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
 import { logger } from './logger';
 import { syncthingCircuitBreaker } from './retry';
 import { healthMonitor } from './health-monitor';
 import { errorNotifications } from './error-notifications';
+
+/**
+ * Serialize error objects to string, handling Tauri invoke errors
+ */
+function serializeError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  } else if (typeof error === 'string') {
+    return error;
+  } else if (error && typeof error === 'object') {
+    const errObj = error as Record<string, unknown>;
+    return errObj.message?.toString() || JSON.stringify(error);
+  } else {
+    return String(error);
+  }
+}
 
 export interface RecoveryStrategy {
   name: string;
@@ -121,7 +138,7 @@ class AutoRecoveryService {
         }
       } catch (error) {
         logger.error(`Recovery condition check failed: ${name}`, {
-          error: error instanceof Error ? error.message : String(error),
+          error: serializeError(error),
         });
       }
     }
@@ -156,7 +173,7 @@ class AutoRecoveryService {
       }
     } catch (error) {
       logger.error(`Recovery failed: ${name}`, {
-        error: error instanceof Error ? error.message : String(error),
+        error: serializeError(error),
         attempt: state.attempts,
       });
 
@@ -226,6 +243,8 @@ export function registerDefaultRecoveryStrategies() {
       return status ? !status.healthy && status.consecutiveFailures >= 2 : false;
     },
     action: async () => {
+      let toastId: string | number | undefined;
+
       try {
         // First, try a simple ping via Tauri invoke
         const pingResult = await invoke<{ ping: string }>('ping_syncthing');
@@ -236,25 +255,75 @@ export function registerDefaultRecoveryStrategies() {
         }
 
         // If ping fails, Syncthing might not be running - try to start it
-        logger.info('Syncthing not responding, attempting to start sidecar');
+        logger.info(
+          'Syncthing not responding, attempting to start sidecar. ' +
+            'If this is your first time running Eigen, this will initialize Syncthing configuration.'
+        );
+
+        // Show initialization toast to the user
+        toastId = toast.loading('Starting Syncthing...', {
+          description: 'This may take 10-15 seconds on first run',
+          duration: Infinity,
+        });
+
         await invoke('start_syncthing_sidecar');
 
-        // Wait for startup
+        // Wait for startup with progress indicator
+        logger.info('Waiting for Syncthing to start...');
+        let countdown = 5;
+        const countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdown > 0) {
+            toast.loading(`Starting Syncthing... ${countdown}s remaining`, {
+              id: toastId,
+              description: 'This may take 10-15 seconds on first run',
+            });
+          }
+        }, 1000);
+
         await new Promise((resolve) => setTimeout(resolve, 5000));
+        clearInterval(countdownInterval);
 
         // Check again via Tauri invoke
         const retryPing = await invoke<{ ping: string }>('ping_syncthing');
 
         if (retryPing?.ping === 'pong') {
           syncthingCircuitBreaker.reset();
+          logger.info('Syncthing sidecar started successfully');
+
+          // Show success toast
+          toast.success('Syncthing started successfully!', {
+            id: toastId,
+            description: 'Connection established',
+          });
+
           return true;
         }
 
+        logger.warn(
+          'Syncthing sidecar may have started but is not responding yet. ' +
+            'If this is the first run, Syncthing may need more time to initialize. ' +
+            'Check the Syncthing logs for details.'
+        );
+
+        // Show warning toast
+        toast.warning('Syncthing may need more time', {
+          id: toastId,
+          description: 'First-run initialization can take 10-15 seconds. Will retry automatically.',
+          duration: 8000,
+        });
+
         return false;
       } catch (error) {
-        logger.error('Recovery action failed', {
-          error: error instanceof Error ? error.message : String(error),
+        logger.error('Recovery action failed', { error: serializeError(error) });
+
+        // Dismiss loading toast and show error
+        toast.error('Failed to start Syncthing', {
+          id: toastId,
+          description: serializeError(error),
+          duration: 8000,
         });
+
         return false;
       }
     },

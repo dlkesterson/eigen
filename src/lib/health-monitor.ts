@@ -1,6 +1,7 @@
 // src/lib/health-monitor.ts
 import { logger } from './logger';
 import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
 
 interface HealthCheck {
   name: string;
@@ -152,13 +153,32 @@ export class HealthMonitor {
     // Alert on critical failures - only log once when threshold is reached
     // (not on every subsequent failure)
     if (check.critical && consecutiveFailures === 3) {
-      const hint =
-        check.name === 'syncthing-api'
-          ? 'Syncthing may not be running. Please ensure Syncthing is started.'
-          : undefined;
+      let hint: string | undefined;
+      if (check.name === 'syncthing-api') {
+        hint =
+          'Syncthing may not be running or configured. ' +
+          'If this is your first time running Eigen, you need to either: ' +
+          '1) Start Syncthing manually to create its configuration, or ' +
+          '2) Let Eigen start the bundled Syncthing sidecar (automatic recovery will attempt this).';
+      }
       logger.error(`CRITICAL: Health check failing repeatedly: ${check.name}`, {
         consecutiveFailures,
+        error,
         ...(hint && { hint }),
+      });
+
+      // Show critical failure notification to user
+      toast.error(`Connection Issue: ${check.name}`, {
+        description: hint || error,
+        duration: 10000,
+        action: hint
+          ? {
+              label: 'Auto-recovering...',
+              onClick: () => {
+                // User can dismiss the toast - recovery happens automatically
+              },
+            }
+          : undefined,
       });
     }
   }
@@ -279,7 +299,21 @@ export function registerDefaultHealthChecks(_apiKey?: string) {
         // Use the same Tauri command that the UI uses
         const result = await invoke('get_system_status');
         return result !== null && result !== undefined;
-      } catch {
+      } catch (error) {
+        // Log the actual error to help diagnose connection issues
+        const errorMsg =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' && error !== null
+              ? JSON.stringify(error)
+              : String(error);
+
+        // Only log detailed error on first few failures to avoid spam
+        const status = healthMonitor.getCheckStatus('syncthing-api');
+        if (!status || status.consecutiveFailures < 3) {
+          logger.debug('Syncthing API check failed', { error: errorMsg });
+        }
+
         return false;
       }
     },
