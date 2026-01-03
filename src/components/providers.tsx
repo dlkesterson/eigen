@@ -14,6 +14,7 @@ import { logger } from '@/lib/logger';
 import { SyncthingClientProvider } from '@/lib/api';
 import { parseInviteUrl } from '@/hooks/useDeviceInvite';
 import { ThemeProvider, useResolvedTheme } from './theme-provider';
+import { SettingsProvider } from '@/lib/settings';
 
 // Themed Toaster component that respects theme settings
 function ThemedToaster() {
@@ -100,18 +101,20 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <I18nextProvider i18n={i18n}>
-        <QueryClientProvider client={queryClient}>
-          <SyncthingClientProvider>
-            <ThemeProvider>
-              <DeepLinkHandler />
-              <SyncthingManager>{children}</SyncthingManager>
-              <ThemedToaster />
-              <DebugPanel />
-            </ThemeProvider>
-          </SyncthingClientProvider>
-        </QueryClientProvider>
-      </I18nextProvider>
+      <SettingsProvider>
+        <I18nextProvider i18n={i18n}>
+          <QueryClientProvider client={queryClient}>
+            <SyncthingClientProvider>
+              <ThemeProvider>
+                <DeepLinkHandler />
+                <SyncthingManager>{children}</SyncthingManager>
+                <ThemedToaster />
+                <DebugPanel />
+              </ThemeProvider>
+            </SyncthingClientProvider>
+          </QueryClientProvider>
+        </I18nextProvider>
+      </SettingsProvider>
     </ErrorBoundary>
   );
 }
